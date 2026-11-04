@@ -1,0 +1,219 @@
+<!-- Support Tickets & Helpdesk Dedicated Page -->
+<div id="supportTicketsPage" class="subpage-overlay">
+    <!-- Header -->
+    <header class="subpage-header">
+        <div class="subpage-logo">
+            <img src="assets/dashboard/logo half.png" alt="Zion Memorial Garden Logo">
+        </div>
+        <div class="subpage-header-actions">
+            <button type="button" class="notif-bell-btn" aria-label="Notifications" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notif-badge-count" style="display: none;">0</span>
+            </button>
+            <button type="button" class="subpage-menu-btn" id="supportTicketsMenuBtn" title="Toggle Navigation Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <button type="button" class="subpage-user-btn" id="supportTicketsUserBtn" title="View Profile">
+                <img src="assets/images/icons/image 6.png" alt="User Avatar" id="supportTicketsUserAvatar">
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="subpage-main">
+        <div class="subpage-title-row">
+            <div>
+                <h1 class="subpage-title">Customer Support &amp; Inquiries</h1>
+                <p class="subpage-subtitle">Submit and track help tickets regarding your plot reservations, amortization dues, and memorial records</p>
+            </div>
+            <div class="subpage-actions-group">
+                <button type="button" class="btn-subpage-outline" id="btnTicketContactInfo">Park Office Directory</button>
+                <button type="button" class="btn-subpage-primary" id="btnTicketOpenCreateTop">+ Open Support Ticket</button>
+            </div>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="subpage-kpi-row">
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">TOTAL INQUIRIES</span>
+                <div class="subpage-kpi-value" id="ticketKpiTotal" style="color: #1e3a29;">0</div>
+                <div class="subpage-kpi-meta">All-time tickets opened</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">OPEN &amp; IN PROGRESS</span>
+                <div class="subpage-kpi-value" id="ticketKpiActive" style="color: #0369a1;">0</div>
+                <div class="subpage-kpi-meta">Under review by park administration</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">RESOLVED TICKETS</span>
+                <div class="subpage-kpi-value" id="ticketKpiResolved" style="color: #166534;">0</div>
+                <div class="subpage-kpi-meta">Successfully answered and closed</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">STAFF RESPONSE TIME</span>
+                <div class="subpage-kpi-value" id="ticketKpiAvgTime" style="color: #1e293b;">&lt; 24h</div>
+                <div class="subpage-kpi-meta">Typical turnaround during office hours</div>
+            </div>
+        </div>
+
+        <!-- Subpage Tabs Bar -->
+        <div class="subpage-tabs-bar">
+            <button type="button" class="subpage-tab-btn active" id="tabTicketList">My Support Inquiries</button>
+            <button type="button" class="subpage-tab-btn" id="tabTicketNew">+ Open New Ticket</button>
+        </div>
+
+        <!-- View 1: List & History -->
+        <div id="ticketListView" class="subpage-box">
+            <div class="subpage-box-header">
+                <div class="subpage-box-title-group">
+                    <h2>Support Ticket History</h2>
+                    <span class="subpage-badge" id="ticketListCountBadge">0 Tickets</span>
+                </div>
+                <div class="subpage-box-controls">
+                    <input type="text" id="ticketSearchInput" class="subpage-search-input" placeholder="Search by ticket #, subject, or message...">
+                    <select id="ticketCategoryFilter" class="subpage-filter-select">
+                        <option value="all">All Categories</option>
+                        <option value="Reservation Inquiry">Reservation &amp; Booking</option>
+                        <option value="Payment & Amortization">Payment, GCash &amp; Dues</option>
+                        <option value="Plot Maintenance">Plot Maintenance &amp; Care</option>
+                        <option value="Burial Record">Burial &amp; Deceased Record</option>
+                        <option value="General Support">General Support &amp; Docs</option>
+                    </select>
+                    <button type="button" class="btn-subpage-outline" id="btnTicketSwitchToNewForm">+ New Ticket</button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="ticketLoading" class="subpage-state-wrapper">
+                <p>Loading your support tickets and replies...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="ticketEmpty" class="subpage-state-wrapper" style="display: none;">
+                <h3>No Support Tickets Found</h3>
+                <p>Have questions about your plot contract, deed of sale, monthly dues, or grounds keeping? Our park staff is ready to help.</p>
+                <button type="button" class="btn-subpage-primary" id="btnTicketEmptyCreate" style="margin-top: 14px;">Open First Ticket</button>
+            </div>
+
+            <!-- Table Container -->
+            <div id="ticketTableContainer" class="subpage-table-wrapper" style="display: none;">
+                <table class="subpage-table" id="ticketTable">
+                    <thead>
+                        <tr>
+                            <th>TICKET #</th>
+                            <th>CATEGORY</th>
+                            <th>SUBJECT</th>
+                            <th>PRIORITY</th>
+                            <th>DATE CREATED</th>
+                            <th>STATUS</th>
+                            <th>STAFF RESPONSE</th>
+                            <th style="text-align: center;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- View 2: Submit New Ticket Form -->
+        <div id="ticketFormView" class="subpage-box" style="display: none;">
+            <div class="subpage-box-header">
+                <div class="subpage-box-title-group">
+                    <h2>Open a Support Inquiry</h2>
+                    <span class="subpage-badge">Direct Staff Dispatch</span>
+                </div>
+                <div class="subpage-box-controls">
+                    <button type="button" class="btn-subpage-outline" id="btnTicketBackToList">&larr; Back to Tickets</button>
+                </div>
+            </div>
+
+            <form id="ticketForm">
+                <div class="subpage-form-grid">
+                    <div class="subpage-form-group full-width">
+                        <label for="ticketSubjectInput">Subject / Summary *</label>
+                        <input type="text" id="ticketSubjectInput" class="subpage-form-control" placeholder="E.g., Request for certified copy of Deed of Sale for Plot SPEC5-04..." required>
+                    </div>
+
+                    <div class="subpage-form-group">
+                        <label for="ticketCategorySelect">Category *</label>
+                        <select id="ticketCategorySelect" class="subpage-form-control" required>
+                            <option value="Reservation Inquiry">Reservation &amp; Booking Inquiry</option>
+                            <option value="Payment & Amortization">Payment, GCash &amp; Amortization</option>
+                            <option value="Plot Maintenance">Plot Maintenance &amp; Grounds Care</option>
+                            <option value="Burial Record">Burial &amp; Deceased Record Update</option>
+                            <option value="General Support">General Support &amp; Legal Docs</option>
+                        </select>
+                    </div>
+
+                    <div class="subpage-form-group">
+                        <label for="ticketPrioritySelect">Priority Level *</label>
+                        <select id="ticketPrioritySelect" class="subpage-form-control" required>
+                            <option value="normal" selected>Normal Priority</option>
+                            <option value="high">High Priority</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                    </div>
+
+                    <div class="subpage-form-group full-width">
+                        <label for="ticketMessageInput">Detailed Message / Inquiry *</label>
+                        <textarea id="ticketMessageInput" rows="5" class="subpage-form-control" placeholder="Please provide specific details including plot code, reservation number, or deceased family name so our staff can assist promptly..." required></textarea>
+                    </div>
+                </div>
+
+                <div class="subpage-form-footer">
+                    <button type="button" class="btn-subpage-outline" id="btnCancelTicketForm">Cancel</button>
+                    <button type="submit" class="btn-subpage-primary" id="btnSubmitTicketForm">Submit Support Ticket</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Ticket Detail Modal (Flat, 4px corners, clean text) -->
+        <div id="ticketDetailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center;">
+            <div style="background: #ffffff; width: 92%; max-width: 650px; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div>
+                        <span id="modalTicketNumber" style="font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;"></span>
+                        <h3 id="modalTicketSubject" style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 4px 0 0 0;"></h3>
+                    </div>
+                    <button type="button" id="btnCloseTicketDetailModal" style="background: none; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 10px; cursor: pointer; color: #64748b; font-size: 1rem;">&times;</button>
+                </div>
+
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-size: 0.8rem; color: #475569;">
+                    <div>Category: <strong id="modalTicketCategory"></strong></div>
+                    <div>&bull;</div>
+                    <div>Priority: <strong id="modalTicketPriority" style="text-transform: capitalize;"></strong></div>
+                    <div>&bull;</div>
+                    <div>Status: <span id="modalTicketStatusBadge" class="subpage-badge"></span></div>
+                    <div>&bull;</div>
+                    <div>Submitted: <span id="modalTicketDate"></span></div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Your Message:</label>
+                    <div id="modalTicketMessage" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px; font-size: 0.88rem; color: #1e293b; white-space: pre-wrap; line-height: 1.5;"></div>
+                </div>
+
+                <div id="modalTicketReplyContainer" style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 6px;">Staff Response &amp; Resolution:</label>
+                    <div id="modalTicketResolution" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 12px; font-size: 0.88rem; color: #166534; white-space: pre-wrap; line-height: 1.5;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="button" id="btnCloseTicketDetailModalBtn" class="btn-subpage-outline">Close Window</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+

@@ -1,0 +1,1262 @@
+/* =========================================
+   RESERVATION MODAL - FULL SCREEN
+   ========================================= */
+
+.reservation-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    background-image: url('../assets/images/backgrounds/DECEASED FAMILY.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    z-index: 2999;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    box-sizing: border-box;
+}
+
+.reservation-modal-overlay::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.reservation-modal-overlay * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.reservation-modal-overlay *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.reservation-modal-overlay.active {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Reservation Header - Matching Deceased Family Design */
+.reservation-modal-header {
+    background-color: #f5f1e8;
+    padding: 6px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2d4a36;
+    flex-shrink: 0;
+    z-index: 3000;
+}
+
+.reservation-modal-logo img {
+    height: 40px;
+    width: auto;
+    display: block;
+    cursor: pointer;
+}
+
+.reservation-modal-icons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-back-to-dashboard {
+    background: #ffffff;
+    color: #1e3a29;
+    border: 1px solid #cbd5e1;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-back-to-dashboard:hover {
+    background: #f8fafc;
+    border-color: #2d4a36;
+}
+
+.reservation-menu-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.reservation-menu-btn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.reservation-menu-btn span {
+    width: 100%;
+    height: 2px;
+    background-color: #1e293b;
+    display: block;
+}
+
+.reservation-user-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    padding: 2px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.reservation-user-btn:hover {
+    border-color: #2d4a36;
+}
+
+.reservation-user-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+/* Reservation Content */
+.reservation-modal-content {
+    background: transparent;
+    width: 100%;
+    max-width: 1720px;
+    margin: 0 auto;
+    position: relative;
+    padding: 8px 24px 10px 24px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.reservation-modal-content::-webkit-scrollbar {
+    display: none;
+}
+
+.reservation-header {
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.reservation-header h2 {
+    font-size: 1.3rem;
+    margin: 0;
+    color: #1e3a29;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Lawn Tabs */
+.lawn-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 6px;
+    border: 1.5px solid #d4d4d4;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.lawn-tab {
+    flex: 1;
+    padding: 6px 12px;
+    background: white;
+    border: none;
+    border-right: 1px solid #ddd;
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.lawn-tab:last-child {
+    border-right: none;
+}
+
+.lawn-tab:hover {
+    background-color: #f0f0f0;
+}
+
+.lawn-tab.active {
+    background-color: #1e3a29;
+    color: white;
+}
+
+/* Lawn Description */
+.lawn-description {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid #dcdcd5;
+    border-radius: 6px;
+    padding: 6px 14px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 30;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.lawn-description h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin: 0 6px 0 0;
+    color: #1e3a29;
+    display: inline;
+}
+
+.lawn-description p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.35;
+    display: inline;
+}
+
+/* Reservation Grid */
+.reservation-grid {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 280px;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    margin-bottom: 0;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+/* Legend Section */
+.legend-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.legend-card {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: none;
+}
+
+.legend-card h3 {
+    font-size: 1.2rem;
+    margin: 0 0 15px 0;
+    color: #2c2c2c;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.legend-color {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    border: 2px solid #ddd;
+    flex-shrink: 0;
+}
+
+.legend-color.most-populated {
+    background-color: #6b8e6b;
+}
+
+.legend-color.least-populated {
+    background-color: #c4a661;
+}
+
+.legend-color.family-estate {
+    background-color: #f5f1e8;
+}
+
+.legend-color.condominium-color {
+    background-color: #5a8a9a;
+}
+
+.legend-item span:last-child {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Map Section handled below */
+
+/* ============================================
+   SHAPE 10 CLICKABLE OVERLAY - CUSTOMIZE HERE
+   ============================================ */
+
+.shape-10-overlay {
+    position: absolute;
+    
+    /* POSITION: Move the vector on the map */
+    top: 35%;        /* ⬆️⬇️ Move up/down (0-100%) */
+    left: 45%;       /* ⬅️➡️ Move left/right (0-100%) */
+    
+    /* SIZE: Make vector bigger/smaller */
+    width: 15%;      /* 📏 Increase = bigger, decrease = smaller (5-30%) */
+    height: auto;
+    
+    /* ROTATION: Rotate the vector */
+    transform: rotate(30deg);  /* 🔄 Change angle (0-360 degrees) */
+    
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.shape-10-overlay img {
+    width: 100%;
+    height: auto;
+    display: block;
+    
+    /* ORIGINAL COLOR & EFFECTS */
+    filter: 
+        hue-rotate(0deg)           /* 🎨 Color shift: 0=original, 60=yellow, 120=green, 180=cyan, 240=blue, 300=magenta */
+        brightness(1)              /* 💡 Brightness: 0.5=dark, 1=normal, 1.5=bright */
+        saturate(1)                /* 🌈 Color intensity: 0=grayscale, 1=normal, 2=vivid */
+        drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));  /* ✨ Glow: change rgba(R,G,B,opacity) */
+}
+
+.shape-10-overlay:hover {
+    /* HOVER: Rotation & Scale */
+    transform: rotate(30deg) scale(1.1);  /* 🔍 scale(1.1) = 10% bigger on hover */
+    filter: brightness(1.2);
+}
+
+.shape-10-overlay:hover img {
+    /* HOVER COLOR & EFFECTS */
+    filter: 
+        hue-rotate(0deg)           /* 🎨 Hover color shift */
+        brightness(1.3)            /* 💡 Hover brightness */
+        saturate(1.5)              /* 🌈 Hover color intensity */
+        drop-shadow(0 0 15px rgba(255, 215, 0, 1));  /* ✨ Hover glow: gold color */
+        /* Change rgba values for different glow colors:
+           Gold: rgba(255, 215, 0, 1)
+           Blue: rgba(0, 150, 255, 1)
+           Green: rgba(0, 255, 100, 1)
+           Red: rgba(255, 50, 50, 1)
+           Purple: rgba(200, 0, 255, 1) */
+}
+
+/* ============================================
+   END OF SHAPE 10 CUSTOMIZATION
+   ============================================ */
+/* Shape 10 Clickable Overlay */
+.shape-10-overlay {
+    position: absolute;
+    /* Adjust these values to position exactly on shape 10 */
+    top: 3.6%;
+    left: 37%;
+    width: 25%;
+    height: auto;
+    transform: rotate(30deg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.shape-10-overlay img {
+    width: 83%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));
+}
+
+.shape-10-overlay:hover {
+    transform: rotate(30deg) scale(1.05);
+    filter: brightness(1.2);
+}
+
+.shape-10-overlay:hover img {
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.8));
+}
+
+/* Location Title Section */
+.location-title-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    padding-top: 0;
+    min-height: 0;
+    z-index: 20;
+    position: relative;
+}
+
+.location-title-card {
+    background: #f7f6f2;
+    border: 1.5px solid #444;
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+
+.location-title-card h3 {
+    font-size: 0.95rem;
+    margin: 0 0 4px 0;
+    color: #2c2c2c;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Location Section */
+.location-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.location-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.location-card h3 {
+    font-size: 1.2rem;
+    margin: 0 0 12px 0;
+    color: #2c2c2c;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.location-instruction {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.selected-location {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.selected-location p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.selected-location strong {
+    color: #2c2c2c;
+}
+
+#selectedPlot {
+    color: #4a6b4a;
+    font-weight: bold;
+}
+
+.proceed-btn {
+    background-color: #4a6b4a;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 10px;
+}
+
+.proceed-btn:hover {
+    background-color: #3a5a3a;
+}
+
+.proceed-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .reservation-grid {
+        grid-template-columns: 210px minmax(0, 1fr) 240px;
+        gap: 12px;
+    }
+}
+
+@media (max-height: 600px), (max-width: 900px) {
+    .reservation-modal-overlay {
+        overflow-y: auto !important;
+    }
+    .reservation-modal-content {
+        height: auto;
+        min-height: 100%;
+        overflow-y: visible;
+        padding: 10px 16px 24px 16px;
+    }
+    .reservation-grid {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        gap: 16px;
+    }
+    .legend-section {
+        order: 1;
+    }
+    .reservation-map-section {
+        order: 2;
+        min-height: 380px;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .reservation-vector-map-wrapper {
+        overflow: visible !important;
+    }
+    #modalVectorMapCanvas {
+        height: auto !important;
+        width: 100% !important;
+        max-width: 540px;
+        overflow: visible !important;
+        margin: 20px auto 0 auto !important;
+    }
+    .location-title-section {
+        order: 3;
+    }
+}
+
+@media (max-width: 768px) {
+    .lawn-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .lawn-tab {
+        flex: 1 1 33.33%;
+    }
+    
+    .reservation-modal-content {
+        padding: 10px 14px;
+    }
+}
+
+
+/* =========================================================================
+   PHASE 2: INTERACTIVE PLOT SELECTOR & BOOKING MODAL
+   ========================================================================= */
+
+.plot-selector-box {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.selector-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 2px;
+}
+
+.lawn-plot-dropdown {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1.5px solid #3f593f;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #ffffff;
+    color: #1a1a1a;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.plot-quick-summary {
+    background: #ffffff;
+    border: 1px solid #dcdcd5;
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.79rem;
+    line-height: 1.3;
+}
+
+.summary-key {
+    color: #666;
+    font-weight: 500;
+}
+
+.summary-val {
+    font-weight: 700;
+    color: #222;
+}
+
+.summary-val.highlight {
+    color: #3f593f;
+    font-size: 0.86rem;
+}
+
+.summary-val.price {
+    color: #1565c0;
+    font-weight: 700;
+}
+
+.summary-val.monthly {
+    color: #d97706;
+}
+
+.proceed-to-booking-btn {
+    background-color: #3f593f;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    box-shadow: 0 3px 8px rgba(63, 89, 63, 0.2);
+}
+
+.proceed-to-booking-btn:hover:not(:disabled) {
+    background-color: #2f452f;
+    transform: translateY(-1px);
+}
+
+.proceed-to-booking-btn:disabled {
+    background-color: #a8a8a8;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.view-grid-link {
+    font-size: 0.78rem;
+    color: #3f593f;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    margin-top: 2px;
+    display: block;
+}
+
+.view-grid-link:hover {
+    text-decoration: underline;
+}
+
+/* =========================================================================
+   STEP 2 RESERVATION BOOKING FORM MODAL
+   ========================================================================= */
+
+.booking-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 5000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.booking-modal-overlay.active {
+    display: flex;
+}
+
+.booking-modal-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 680px;
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    animation: modalBounceIn 0.25s ease-out;
+}
+
+@keyframes modalBounceIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.booking-modal-header {
+    background: #2d4a36;
+    color: white;
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.booking-modal-header h2 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+}
+
+.booking-subtitle {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.booking-close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.booking-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.booking-form-body {
+    padding: 22px 28px;
+    max-height: 68vh;
+    overflow-y: auto;
+}
+
+/* Chosen Plot Banner */
+.chosen-plot-banner {
+    background: #f5f6f4;
+    border: 1.5px solid #d4dfd2;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.chosen-label, .price-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.chosen-plot-info h3 {
+    margin: 0 0 3px 0;
+    font-size: 1.4rem;
+    color: #3f593f;
+    font-weight: 800;
+}
+
+.chosen-plot-info p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #555;
+}
+
+.chosen-plot-price {
+    text-align: right;
+}
+
+.chosen-plot-price h3 {
+    margin: 0;
+    font-size: 1.45rem;
+    color: #1565c0;
+    font-weight: 800;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 20px;
+}
+
+.section-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #2b2b2b;
+    margin-bottom: 8px;
+}
+
+.section-label .required {
+    color: #dc3545;
+}
+
+/* Radio Cards (Plan Type & Payment Option) */
+.plan-type-selector, .payment-option-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.radio-card {
+    border: 1.5px solid #dcdcd5;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: all 0.2s ease;
+    background: #fafaf8;
+}
+
+.radio-card input[type="radio"] {
+    margin-top: 3px;
+    accent-color: #3f593f;
+}
+
+.radio-card.active, .radio-card:has(input:checked) {
+    border-color: #3f593f;
+    background-color: #f2f7f1;
+    box-shadow: 0 2px 6px rgba(63, 89, 63, 0.15);
+}
+
+.radio-content strong {
+    display: block;
+    font-size: 0.92rem;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+
+.radio-content span {
+    display: block;
+    font-size: 0.78rem;
+    color: #666;
+    line-height: 1.3;
+}
+
+/* Amortization Panel */
+.amortization-panel {
+    background-color: #fbfbf9;
+    border: 1.5px solid #e0dfd5;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.amort-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.amort-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.form-select, .form-input, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    background: #ffffff;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-select:focus, .form-input:focus, .form-textarea:focus {
+    border-color: #3f593f;
+}
+
+.amort-calculation-box {
+    background: #ffffff;
+    border: 1px solid #e5e5df;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.calc-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    color: #444;
+}
+
+.calc-row.highlight {
+    background: #fff8e6;
+    margin: 4px -10px -4px -10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #fed7aa;
+}
+
+.monthly-figure {
+    color: #c2410c;
+    font-size: 1.05rem;
+}
+
+/* Payment Channels Grid */
+.payment-channels-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.channel-pill {
+    padding: 8px 16px;
+    background: #f3f3f0;
+    border: 1.5px solid #d1d1ca;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.channel-pill input {
+    accent-color: #3f593f;
+    margin: 0;
+}
+
+.channel-pill:has(input:checked) {
+    background: #3f593f;
+    color: white;
+    border-color: #3f593f;
+}
+
+/* Modal Footer */
+.booking-modal-footer {
+    background: #f7f7f3;
+    padding: 16px 28px;
+    border-top: 1px solid #e0dfd5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel-booking {
+    background: #ffffff;
+    border: 1.5px solid #777;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel-booking:hover {
+    background: #f0f0f0;
+}
+
+.btn-submit-booking {
+    background: #3f593f;
+    color: white;
+    border: none;
+    padding: 10px 26px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 12px rgba(63, 89, 63, 0.25);
+}
+
+.btn-submit-booking:hover {
+    background: #2a3c2a;
+    transform: translateY(-1px);
+}
+
+
+/* ==============================================================================
+   INTERACTIVE MAP HOTSPOTS & LAWN SELECTION STYLES
+   ============================================================================== */
+.interactive-map-viewport {
+    position: relative;
+    width: 100%;
+    display: inline-block;
+}
+
+.map-hotspot-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 12;
+    transform: rotate(30deg);
+    margin-top: 50px;
+}
+
+.map-polygon {
+    fill: rgba(255, 255, 255, 0.001);
+    stroke: transparent;
+    stroke-width: 3px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.map-polygon:hover {
+    fill: rgba(212, 175, 55, 0.35) !important;
+    stroke: #d4af37 !important;
+    stroke-width: 4px !important;
+    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.8));
+}
+
+.map-polygon.active-zone {
+    fill: rgba(46, 125, 50, 0.5) !important;
+    stroke: #ffffff !important;
+    stroke-width: 5px !important;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+}
+
+.map-lawn-badge {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #2c2c2c;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    border: 2px solid #d4af37;
+    z-index: 20;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.map-lawn-badge:hover {
+    transform: translate(-50%, -50%) scale(1.25);
+    background: #d4af37;
+    color: #1a1a1a;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.9);
+}
+
+.map-lawn-badge.active-badge {
+    transform: translate(-50%, -50%) scale(1.3);
+    background: #2e7d32;
+    color: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 0 0 14px rgba(46, 125, 50, 0.9);
+}
+
+.active-lawn-quick-card {
+    background: #ffffff;
+    border: 1.5px solid #3f593f;
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    animation: fadeInQuickCard 0.25s ease-out;
+}
+
+.quick-card-badge {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+#quickCardLawnName {
+    margin: 0 0 4px 0;
+    color: #2e5a2e;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+#quickCardPlotCount {
+    margin: 0 0 10px 0;
+    font-size: 0.82rem;
+    color: #16a34a;
+    font-weight: 700;
+}
+
+.btn-open-grid-quick {
+    display: inline-block;
+    width: 100%;
+    padding: 7px 10px;
+    background: #3f593f;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    box-sizing: border-box;
+    transition: background 0.2s;
+}
+
+@keyframes fadeInQuickCard {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-open-grid-quick:hover {
+    background: #2e5a2e !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ==============================================================================
+   RESERVATION MODAL VECTOR MAP & ACTIVE ZONE HIGHLIGHTING
+   ============================================================================== */
+.reservation-map-section {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: relative !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    flex: 1 !important;
+    z-index: 5 !important;
+}
+
+.reservation-vector-map-wrapper {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 auto !important;
+    padding: 6px 10px !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#modalVectorMapCanvas {
+    position: relative !important;
+    aspect-ratio: 4 / 3 !important;
+    max-width: 68% !important;
+    max-height: 68% !important;
+    width: min(68%, calc((100vh - 200px) * 0.68 * 4 / 3)) !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 22px auto 0 auto !important;
+}
+
+#modalDashboardBgImg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    transform: translate(-50%, -50%);
+}
+
+/* Vector Elements Highlight & Active Zone in Modal & Dashboard */
+.map-vector-element {
+    transition: filter 0.25s ease, transform 0.2s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.map-vector-element:hover {
+    filter: brightness(1.18) drop-shadow(0 0 10px rgba(212, 175, 55, 0.9)) !important;
+    cursor: pointer;
+}
+
+.reservation-modal-overlay .map-vector-element.active-vector-zone,
+#modalVectorMapCanvas .map-vector-element.active-vector-zone {
+    filter: brightness(1.25) drop-shadow(0 0 12px #2e7d32) drop-shadow(0 0 20px rgba(46, 125, 50, 0.95)) drop-shadow(0 0 3px #d4af37) !important;
+    transform: scale(1.025);
+    z-index: 25 !important;
+    animation: pulseActiveVector 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulseActiveVector {
+    from {
+        filter: brightness(1.18) drop-shadow(0 0 10px rgba(46, 125, 50, 0.85)) drop-shadow(0 0 2px #d4af37) !important;
+    }
+    to {
+        filter: brightness(1.3) drop-shadow(0 0 20px rgba(76, 175, 80, 1)) drop-shadow(0 0 6px #ffffff) !important;
+    }
+}

@@ -1,0 +1,354 @@
+<!-- Featured Memorial Spaces Dedicated Showcase Page -->
+<div id="featuredSpacesPage" class="subpage-overlay">
+    <!-- Header -->
+    <header class="subpage-header">
+        <div class="subpage-logo">
+            <img src="assets/dashboard/logo half.png" alt="Zion Memorial Garden Logo">
+        </div>
+        <div class="subpage-header-actions">
+            <button type="button" class="notif-bell-btn" aria-label="Notifications" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notif-badge-count" style="display: none;">0</span>
+            </button>
+            <button type="button" class="subpage-menu-btn" id="featuredSpacesMenuBtn" title="Toggle Navigation Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <button type="button" class="subpage-user-btn" id="featuredSpacesUserBtn" title="View Profile">
+                <img src="assets/images/icons/image 6.png" alt="User Avatar" id="featuredSpacesUserAvatar">
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="subpage-main">
+        <div class="subpage-title-row">
+            <div>
+                <h1 class="subpage-title">Featured Memorial Spaces &amp; Showcase Gallery</h1>
+                <p class="subpage-subtitle">Explore Zion Memorial Garden lawn categories, dimensions, monument rules, and pricing</p>
+            </div>
+            <div class="subpage-actions-group">
+                <button type="button" class="btn-subpage-outline" id="btnFeaturedBackToDashboard">&larr; Back to Dashboard</button>
+                <button type="button" class="btn-subpage-primary" id="btnFeaturedMakeReservation">+ Make a Reservation</button>
+            </div>
+        </div>
+
+        <!-- Filter Tabs Bar -->
+        <div class="subpage-tabs-bar" style="margin-top: 10px;">
+            <button type="button" class="subpage-tab-btn active" data-spaces-filter="ALL">All Categories (6)</button>
+            <button type="button" class="subpage-tab-btn" data-spaces-filter="LAWN">Lawn Lots (3)</button>
+            <button type="button" class="subpage-tab-btn" data-spaces-filter="ESTATE">Family Estates (1)</button>
+            <button type="button" class="subpage-tab-btn" data-spaces-filter="STRUCTURE">Mausoleum &amp; Columbarium (2)</button>
+        </div>
+
+        <!-- Cards Grid -->
+        <div class="featured-spaces-grid" id="featuredSpacesGrid">
+            
+            <!-- 1. Supreme Garden -->
+            <div class="featured-space-card" data-space-type="LAWN">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imageone.png', 'Supreme Garden - Areas 4, 7 & 8: Double-tiered lawn sanctuary with manicured turf.')">
+                    <img src="assets/images/backgrounds/imageone.png" alt="Supreme Garden Lawn">
+                    <span class="featured-media-badge">Most Popular Choice</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Supreme Garden</h3>
+                    <p class="featured-card-locations">Area 4, Area 7 (Faith), Area 8 (Grace)</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Lot Dimensions</span>
+                            <strong>1.0m &times; 2.44m (2.44 sq.m.)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Vault Depth / Capacity</span>
+                            <strong>Double Tier (2 Full Burials)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Ground-Level Marble / Granite</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Included for Life</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Listing Price</span>
+                            <span class="featured-price-main">&#8369; 65,000.00</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>&#8369; 9,500.00</strong></div>
+                            <div>Monthly: <strong>&#8369; 1,480.00 / mo</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('supreme')">Reserve This Type</button>
+                        <a href="plot-details.html?section=supreme&area=4&areaName=Area%204%20-%20Supreme%20Garden" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Special Supreme Estate -->
+            <div class="featured-space-card" data-space-type="LAWN">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imagetwo.png', 'Special Supreme Estate - Areas 2, 5, 9 & 11: Raised marker lawn with ornamental borders.')">
+                    <img src="assets/images/backgrounds/imagetwo.png" alt="Special Supreme Estate">
+                    <span class="featured-media-badge" style="background: #92400e;">Premium Lawn</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Special Supreme Estate</h3>
+                    <p class="featured-card-locations">Area 5, Area 2 (Love), Area 9 (Serenity), Area 11 (Memories)</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Lot Dimensions</span>
+                            <strong>1.2m &times; 2.50m (3.00 sq.m.)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Vault Depth / Capacity</span>
+                            <strong>Double Tier + Secondary Urn Vault</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Raised Bevel Marble Marker</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Included for Life</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Listing Price</span>
+                            <span class="featured-price-main">&#8369; 85,000.00</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>&#8369; 12,500.00</strong></div>
+                            <div>Monthly: <strong>&#8369; 1,935.00 / mo</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('special-supreme')">Reserve This Type</button>
+                        <a href="plot-details.html?section=special-supreme&area=5&areaName=Area%205%20-%20Special%20Supreme%20Estate" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Single Tiered Lawn -->
+            <div class="featured-space-card" data-space-type="LAWN">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imagetree.png', 'Single Tiered Lawn - Areas 1 & 6: Classic peaceful green turf for dignified pre-need planning.')">
+                    <img src="assets/images/backgrounds/imagetree.png" alt="Single Tiered Lawn">
+                    <span class="featured-media-badge" style="background: #166534;">Accessible &amp; Dignified</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Single Tiered Lawn</h3>
+                    <p class="featured-card-locations">Area 1 (Single Tiered), Area 6 (Peace)</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Lot Dimensions</span>
+                            <strong>1.0m &times; 2.44m (2.44 sq.m.)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Vault Depth / Capacity</span>
+                            <strong>Single Depth (1 Full Interment)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Flat Marble Inscription Tablet</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Included for Life</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Listing Price</span>
+                            <span class="featured-price-main">&#8369; 45,000.00</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>&#8369; 6,500.00</strong></div>
+                            <div>Monthly: <strong>&#8369; 1,025.00 / mo</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('single-teired')">Reserve This Type</button>
+                        <a href="plot-details.html?section=single-teired&area=1&areaName=Area%201%20-%20Single%20Tiered%20Lawn" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Family Estate Jr. & Prestige -->
+            <div class="featured-space-card" data-space-type="ESTATE">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imagefour.png', 'Family Estate - Area 3: Private multi-lot sanctuary bordered by ornamental shrubs and stone benches.')">
+                    <img src="assets/images/backgrounds/imagefour.png" alt="Family Estate">
+                    <span class="featured-media-badge" style="background: #1e3a29;">Family Heritage</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Family Estate Jr. &amp; Prestige</h3>
+                    <p class="featured-card-locations">Area 3 - Lawn of Hope (Family Estate)</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Lot Cluster</span>
+                            <strong>4 to 8 Contiguous Lots (Up to 20 sq.m.)</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Vault Depth / Capacity</span>
+                            <strong>Up to 8–16 Interments + Memorial Urns</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Upright Granite Monument &amp; Bench</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Dedicated Estate Grounds Care</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Starting Contract</span>
+                            <span class="featured-price-main">&#8369; 280,000.00</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>&#8369; 42,000.00</strong></div>
+                            <div>Terms: <strong>Up to 5 Years</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('family-estate')">Reserve Family Estate</button>
+                        <a href="plot-details.html?section=family-estate&area=3&areaName=Area%203%20-%20Lawn%20of%20Hope%20(Family%20Estate)" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Mausoleum Court -->
+            <div class="featured-space-card" data-space-type="STRUCTURE">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imagefive.png', 'Mausoleum Court - Area 12: Private architectural chapel and above-ground crypt chamber.')">
+                    <img src="assets/images/backgrounds/imagefive.png" alt="Mausoleum Court">
+                    <span class="featured-media-badge" style="background: #3b0764;">Grand Legacy</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Mausoleum Court</h3>
+                    <p class="featured-card-locations">Area 12 - Mausoleum Court</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Architecture</span>
+                            <strong>Private Engineered Sarcophagus Court</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Vault Depth / Capacity</span>
+                            <strong>Multi-Crypt Chambers &amp; Wall Alcoves</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Architectural Marble &amp; Cast Bronze</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Private Architectural Maintenance</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Custom Valuation</span>
+                            <span class="featured-price-main">&#8369; 450,000.00+</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>20% Initial</strong></div>
+                            <div>Custom Amortization</div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('mausoleum')">Reserve Mausoleum</button>
+                        <a href="plot-details.html?section=mausoleum&area=12&areaName=Area%2012%20-%20Mausoleum%20Court" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Condominium Niches & Wall Vaults -->
+            <div class="featured-space-card" data-space-type="STRUCTURE">
+                <div class="featured-card-media" onclick="openFeaturedLightbox('assets/images/backgrounds/imagesix.png', 'Condominium Block A - Area 10: Covered columbarium niches with polished granite plates.')">
+                    <img src="assets/images/backgrounds/imagesix.png" alt="Condominium Block A">
+                    <span class="featured-media-badge" style="background: #0369a1;">Modern Columbaria</span>
+                    <span class="featured-zoom-hint">Click to enlarge</span>
+                </div>
+                <div class="featured-card-body">
+                    <h3 class="featured-card-title">Condominium Niches &amp; Vaults</h3>
+                    <p class="featured-card-locations">Area 10 - Condominium Block A</p>
+
+                    <div class="featured-specs-list">
+                        <div class="featured-spec-item">
+                            <span>Niche Dimensions</span>
+                            <strong>40cm &times; 40cm &times; 60cm Columbarium</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Urn / Vault Capacity</span>
+                            <strong>Up to 2–4 Cremated Remains</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Permitted Monument</span>
+                            <strong>Polished Black Granite &amp; Photo Cameo</strong>
+                        </div>
+                        <div class="featured-spec-item">
+                            <span>Perpetual Care Fund</span>
+                            <strong>Included for Life</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-price-box">
+                        <div>
+                            <span style="font-size: 0.68rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Listing Price</span>
+                            <span class="featured-price-main">&#8369; 35,000.00</span>
+                        </div>
+                        <div class="featured-price-sub">
+                            <div>Down Payment: <strong>&#8369; 5,000.00</strong></div>
+                            <div>Monthly: <strong>&#8369; 800.00 / mo</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="featured-card-actions">
+                        <button type="button" class="btn-featured-primary" onclick="reserveSpecificCategory('condominium')">Reserve Niche</button>
+                        <a href="plot-details.html?section=condominium&area=10&areaName=Area%2010-%20Condominium%20Block%20A" class="btn-featured-outline">View on Map</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="featuredPhotoLightboxModal" class="featured-lightbox-overlay">
+        <button type="button" class="featured-lightbox-close" id="closeFeaturedLightboxBtn" aria-label="Close Lightbox">&times;</button>
+        <div class="featured-lightbox-main">
+            <img id="featuredLightboxImg" src="assets/images/backgrounds/imageone.png" alt="Featured Space View">
+        </div>
+        <div class="featured-lightbox-caption" id="featuredLightboxCaption">Zion Memorial Garden Grounds</div>
+        <div class="featured-lightbox-thumbnails" id="featuredLightboxThumbnails">
+            <!-- Dynamically populated thumbnails -->
+        </div>
+    </div>
+</div>
+

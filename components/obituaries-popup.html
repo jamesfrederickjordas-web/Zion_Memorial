@@ -1,0 +1,59 @@
+<!-- Obituaries Popup -->
+<div id="obituariesPopup" class="page-popup-overlay">
+    <div class="page-popup-content" style="max-height: 92vh; overflow-y: auto;">
+        <!-- Header -->
+        <header>
+            <div class="header-content container">
+                <img src="assets/images/logos/newlogo.png" alt="Logo" class="main-logo">
+                
+                <div class="logo-and-links">
+                    <nav>
+                        <ul>
+                            <li><a href="#" class="popup-home-link">Home</a></li>
+                            <li><a href="#" class="popup-about-link">About Us</a></li>
+                            <li><a href="#" class="popup-virtual-link">Virtual Tours</a></li>
+                            <li><a href="#" class="popup-obituaries-link active-nav">Obituaries</a></li>
+                            <li><a href="#" class="popup-contact-link">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="header-buttons">
+                    <a href="#" class="btn btn-register popup-register-btn">Register</a>
+                    <a href="#" class="btn btn-login popup-login-btn">Login</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Yellow Line Divider -->
+        <div class="yellow-line-divider"></div>
+
+        <!-- Obituaries Content Section -->
+        <section class="container" style="padding: 30px 20px 50px 20px;">
+            <div style="text-align: center; max-width: 680px; margin: 0 auto 30px auto;">
+                <span style="display: inline-block; padding: 4px 14px; background: #e8f5e9; color: #2d4a36; font-size: 0.78rem; font-weight: 700; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;">Sanctuary of Remembrance</span>
+                <h1 style="color: #1e3a29; font-size: 2rem; font-weight: 800; margin: 0 0 10px 0;">Obituaries &amp; Memorial Tributes</h1>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.6; margin: 0;">Honoring the cherished memories, lives, and legacies of those laid to rest in Zion Memorial Garden. Search by name to view resting place details.</p>
+            </div>
+
+            <!-- Search Filter Bar -->
+            <div style="max-width: 600px; margin: 0 auto 32px auto; display: flex; gap: 10px;">
+                <input type="text" id="obituarySearchInput" placeholder="Search loved ones by name or year..." style="flex: 1; padding: 12px 18px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                <button type="button" id="obituarySearchBtn" style="padding: 12px 24px; background: #2d4a36; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Search</button>
+            </div>
+
+            <!-- Obituaries Grid -->
+            <div id="obituariesLoading" style="text-align: center; padding: 40px; color: #64748b;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">&#127807;</div>
+                <p>Loading memorial tributes...</p>
+            </div>
+
+            <div id="obituariesEmpty" style="display: none; text-align: center; padding: 60px 20px; background: #fdfdf9; border-radius: 12px; border: 1px dashed #c2cfc2; max-width: 500px; margin: 0 auto;">
+                <div style="font-size: 2.2rem; margin-bottom: 8px;">&#128367;</div>
+                <h3 style="color: #334155; margin: 0 0 6px 0;">No Records Found</h3>
+                <p style="color: #64748b; font-size: 0.9rem; margin: 0;">Try searching with a different name or browse all memorials.</p>
+            </div>
+
+            <div id="obituariesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;"></div>
+        </section>
+    </div>
+</div>

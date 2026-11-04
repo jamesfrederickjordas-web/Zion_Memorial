@@ -1,0 +1,302 @@
+<!-- My Reservation Page Modal -->
+<div id="myReservationPage" class="my-reservation-page-overlay">
+    <!-- Header -->
+    <header class="my-reservation-page-header">
+        <div class="my-reservation-page-logo">
+            <img src="assets/dashboard/logo half.png" alt="Logo">
+        </div>
+        <div class="my-reservation-page-icons">
+            <button type="button" class="notif-bell-btn" aria-label="Notifications" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notif-badge-count" style="display: none;">0</span>
+            </button>
+            <button class="my-reservation-menu-btn" id="myReservationMenuBtn" title="Toggle Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <button class="my-reservation-user-btn" id="myReservationUserBtn" title="View Profile">
+                <img src="assets/images/icons/image 6.png" alt="User" id="myReservationUserAvatar">
+            </button>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="my-reservation-content">
+        <div class="my-reservation-header">
+            <h1>My Reservation</h1>
+            <p>View and Manage your plot reservation</p>
+        </div>
+
+        <!-- Main Reservation Card matching Figma Frame 120_91 -->
+        <div class="my-reservation-box">
+            <div class="my-reservation-box-header">
+                <h2>My Reservation</h2>
+                <button class="quick-reserve-btn" id="headerReservePlotBtn">+ Reserve Another Plot</button>
+            </div>
+            
+            <!-- Table Container (Shown when reservations exist) -->
+            <div id="reservationTableContainer" class="reservation-table-wrapper" style="display: none;">
+                <table class="reservation-table">
+                    <thead>
+                        <tr>
+                            <th>RESERVATION #</th>
+                            <th>PLOT LOCATION</th>
+                            <th>PLAN TYPE</th>
+                            <th>PAYMENT</th>
+                            <th>INTERRED / DECEASED</th>
+                            <th>STATUS</th>
+                            <th>DATE</th>
+                            <th style="text-align: center;">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reservationTableBody">
+                        <!-- Populated dynamically via my-reservation-page.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Container (Shown when 0 reservations) -->
+            <div id="reservationEmptyState" class="my-reservation-box-content">
+                <img src="assets/images/icons/calendar.png" alt="Calendar" class="calendar-icon">
+                <p class="no-reservation-text">You don't have any reservations yet.</p>
+                <button class="reserve-plot-btn" id="reservePlotBtn">+ Reserve a Plot</button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="reservationLoadingState" class="reservation-loading-state" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading your reservations...</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MY RESERVATION DETAILS MODAL (Matching Figma Frame 213_2) -->
+<!-- ========================================================================= -->
+<div id="reservationDetailsModal" class="reservation-details-modal-overlay">
+    <div class="reservation-details-card">
+        <div class="details-header">
+            <div>
+                <h2>Reservation Details</h2>
+                <p class="details-subtitle" id="detailResNumberHeader">ZMG-20260410-001</p>
+            </div>
+            <button type="button" class="close-details-btn" id="closeReservationDetailsBtn">&times;</button>
+        </div>
+
+        <div class="details-body">
+            <!-- Status & Plan Badge Ribbon -->
+            <div class="details-ribbon">
+                <div class="ribbon-item">
+                    <span class="ribbon-label">Status</span>
+                    <span id="detailStatusBadge" class="badge-status-pending">PENDING</span>
+                </div>
+                <div class="ribbon-item">
+                    <span class="ribbon-label">Plan Type</span>
+                    <span id="detailPlanBadge" class="badge-plan-preneed">PRE-NEED</span>
+                </div>
+                <div class="ribbon-item">
+                    <span class="ribbon-label">Payment Method</span>
+                    <span id="detailPaymentBadge" class="badge-payment-installment">INSTALLMENT</span>
+                </div>
+                <div class="ribbon-item">
+                    <span class="ribbon-label">Reservation Date</span>
+                    <strong id="detailDateDisplay">April 10, 2026</strong>
+                </div>
+            </div>
+
+            <!-- Grid of Detailed Information -->
+            <div class="details-grid">
+                <!-- Plot Location Card -->
+                <div class="details-section-card">
+                    <h3>Plot Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Plot ID:</span>
+                        <span class="detail-val highlight" id="detailPlotId">SPB54</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Section / Area:</span>
+                        <span class="detail-val" id="detailPlotSection">Area 2 - Lawn of Love</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Lawn Category:</span>
+                        <span class="detail-val" id="detailPlotCategory">Special Supreme</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Coordinates / Grid:</span>
+                        <span class="detail-val" id="detailPlotGrid">Row 5, Col 4</span>
+                    </div>
+                </div>
+
+                <!-- Financial & Amortization Card -->
+                <div class="details-section-card">
+                    <h3>Financial & Amortization Plan</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Total Price:</span>
+                        <span class="detail-val price-total" id="detailTotalPrice">₱ 71,486.37</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Down Payment:</span>
+                        <span class="detail-val" id="detailDownPayment">₱ 10,200.00</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Installment Term:</span>
+                        <span class="detail-val" id="detailTermMonths">60 Months (5 Years)</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Monthly Amortization:</span>
+                        <span class="detail-val price-monthly" id="detailMonthlyAmortization">₱ 1,191.44 / mo</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Total Paid So Far:</span>
+                        <span class="detail-val" id="detailTotalPaid">₱ 0.00</span>
+                    </div>
+                    <div class="detail-row balance-row">
+                        <span class="detail-label">Remaining Balance:</span>
+                        <span class="detail-val balance-total" id="detailBalance">₱ 71,486.37</span>
+                    </div>
+                </div>
+
+                <!-- Interred Deceased & Plot Capacity Section Card -->
+                <div class="details-section-card" style="grid-column: 1 / -1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e5e5e0; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin: 0; border-bottom: none; padding-bottom: 0;">Interred Deceased &amp; Plot Capacity</h3>
+                        <span id="detailPlotCapacityBadge" style="font-size: 0.8rem; font-weight: 700; color: #2d4a36; background: #e8eee8; padding: 4px 10px; border-radius: 4px;">0 / 1 Slots Assigned</span>
+                    </div>
+                    <div id="detailDeceasedList" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Rendered dynamically -->
+                    </div>
+                    <div style="margin-top: 14px; text-align: right;">
+                        <button type="button" class="btn-action-details" id="detailAddDeceasedBtn" style="background: #2d4a36; color: #ffffff; border-color: #2d4a36; padding: 6px 14px; font-size: 0.82rem;">+ Add Deceased to Plot</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes & Remarks -->
+            <div class="details-notes-card" id="detailNotesContainer" style="display: none;">
+                <h4>Notes & Special Instructions</h4>
+                <p id="detailNotesText">-</p>
+            </div>
+        </div>
+
+        <div class="details-footer">
+            <button type="button" class="btn-print-receipt" id="printReceiptBtn">
+                Print Receipt Summary
+            </button>
+            <button type="button" class="btn-close-details" id="dismissReservationDetailsBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     CLIENT MANAGE INTERRED DECEASED MODAL
+     Allows clients to view, add, and edit loved ones interred in their reserved plots
+     ========================================================================= -->
+<div id="clientManageDeceasedModal" class="reservation-details-modal-overlay">
+    <div class="reservation-details-card" style="max-width: 680px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; border-radius: 4px;">
+        <div class="details-header" style="background: #2d4a36; color: #ffffff; padding: 18px 24px;">
+            <div>
+                <h2 style="font-size: 1.35rem; margin: 0 0 3px 0;">Manage Interred Deceased</h2>
+                <p class="details-subtitle" id="cmdModalSubtitle" style="font-size: 0.85rem; color: #e8eee8; margin: 0;">Plot: <span id="cmdModalPlotCode">-</span> &bull; <span id="cmdModalCategory">-</span></p>
+            </div>
+            <button type="button" class="close-details-btn" id="closeCmdModalBtn">&times;</button>
+        </div>
+
+        <div class="details-body" style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+            <!-- Capacity Summary Box -->
+            <div id="cmdCapacityBanner" style="background: #f4f7f4; border: 1.5px solid #c2cfc2; border-radius: 4px; padding: 12px 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700; display: block;">Plot Space Capacity</span>
+                    <strong id="cmdCapacityText" style="color: #2d4a36; font-size: 0.95rem;">Loading plot capacity...</strong>
+                </div>
+                <span id="cmdCapacityPill" style="padding: 4px 12px; border-radius: 2px; font-weight: 700; font-size: 0.8rem; background: #e8eee8; color: #2d4a36;">0 / 1 Slots</span>
+            </div>
+
+            <!-- Existing Deceased Records on this Plot -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; font-size: 0.92rem; color: #2d4a36; text-transform: uppercase; font-weight: 700;">Assigned Loved Ones on this Plot</h4>
+                    <button type="button" id="cmdAddNewBtn" class="btn-action-details" style="font-size: 0.78rem; padding: 4px 12px; background: #2d4a36; color: #ffffff; border-color: #2d4a36; border-radius: 2px; display: none;">+ Add Another Deceased</button>
+                </div>
+                <div id="cmdDeceasedListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Deceased items rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Form: Add / Edit Deceased Details -->
+            <div id="cmdFormContainer" style="background: #fafaf8; border: 1.5px solid #d4dfd2; border-radius: 4px; padding: 16px;">
+                <h4 id="cmdFormTitle" style="margin: 0 0 12px 0; color: #2d4a36; font-size: 0.95rem; font-weight: 700;">Add Deceased to this Plot</h4>
+                
+                <form id="clientManageDeceasedForm">
+                    <input type="hidden" id="cmdRecordId" value="">
+                    <input type="hidden" id="cmdSpaceId" value="">
+                    <input type="hidden" id="cmdReservationId" value="">
+
+                    <!-- 3 Name Inputs (First, Middle, Last) -->
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Deceased Full Name *</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                            <div>
+                                <input type="text" id="cmdFirstName" class="form-input" placeholder="First Name *" required style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                            </div>
+                            <div>
+                                <input type="text" id="cmdMiddleName" class="form-input" placeholder="Middle Name" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                            </div>
+                            <div>
+                                <input type="text" id="cmdLastName" class="form-input" placeholder="Last Name *" required style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gender and Dates Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <div>
+                            <label for="cmdGender" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Gender</label>
+                            <select id="cmdGender" class="form-select" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cmdDeathDate" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Date of Death</label>
+                            <input type="date" id="cmdDeathDate" class="form-input" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                        </div>
+                        <div>
+                            <label for="cmdBurialDate" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Date of Burial</label>
+                            <input type="date" id="cmdBurialDate" class="form-input" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                        </div>
+                    </div>
+
+                    <!-- Epitaph -->
+                    <div style="margin-bottom: 16px;">
+                        <label for="cmdEpitaph" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Epitaph / Memorial Inscription</label>
+                        <input type="text" id="cmdEpitaph" class="form-input" placeholder="e.g. In Loving Memory, Forever in Our Hearts" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
+                        <button type="button" id="cmdCancelEditBtn" style="display: none; background: #ffffff; color: #555; border: 1px solid #ccc; padding: 8px 16px; border-radius: 2px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Cancel Edit</button>
+                        <button type="submit" id="cmdSubmitBtn" style="background: #2d4a36; color: #ffffff; border: none; padding: 8px 20px; border-radius: 2px; font-size: 0.88rem; font-weight: 700; cursor: pointer;">Save Deceased Record</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Capacity Reached Notice (Shown when all slots are full and not editing) -->
+            <div id="cmdCapacityFullNotice" style="display: none; background: #fdfdf9; border: 1.5px solid #d4af37; border-radius: 4px; padding: 14px 18px; text-align: center;">
+                <strong style="color: #b45309; display: block; margin-bottom: 4px;">All Plot Slots Occupied</strong>
+                <p style="margin: 0; font-size: 0.85rem; color: #555;">This plot has reached its maximum slot capacity for this category. To modify a deceased, click &ldquo;Edit&rdquo; above.</p>
+            </div>
+        </div>
+
+        <div class="details-footer" style="padding: 14px 24px; background: #f5f1e8; border-top: 1.5px solid #d4af37; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn-close-details" id="dismissCmdModalBtn" style="background: #2d4a36; border-radius: 2px;">Done</button>
+        </div>
+    </div>
+</div>
+

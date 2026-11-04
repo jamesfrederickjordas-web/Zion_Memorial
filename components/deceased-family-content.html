@@ -1,0 +1,117 @@
+<!-- Deceased Family Dedicated Page -->
+<div id="deceasedFamilyPage" class="subpage-overlay">
+    <!-- Header -->
+    <header class="subpage-header">
+        <div class="subpage-logo">
+            <img src="assets/dashboard/logo half.png" alt="Zion Memorial Garden Logo">
+        </div>
+        <div class="subpage-header-actions">
+            <button type="button" class="notif-bell-btn" aria-label="Notifications" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notif-badge-count" style="display: none;">0</span>
+            </button>
+            <button type="button" class="subpage-menu-btn" id="deceasedFamilyMenuBtn" title="Toggle Navigation Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <button type="button" class="subpage-user-btn" id="deceasedFamilyUserBtn" title="View Profile">
+                <img src="assets/images/icons/image 6.png" alt="User Avatar" id="deceasedFamilyUserAvatar">
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="subpage-main">
+        <div class="subpage-title-row">
+            <div>
+                <h1 class="subpage-title">Deceased Family</h1>
+                <p class="subpage-subtitle">Registry of interred family members resting in Zion Memorial Garden</p>
+            </div>
+            <div class="subpage-actions-group">
+                <button type="button" class="btn-subpage-outline" id="dfViewMyReservationsBtn">View Plot Reservations</button>
+                <button type="button" class="btn-subpage-primary" id="makeDeceasedFamilyReservationBtn">+ Reserve Plot</button>
+            </div>
+        </div>
+
+        <!-- Summary KPI Cards (Flat, No Gradient, 4px Radius) -->
+        <div class="subpage-kpi-row">
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">ACCOUNT STATUS</span>
+                <div class="subpage-kpi-value" id="dfAccountStatus" style="color: #166534;">ACTIVE</div>
+                <div class="subpage-kpi-meta" id="dfMemberSince">Member Since: Loading...</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">RESERVED PLOTS</span>
+                <div class="subpage-kpi-value" id="dfActivePlotsCount" style="color: #1e3a29;">0 Plots</div>
+                <div class="subpage-kpi-meta" id="dfPlotsSummaryText">Loading plot records...</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">INTERRED FAMILY MEMBERS</span>
+                <div class="subpage-kpi-value" id="dfInterredCount" style="color: #1e3a29;">0 Interred</div>
+                <div class="subpage-kpi-meta" id="dfInterredSummary">Assigned to reserved spaces</div>
+            </div>
+
+            <div class="subpage-kpi-card">
+                <span class="subpage-kpi-label">FINANCIAL BALANCE</span>
+                <div class="subpage-kpi-value" id="dfRemainingBalance" style="color: #92400e;">&#8369; 0.00</div>
+                <div class="subpage-kpi-meta">
+                    <span id="dfPaymentStatusBadge" style="display: inline-block; padding: 2px 6px; background: #f1f5f9; color: #475569; font-weight: 700; border-radius: 3px;">Up to Date</span>
+                    &bull; <a href="#" id="dfOpenPaymentHistoryLink" style="color: #2d4a36; text-decoration: underline; font-size: 0.78rem;">Payment History</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Memorial Registry Table Container -->
+        <div class="subpage-box">
+            <div class="subpage-box-header">
+                <div class="subpage-box-title-group">
+                    <h2>Interred Family Registry</h2>
+                    <span class="subpage-badge" id="dfRegistryCountBadge">0 Records</span>
+                </div>
+                <div class="subpage-box-controls">
+                    <input type="text" id="dfSearchInput" class="subpage-search-input" placeholder="Search by name, plot code, or section...">
+                    <button type="button" class="btn-subpage-outline" id="dfBtnManagePlots">+ Manage Plot Deceased</button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="dfDeceasedLoading" class="subpage-state-wrapper">
+                <p>Loading memorial registry records...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="dfDeceasedEmpty" class="subpage-state-wrapper" style="display: none;">
+                <h3>No Interred Deceased Registered Yet</h3>
+                <p>Your plot reservations are recorded. When ready, you can register and assign deceased records to your plots anytime.</p>
+                <button type="button" class="btn-subpage-primary" id="dfEmptyAddBtn" style="margin-top: 14px;">Assign Loved One to Plot</button>
+            </div>
+
+            <!-- Table Container -->
+            <div id="dfTableContainer" class="subpage-table-wrapper" style="display: none;">
+                <table class="subpage-table">
+                    <thead>
+                        <tr>
+                            <th>DECEASED FULL NAME</th>
+                            <th>PLOT CODE</th>
+                            <th>SECTION</th>
+                            <th>LAWN CATEGORY</th>
+                            <th>LIFESPAN</th>
+                            <th>INTERMENT DATE</th>
+                            <th>EPITAPH / INSCRIPTION</th>
+                            <th style="text-align: center;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dfDeceasedTableBody">
+                        <!-- Populated via deceased-family-page.js -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>

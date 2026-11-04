@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 520" width="400" height="520">
+  <defs>
+    <linearGradient id="gcashBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0057ff"/>
+      <stop offset="100%" stop-color="#003bb5"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-5%" width="120%" height="115%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="400" height="520" rx="24" fill="#ffffff" filter="url(#cardShadow)"/>
+
+  <!-- Top Brand Banner -->
+  <path d="M 0 24 C 0 10.7 10.7 0 24 0 L 376 0 C 389.3 0 400 10.7 400 24 L 400 90 L 0 90 Z" fill="url(#gcashBlue)"/>
+
+  <!-- GCash Logo text & badge -->
+  <text x="200" y="48" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="24" fill="#ffffff" letter-spacing="1">GCash</text>
+  <text x="200" y="74" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="600" font-size="12" fill="#e0e7ff" letter-spacing="2">SCAN TO PAY</text>
+
+  <!-- Merchant Container -->
+  <text x="200" y="122" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="16" fill="#0f172a">ZION MEMORIAL GARDEN INC.</text>
+  <text x="200" y="142" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="600" font-size="13" fill="#475569">Mobile: 0945 187 6774</text>
+
+  <!-- QR Frame Outer -->
+  <rect x="60" y="160" width="280" height="280" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+
+  <!-- QR Code Matrix Simulation with Accurate Finder Patterns -->
+  <g fill="#0f172a">
+    <!-- Top-Left Finder Pattern -->
+    <rect x="80" y="180" width="60" height="60" rx="8" fill="#0057ff"/>
+    <rect x="90" y="190" width="40" height="40" rx="4" fill="#ffffff"/>
+    <rect x="98" y="198" width="24" height="24" rx="3" fill="#0057ff"/>
+
+    <!-- Top-Right Finder Pattern -->
+    <rect x="260" y="180" width="60" height="60" rx="8" fill="#0057ff"/>
+    <rect x="270" y="190" width="40" height="40" rx="4" fill="#ffffff"/>
+    <rect x="278" y="198" width="24" height="24" rx="3" fill="#0057ff"/>
+
+    <!-- Bottom-Left Finder Pattern -->
+    <rect x="80" y="360" width="60" height="60" rx="8" fill="#0057ff"/>
+    <rect x="90" y="370" width="40" height="40" rx="4" fill="#ffffff"/>
+    <rect x="98" y="378" width="24" height="24" rx="3" fill="#0057ff"/>
+
+    <!-- Alignment pattern -->
+    <rect x="270" y="370" width="32" height="32" rx="4" fill="#0f172a"/>
+    <rect x="278" y="378" width="16" height="16" fill="#ffffff"/>
+    <rect x="282" y="382" width="8" height="8" fill="#0f172a"/>
+
+    <!-- Timing Patterns -->
+    <rect x="150" y="204" width="100" height="8" fill="#0f172a"/>
+    <rect x="106" y="250" width="8" height="100" fill="#0f172a"/>
+
+    <!-- Data Pattern Elements (A realistic structured QR grid) -->
+    <rect x="152" y="180" width="12" height="12" rx="2"/>
+    <rect x="172" y="180" width="12" height="12" rx="2"/>
+    <rect x="200" y="180" width="12" height="12" rx="2"/>
+    <rect x="228" y="180" width="12" height="12" rx="2"/>
+
+    <rect x="160" y="224" width="12" height="12" rx="2"/>
+    <rect x="184" y="224" width="12" height="12" rx="2"/>
+    <rect x="212" y="224" width="12" height="12" rx="2"/>
+    <rect x="240" y="224" width="12" height="12" rx="2"/>
+
+    <rect x="80" y="260" width="12" height="12" rx="2"/>
+    <rect x="124" y="260" width="12" height="12" rx="2"/>
+    <rect x="148" y="260" width="12" height="12" rx="2"/>
+    <rect x="236" y="260" width="12" height="12" rx="2"/>
+    <rect x="260" y="260" width="12" height="12" rx="2"/>
+    <rect x="288" y="260" width="12" height="12" rx="2"/>
+    <rect x="308" y="260" width="12" height="12" rx="2"/>
+
+    <rect x="80" y="284" width="12" height="12" rx="2"/>
+    <rect x="124" y="284" width="12" height="12" rx="2"/>
+    <rect x="148" y="284" width="12" height="12" rx="2"/>
+    <rect x="240" y="284" width="12" height="12" rx="2"/>
+    <rect x="268" y="284" width="12" height="12" rx="2"/>
+    <rect x="300" y="284" width="12" height="12" rx="2"/>
+
+    <rect x="80" y="308" width="12" height="12" rx="2"/>
+    <rect x="124" y="308" width="12" height="12" rx="2"/>
+    <rect x="148" y="308" width="12" height="12" rx="2"/>
+    <rect x="236" y="308" width="12" height="12" rx="2"/>
+    <rect x="260" y="308" width="12" height="12" rx="2"/>
+    <rect x="284" y="308" width="12" height="12" rx="2"/>
+    <rect x="308" y="308" width="12" height="12" rx="2"/>
+
+    <rect x="80" y="332" width="12" height="12" rx="2"/>
+    <rect x="124" y="332" width="12" height="12" rx="2"/>
+    <rect x="152" y="332" width="12" height="12" rx="2"/>
+    <rect x="176" y="332" width="12" height="12" rx="2"/>
+    <rect x="224" y="332" width="12" height="12" rx="2"/>
+    <rect x="248" y="332" width="12" height="12" rx="2"/>
+    <rect x="292" y="332" width="12" height="12" rx="2"/>
+
+    <rect x="152" y="360" width="12" height="12" rx="2"/>
+    <rect x="180" y="360" width="12" height="12" rx="2"/>
+    <rect x="208" y="360" width="12" height="12" rx="2"/>
+    <rect x="236" y="360" width="12" height="12" rx="2"/>
+
+    <rect x="164" y="384" width="12" height="12" rx="2"/>
+    <rect x="192" y="384" width="12" height="12" rx="2"/>
+    <rect x="220" y="384" width="12" height="12" rx="2"/>
+    <rect x="248" y="384" width="12" height="12" rx="2"/>
+
+    <rect x="152" y="408" width="12" height="12" rx="2"/>
+    <rect x="176" y="408" width="12" height="12" rx="2"/>
+    <rect x="204" y="408" width="12" height="12" rx="2"/>
+    <rect x="232" y="408" width="12" height="12" rx="2"/>
+    <rect x="260" y="408" width="12" height="12" rx="2"/>
+    <rect x="308" y="408" width="12" height="12" rx="2"/>
+
+    <!-- Center GCash/Zion Badge -->
+    <rect x="174" y="274" width="52" height="52" rx="12" fill="#ffffff" stroke="#0057ff" stroke-width="3"/>
+    <circle cx="200" cy="300" r="18" fill="#0057ff"/>
+    <text x="200" y="307" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="18" fill="#ffffff">G</text>
+  </g>
+
+  <!-- Bottom Instruction Footer -->
+  <text x="200" y="472" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="700" font-size="13" fill="#1e3a29">Zion Memorial Garden Cashier / E-Wallet</text>
+  <text x="200" y="492" text-anchor="middle" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="500" font-size="11" fill="#64748b">Verify recipient name before confirming payment</text>
+</svg>

@@ -1,0 +1,118 @@
+<!-- Profile Modal -->
+<div id="profileModal" class="profile-modal-overlay">
+    <!-- Profile Header with Logo and Icons -->
+    <header class="profile-modal-header">
+        <div class="profile-modal-logo">
+            <img src="assets/dashboard/logo half.png" alt="Logo">
+        </div>
+        <div class="profile-modal-icons">
+            <button type="button" class="notif-bell-btn" aria-label="Notifications" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span class="notif-badge-count" style="display: none;">0</span>
+            </button>
+            <button class="profile-menu-btn" id="profileMenuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <button class="profile-user-btn" id="profileUserBtn">
+                <img src="assets/images/icons/image 6.png" alt="User">
+            </button>
+        </div>
+    </header>
+
+    <div class="profile-modal-content">
+        <div class="profile-header">
+            <h2>Profile</h2>
+            <p class="profile-subtitle">Manage your personal information and account settings</p>
+        </div>
+
+        <div class="profile-grid">
+            <!-- Left Section - Personal Information -->
+            <div class="profile-info-section">
+                <div class="info-card">
+                    <h3>Personal Information</h3>
+                    
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>FULL NAME</label>
+                            <p id="profileFullName">-</p>
+                        </div>
+                        <div class="info-field">
+                            <label>USERNAME</label>
+                            <p id="profileUsername">-</p>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>EMAIL ADDRESS</label>
+                            <p id="profileEmail">-</p>
+                        </div>
+                        <div class="info-field">
+                            <label>PHONE NUMBER</label>
+                            <p id="profilePhone">-</p>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>ACCOUNT STATUS</label>
+                            <span class="status-badge-active" id="profileAccountBadge">ACTIVE</span>
+                        </div>
+                        <div class="info-field">
+                            <label>VERIFICATION STATUS</label>
+                            <span class="status-badge-verified">VERIFIED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Account Activity</h3>
+                    
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>MEMBER SINCE</label>
+                            <p id="profileMemberSince">October, 2026</p>
+                        </div>
+                        <div class="info-field">
+                            <label>LAST LOGIN</label>
+                            <p id="profileLastLogin">Today</p>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>LAST UPDATED</label>
+                            <p id="profileLastUpdated">Today</p>
+                        </div>
+                        <div class="info-field">
+                            <label>LOGIN ATTEMPTS</label>
+                            <p>0 failed attempts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Section - Profile Picture & Actions -->
+            <div class="profile-picture-section">
+                <div class="profile-card">
+                    <div class="profile-avatar">
+                        <img src="assets/images/icons/image 6.png" alt="Profile Picture" id="profilePicture">
+                    </div>
+                    <input type="file" id="profilePictureInput" accept="image/*" style="display: none;">
+                    <h3 id="profileDisplayName"></h3>
+                    <p class="profile-username-display" id="profileUsernameDisplay"></p>
+                    <span class="user-role-badge">User</span>
+                    
+                    <button class="profile-action-btn edit-btn" id="editProfileBtn">Edit Profile</button>
+                    <button class="profile-action-btn password-btn" id="changePasswordBtn">Change Password</button>
+                    <button class="back-to-dashboard-btn" id="backToDashboard">Back to Dashboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

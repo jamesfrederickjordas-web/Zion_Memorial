@@ -1,0 +1,64 @@
+<div id="registerModal" class="modal-overlay">
+    <div class="register-card" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
+        <button type="button" class="close-btn register-close" aria-label="Close registration modal">&times;</button>
+        
+        <div class="reg-left">
+            <img src="assets/images/logos/newlogo.png" alt="Zion Memorial Garden Logo" class="reg-logo-overlay">
+        </div>
+        
+        <div class="reg-right">
+            <h2 id="registerModalTitle">Create Account</h2>
+            <form id="newRegisterForm" autocomplete="on">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label for="regFullName">Full Name</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 58.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="text" id="regFullName" placeholder="Enter your full name" required autocomplete="name">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="regUsername">Username</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 63.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="text" id="regUsername" placeholder="Create a username" required autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="regEmail">Email Address</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 64.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="email" id="regEmail" placeholder="Enter your email" required autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="regPhone">Phone Number</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 62.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="tel" id="regPhone" placeholder="Enter 11-digit phone number" maxlength="11" pattern="[0-9]{11}" autocomplete="tel">
+                        </div>
+                        <span class="error-message" id="phoneError" style="display: none; color: #dc3545; font-size: 13px; font-weight: 600; margin-top: 4px; text-align: left;">Numbers only (11 digits)</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="regPassword">Password</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 61.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="password" id="regPassword" placeholder="Enter your password" required autocomplete="new-password">
+                            <img src="assets/images/icons/image 66.png" alt="Toggle View" class="toggle-password" title="Show/Hide password">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="regConfirmPassword">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <img src="assets/images/icons/image 60.png" alt="" class="input-icon" aria-hidden="true">
+                            <input type="password" id="regConfirmPassword" placeholder="Confirm password" required autocomplete="new-password">
+                            <img src="assets/images/icons/image 66.png" alt="Toggle View" class="toggle-password" title="Show/Hide password">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-create-account">Create Account</button>
+            </form>
+            <p class="login-prompt">Already have an account? <a href="#" id="switchToLogin">Sign In</a></p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,395 @@
+/* =========================================
+   PROFILE MODAL - FULL SCREEN
+   ========================================= */
+
+.profile-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-image: url('../assets/images/backgrounds/DECEASED FAMILY.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    z-index: 2999;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.profile-modal-overlay::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.profile-modal-overlay * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.profile-modal-overlay *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.profile-modal-overlay.active {
+    display: block;
+}
+
+/* Profile Header with Logo and Icons - Matching Deceased Family Design */
+.profile-modal-header {
+    background-color: #f5f1e8;
+    padding: 8px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2d4a36;
+    position: sticky;
+    top: 0;
+    z-index: 2998;
+}
+
+.profile-modal-logo img {
+    height: 52px;
+    width: auto;
+    display: block;
+    cursor: pointer;
+}
+
+.profile-modal-icons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.profile-menu-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 38px;
+    height: 38px;
+    padding: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.profile-menu-btn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.profile-menu-btn span {
+    width: 100%;
+    height: 2px;
+    background-color: #1e293b;
+    display: block;
+}
+
+.profile-user-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    padding: 2px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.profile-user-btn:hover {
+    border-color: #2d4a36;
+}
+
+.profile-user-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+.profile-modal-content {
+    background: transparent;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    padding: 15px 40px;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.profile-modal-content::-webkit-scrollbar {
+    display: none;
+}
+
+.profile-close-btn {
+    display: none;
+}
+
+.profile-header {
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    flex-shrink: 0;
+}
+
+.profile-header h2 {
+    font-size: 1.8rem;
+    margin: 0 0 3px 0;
+    color: #2c2c2c;
+}
+
+.profile-subtitle {
+    color: #666;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 25px;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Left Section - Information Cards */
+.profile-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.info-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex: 10;
+    min-height: 900;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-card h3 {
+    font-size: 1.2rem;
+    margin: 0 0 12px 0;
+    color: #2c2c2c;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 12px;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.info-field p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.status-badge-active,
+.status-badge-verified {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.status-badge-active {
+    background-color: #4caf50;
+    color: white;
+}
+
+.status-badge-verified {
+    background-color: #2196F3;
+    color: white;
+}
+
+/* Right Section - Profile Picture Card */
+.profile-picture-section {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.profile-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-height: 0;
+    justify-content: center;
+}
+
+.profile-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: none;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.profile-avatar:hover {
+    transform: scale(1.05);
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-card h3 {
+    font-size: 1.05rem;
+    margin: 0 0 4px 0;
+    color: #2c2c2c;
+}
+
+.profile-username-display {
+    color: #666;
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+}
+
+.user-role-badge {
+    background-color: #4a6b4a;
+    color: white;
+    padding: 5px 18px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 18px;
+}
+
+.profile-action-btn {
+    width: 100%;
+    padding: 11px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 9px;
+}
+
+.edit-btn {
+    background-color: #4a6b4a;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #3a5a3a;
+}
+
+.password-btn {
+    background-color: white;
+    color: #4a6b4a;
+    border: 2px solid #4a6b4a;
+}
+
+.password-btn:hover {
+    background-color: #4a6b4a;
+    color: white;
+}
+
+/* Back Button */
+.back-to-dashboard-btn {
+    background-color: #666;
+    color: white;
+    border: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 9px;
+    width: 100%;
+}
+
+.back-to-dashboard-btn:hover {
+    background-color: #555;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-modal-content {
+        padding: 25px 15px;
+    }
+}
+
+@media (max-width: 600px) {
+    .info-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .profile-modal-header {
+        padding: 8px 16px;
+    }
+    
+    .profile-modal-logo img {
+        height: 44px;
+    }
+}

@@ -1,0 +1,76 @@
+<!-- Client Support Tickets & Helpdesk Modal -->
+<div id="supportTicketsModal" class="dashboard-modal-overlay support-tickets-modal-overlay">
+    <div class="dashboard-modal-card" style="max-width: 750px; width: 95%; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    &#128172;
+                </div>
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0;">Help &amp; Support Tickets</h2>
+                    <p style="font-size: 0.82rem; color: #64748b; margin: 2px 0 0 0;">Reach out to park administrators regarding bookings, dues, or records.</p>
+                </div>
+            </div>
+            <button type="button" id="closeSupportModalBtn" class="close-modal-btn" style="background: none; border: none; font-size: 1.6rem; color: #94a3b8; cursor: pointer;">&times;</button>
+        </div>
+
+        <!-- Subtabs -->
+        <div style="display: flex; gap: 10px; border-bottom: 2px solid #f1f5f9; margin-bottom: 18px;">
+            <button type="button" id="tabClientTicketList" class="modal-subtab-btn active" style="padding: 8px 16px; background: none; border: none; border-bottom: 2px solid #0369a1; font-weight: 700; color: #0369a1; cursor: pointer;">My Inquiries</button>
+            <button type="button" id="tabClientTicketNew" class="modal-subtab-btn" style="padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent; font-weight: 600; color: #64748b; cursor: pointer;">+ New Support Ticket</button>
+        </div>
+
+        <!-- View 1: List of Tickets -->
+        <div id="clientTicketListView">
+            <div id="clientTicketLoading" style="text-align: center; padding: 30px; color: #64748b;">Loading your support tickets...</div>
+            <div id="clientTicketEmpty" style="display: none; text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">&#128229;</div>
+                <h4 style="color: #334155; margin: 0 0 4px 0;">No Support Tickets</h4>
+                <p style="color: #64748b; font-size: 0.85rem; margin: 0 0 16px 0;">You have not submitted any inquiries or support requests yet.</p>
+                <button type="button" class="btn-primary" id="btnTicketEmptyCreate" style="background: #0369a1; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer;">Create First Ticket</button>
+            </div>
+            <div id="clientTicketListContainer" style="display: none; display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+
+        <!-- View 2: New Ticket Form -->
+        <form id="clientTicketForm" style="display: none;">
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Subject / Issue Summary *</label>
+                <input type="text" id="clientTicketSubjectInput" class="form-control" placeholder="E.g., Query on upcoming amortization payment / Request deed copy" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Category *</label>
+                    <select id="clientTicketCategorySelect" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="Reservation Inquiry">Reservation &amp; Booking Inquiry</option>
+                        <option value="Payment & Amortization">Payment, GCash &amp; Amortization</option>
+                        <option value="Plot Maintenance">Plot Maintenance &amp; Grounds Care</option>
+                        <option value="Burial Record">Burial &amp; Deceased Record Update</option>
+                        <option value="General Support">General Support &amp; Legal Docs</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Priority *</label>
+                    <select id="clientTicketPrioritySelect" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="normal" selected>Normal Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Detailed Message / Description *</label>
+                <textarea id="clientTicketMessageInput" rows="4" class="form-control" placeholder="Please provide specific details regarding your inquiry, including any reservation numbers or plot identifiers..." required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                <button type="button" id="btnCancelTicketForm" class="btn-secondary" style="padding: 8px 18px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; cursor: pointer;">Cancel</button>
+                <button type="submit" id="btnSubmitTicketForm" class="btn-primary" style="padding: 8px 20px; background: #0369a1; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Submit Ticket</button>
+            </div>
+        </form>
+    </div>
+</div>
+

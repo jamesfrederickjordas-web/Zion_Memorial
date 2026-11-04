@@ -1,0 +1,84 @@
+<!-- Contact Popup -->
+<div id="contactPopup" class="page-popup-overlay">
+    <div class="page-popup-content">
+        <!-- Header -->
+        <header>
+            <div class="header-content container">
+                <img src="assets/images/logos/newlogo.png" alt="Logo" class="main-logo">
+                
+                <div class="logo-and-links">
+                    <nav>
+                        <ul>
+                            <li><a href="#" class="popup-home-link">Home</a></li>
+                            <li><a href="#" class="popup-about-link">About Us</a></li>
+                            <li><a href="#" class="popup-virtual-link">Virtual Tours</a></li>
+                            <li><a href="#" class="popup-obituaries-link">Obituaries</a></li>
+                            <li><a href="#" class="popup-contact-link active-nav">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="header-buttons">
+                    <a href="#" class="btn btn-register popup-register-btn">Register</a>
+                    <a href="#" class="btn btn-login popup-login-btn">Login</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Yellow Line Divider -->
+        <div class="yellow-line-divider"></div>
+
+        <!-- Contact Form Section -->
+        <section class="contact-section container">
+            <div class="contact-box">
+                <div class="contact-left">
+                    <h2 class="contact-title">Get in Touch</h2>
+                    <p class="contact-subtitle">We'd love to hear from you!</p>
+                    
+                    <p class="contact-description">If you have inquiries regarding plot availability, memorial services, or records, please send us a message below.</p>
+                    
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <img src="assets/images/icons/mail logo(3).png" alt="Email" class="contact-icon">
+                            <span>zionmemorialgarden@gmail.com</span>
+                        </div>
+                        <div class="contact-item">
+                            <img src="assets/images/icons/fb logo (1).png" alt="Facebook" class="contact-icon">
+                            <span>ZIONmemorialgarden</span>
+                        </div>
+                        <div class="contact-item">
+                            <img src="assets/images/icons/call audio.png" alt="Phone" class="contact-icon">
+                            <span>0917 309 6618</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="contact-right">
+                    <form class="contact-form" id="publicContactForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" id="contactFirstName" placeholder="Your first name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" id="contactLastName" placeholder="Your last name" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="contactEmail" placeholder="your.email@example.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="contactMessage" rows="6" placeholder="How can we assist you?" required></textarea>
+                        </div>
+                        
+                        <button type="submit" id="contactSubmitBtn" class="send-btn">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

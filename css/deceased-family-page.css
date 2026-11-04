@@ -1,0 +1,343 @@
+/* =========================================
+   DECEASED FAMILY PAGE MODAL
+   ========================================= */
+
+.deceased-family-page-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-image: url('../assets/images/backgrounds/Background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    z-index: 3500;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.deceased-family-page-overlay::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.deceased-family-page-overlay.active {
+    display: block;
+}
+
+.deceased-family-page-overlay * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.deceased-family-page-overlay *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Header - Matching Deceased Family Design */
+.deceased-family-page-header {
+    background-color: #f5f1e8;
+    padding: 8px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2d4a36;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.deceased-family-page-logo img {
+    height: 52px;
+    width: auto;
+    display: block;
+    cursor: pointer;
+}
+
+.deceased-family-page-icons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.deceased-family-menu-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 38px;
+    height: 38px;
+    padding: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.deceased-family-menu-btn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.deceased-family-menu-btn span {
+    width: 100%;
+    height: 2px;
+    background-color: #1e293b;
+    display: block;
+}
+
+.deceased-family-user-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    padding: 2px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.deceased-family-user-btn:hover {
+    border-color: #2d4a36;
+}
+
+.deceased-family-user-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+/* Main Content */
+.deceased-family-content {
+    padding: 40px 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.deceased-family-welcome-title {
+    font-size: 2.5rem;
+    font-weight: normal;
+    margin-bottom: 40px;
+    color: #2c2c2c;
+}
+
+.deceased-family-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr 350px;
+    gap: 30px;
+    align-items: start;
+}
+
+/* Reservation Card */
+.deceased-family-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.tombstone-icon {
+    margin-bottom: 20px;
+}
+
+.tombstone-icon img {
+    width: 80px;
+    height: 80px;
+}
+
+.deceased-family-btn {
+    background-color: #d4af37;
+    color: #333;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 15px;
+    transition: background-color 0.3s;
+}
+
+.deceased-family-btn:hover {
+    background-color: #c19b2a;
+}
+
+.deceased-family-text {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* Map Section */
+.deceased-family-map-section {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: -10px;
+    box-shadow: none;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-left: -90px;
+}
+
+.cemetery-map {
+    width: 95%;
+    height: auto;
+    max-width: 900%;
+    display: block;
+    transform: rotate(30deg);
+    mix-blend-mode: multiply;
+    filter: brightness(1.1) contrast(1.1);
+}
+
+/* Status Section */
+.deceased-family-status-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.deceased-family-status-card, .deceased-family-payment-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.deceased-family-status-section .status-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.deceased-family-status-section .shield-icon {
+    width: 50px;
+    height: 50px;
+}
+
+.deceased-family-status-section .status-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.deceased-family-status-section .status-active {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #4caf50;
+}
+
+.deceased-family-status-section .member-info {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 5px 0;
+}
+
+/* Payment Card */
+.deceased-family-payment-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    font-weight: normal;
+}
+
+.deceased-family-status-section .payment-status {
+    margin-bottom: 20px;
+}
+
+.deceased-family-status-section .status-badge {
+    background-color: #4caf50;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.deceased-family-status-section .payment-details {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.deceased-family-status-section .payment-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    font-size: 0.9rem;
+}
+
+.deceased-family-status-section .payment-row span:last-child {
+    font-weight: bold;
+}
+
+.deceased-family-status-section .payment-history {
+    color: #2196F3;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.deceased-family-status-section .payment-history:hover {
+    text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .deceased-family-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .deceased-family-map-section {
+        order: 2;
+    }
+    
+    .deceased-family-card {
+        order: 1;
+    }
+    
+    .deceased-family-status-section {
+        order: 3;
+    }
+}
+
+@media (max-width: 768px) {
+    .deceased-family-welcome-title {
+        font-size: 1.8rem;
+    }
+    
+    .deceased-family-page-header {
+        padding: 10px 15px;
+    }
+    
+    .deceased-family-page-logo img {
+        height: 45px;
+    }
+    
+    .deceased-family-content {
+        padding: 20px 15px;
+    }
+}

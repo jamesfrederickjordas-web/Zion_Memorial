@@ -1,0 +1,359 @@
+/* =========================================
+   SHARED PAGE SYSTEM
+   ========================================= */
+
+body {
+    margin: 0;
+    padding: 0;
+    background-image: url('../assets/images/backgrounds/Background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
+
+/* Shared Header - Matching Dashboard */
+.shared-page-header {
+    background-color: #f5f1e8;
+    padding: 8px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2d4a36;
+    position: sticky;
+    top: 0;
+    z-index: 4001;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.shared-logo {
+    position: absolute;
+    z-index: 4003;
+    left: 70px;
+    top: 100%;
+    transform: translateY(-50%);
+}
+
+.shared-logo img {
+    height: 140px;
+    position: relative;
+    z-index: 4003;
+    display: block;
+    background: white;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shared-nav {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.shared-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.shared-nav ul li {
+    margin: 0;
+}
+
+.shared-nav ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.shared-nav ul li a.active-nav {
+    background-color: #34a853;
+    color: white;
+}
+
+.shared-nav ul li a:hover {
+    background-color: rgba(52, 168, 83, 0.1);
+}
+
+.shared-header-buttons {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.shared-header-buttons .btn {
+    padding: 8px 20px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.btn-register {
+    border: 1px solid #34a853;
+    color: #34a853;
+    background: white;
+}
+
+.btn-register:hover {
+    background-color: #34a853;
+    color: white;
+}
+
+.btn-login {
+    background-color: #34a853;
+    color: white;
+    border: 1px solid #34a853;
+}
+
+.btn-login:hover {
+    background-color: #2d8e45;
+}
+
+/* Page Content Wrapper */
+.page-content-wrapper {
+    width: 100%;
+    min-height: calc(100vh - 100px);
+}
+
+.page-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 20px 40px 20px;
+}
+
+/* =========================================
+   HOME PAGE STYLES
+   ========================================= */
+
+.home-hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+}
+
+.home-hero h1 {
+    font-size: 3rem;
+    color: #2c2c2c;
+    margin: 0;
+    font-weight: 400;
+}
+
+.home-sections {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Quick Access Section */
+.quick-access-section {
+    margin-bottom: 60px;
+}
+
+.quick-access-section h2 {
+    color: #2b9348;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.quick-access-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+}
+
+.access-item {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
+}
+
+.access-item:hover {
+    transform: translateY(-5px);
+}
+
+.access-item img {
+    height: 60px;
+    margin-bottom: 15px;
+}
+
+.access-item h3 {
+    font-size: 1.1rem;
+    color: #2c2c2c;
+    margin: 0;
+}
+
+/* Vision & Mission Section */
+.vision-mission-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.vision-box, .mission-box {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.vision-box h2, .mission-box h2 {
+    color: #2b9348;
+    font-size: 1.8rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.vision-box p, .mission-box p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #2c2c2c;
+    font-style: italic;
+}
+
+/* Features Section */
+.features-section {
+    margin-bottom: 60px;
+}
+
+.features-section h2 {
+    color: #2b9348;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.feature-highlight {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.feature-highlight h3 {
+    color: #2b9348;
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.feature-highlight p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #2c2c2c;
+    margin-bottom: 15px;
+}
+
+/* =========================================
+   CONTENT GRID FOR ALL PAGES
+   ========================================= */
+
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.content-box {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
+}
+
+.content-box:hover {
+    transform: translateY(-5px);
+}
+
+.content-box h3 {
+    color: #2b9348;
+    font-size: 1.3rem;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.content-box p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #2c2c2c;
+    margin: 0;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+   ========================================= */
+
+@media (max-width: 1024px) {
+    .quick-access-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .vision-mission-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .home-hero h1 {
+        font-size: 2rem;
+    }
+    
+    .quick-access-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .access-item, .vision-box, .mission-box, .feature-highlight, .content-box {
+        padding: 25px;
+    }
+
+    .page-inner {
+        padding: 40px 15px 20px 15px;
+    }
+
+    .shared-page-header {
+        padding: 10px 15px;
+    }
+    
+    .shared-logo img {
+        height: 100px;
+    }
+    
+    .shared-nav ul {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .shared-nav ul li a {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+    
+    .shared-header-buttons {
+        gap: 10px;
+    }
+    
+    .shared-header-buttons .btn {
+        padding: 6px 15px;
+        font-size: 0.85rem;
+    }
+}

@@ -1,0 +1,73 @@
+<!-- Maintenance & Visit Requests Modal -->
+<div id="maintenanceModal" class="dashboard-modal-overlay maintenance-modal-overlay">
+    <div class="dashboard-modal-card" style="max-width: 750px; width: 95%; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #e8f5e9; color: #2d4a36; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    &#129529;
+                </div>
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0;">Care, Maintenance &amp; Visits</h2>
+                    <p style="font-size: 0.82rem; color: #64748b; margin: 2px 0 0 0;">Schedule grave cleaning, grass trimming, flower tributes, or visitations.</p>
+                </div>
+            </div>
+            <button type="button" id="closeMaintenanceModalBtn" class="close-modal-btn" style="background: none; border: none; font-size: 1.6rem; color: #94a3b8; cursor: pointer;">&times;</button>
+        </div>
+
+        <!-- Subtabs -->
+        <div style="display: flex; gap: 10px; border-bottom: 2px solid #f1f5f9; margin-bottom: 18px;">
+            <button type="button" id="tabClientMaintList" class="modal-subtab-btn active" style="padding: 8px 16px; background: none; border: none; border-bottom: 2px solid #2d4a36; font-weight: 700; color: #2d4a36; cursor: pointer;">My Scheduled Requests</button>
+            <button type="button" id="tabClientMaintNew" class="modal-subtab-btn" style="padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent; font-weight: 600; color: #64748b; cursor: pointer;">+ New Request</button>
+        </div>
+
+        <!-- View 1: List of Requests -->
+        <div id="clientMaintListView">
+            <div id="clientMaintLoading" style="text-align: center; padding: 30px; color: #64748b;">Loading scheduled visits...</div>
+            <div id="clientMaintEmpty" style="display: none; text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">&#127807;</div>
+                <h4 style="color: #334155; margin: 0 0 4px 0;">No Maintenance or Visit Requests</h4>
+                <p style="color: #64748b; font-size: 0.85rem; margin: 0 0 16px 0;">You have not scheduled any cemetery care or memorial visits yet.</p>
+                <button type="button" class="btn-primary" id="btnMaintEmptyCreate" style="background: #2d4a36; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer;">Schedule First Visit</button>
+            </div>
+            <div id="clientMaintListContainer" style="display: none; display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+
+        <!-- View 2: New Request Form -->
+        <form id="clientMaintForm" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Select Reserved Plot *</label>
+                    <select id="clientMaintSpaceSelect" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">-- Choose Plot --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Service / Visit Type *</label>
+                    <select id="clientMaintTypeSelect" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="Grave Cleaning">Grave Cleaning &amp; Washing</option>
+                        <option value="Grass Trimming">Grass Trimming &amp; Weeding</option>
+                        <option value="Flower Placement">Flower Placement &amp; Tribute</option>
+                        <option value="Inspection">Plot Inspection &amp; Maintenance Check</option>
+                        <option value="Family Visit">Scheduled Family Visit / Memorial Mass</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Preferred Scheduled Date *</label>
+                <input type="date" id="clientMaintDateInput" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 6px;">Notes / Special Instructions (Optional)</label>
+                <textarea id="clientMaintNotesInput" rows="3" class="form-control" placeholder="E.g., Please place white chrysanthemums on the marker; family arriving around 10 AM..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                <button type="button" id="btnCancelMaintForm" class="btn-secondary" style="padding: 8px 18px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; cursor: pointer;">Cancel</button>
+                <button type="submit" id="btnSubmitMaintForm" class="btn-primary" style="padding: 8px 20px; background: #2d4a36; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+

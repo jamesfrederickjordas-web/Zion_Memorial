@@ -1,0 +1,91 @@
+/* =========================================
+   HEADER & NAVIGATION
+   ========================================= */
+header {
+    background-color: white;
+    padding: 30px 60px;
+    border-bottom: 2px solid #ccc;
+    z-index: 1000;
+    position: relative;
+}
+
+.header-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 0 40px;
+}
+
+.main-logo {
+    height: 120px;
+    width: 120px;
+    position: absolute;
+    top: 0;
+    left: 20px;
+    z-index: 1001;
+    background: white;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: none;
+    object-fit: contain;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+nav li { margin: 0 10px; }
+
+nav a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 30px;
+}
+
+nav a.active-nav {
+    background-color: #34a853;
+    color: white;
+}
+
+.header-buttons .btn {
+    padding: 8px 20px;
+    border-radius: 30px;
+    margin-left: 10px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.header-buttons {
+    position: absolute;
+    right: 20px;
+}
+
+.btn-register { 
+    border: 1px solid #34a853; 
+    color: #34a853; 
+    background: white;
+}
+
+.btn-register:hover {
+    background-color: #34a853;
+    color: white;
+}
+
+.btn-login { 
+    background-color: #34a853; 
+    color: white; 
+    border: 1px solid #34a853;
+}
+
+.btn-login:hover {
+    background-color: #2d8e45;
+}

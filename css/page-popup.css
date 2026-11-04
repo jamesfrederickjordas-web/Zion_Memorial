@@ -1,0 +1,452 @@
+/* =========================================
+   PAGE POPUP MODAL
+   ========================================= */
+
+.page-popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 5000;
+    overflow-y: auto;
+}
+
+.page-popup-overlay.active {
+    display: block;
+}
+
+.page-popup-content {
+    background-image: url('../assets/images/backgrounds/DECEASED FAMILY.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    padding: 0;
+}
+
+/* =========================================
+   YELLOW LINE DIVIDER
+   ========================================= */
+
+.yellow-line-divider {
+    background-color: #FFD700;
+    width: 100%;              /* Adjust width: 100% = full screen, 80% = 80% of screen, etc. */
+    height: 5px;              /* Adjust height/thickness of the line */
+    margin: 0 auto;           /* Centers the line if width is less than 100% */
+    position: relative;
+    top: 0px;                 /* Adjust vertical position: positive = down, negative = up */
+}
+
+/* =========================================
+   WHY CHOOSE US SECTION
+   ========================================= */
+
+.why-choose-us {
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.section-title {
+    font-size: 48px;
+    font-weight: bold;
+    margin-bottom: 50px;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.title-left {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.title-why {
+    color: #333;
+    font-size: 48px;
+    letter-spacing: 40px;
+}
+
+.title-choose {
+    color: #333;
+    font-size: 48px;
+    letter-spacing: 2px;
+}
+
+.title-us {
+    color: #4CAF50;
+    font-size: 100px;
+    margin-top: -25px;
+    margin-left: -30px;
+}
+
+.question-mark {
+    color: #000;
+}
+
+.reasons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 150px;
+    margin-bottom: 40px;
+}
+
+/* Second row with 2 items - centered */
+.reason-card:nth-child(4) {
+    grid-column: 1 / 2;
+    transform: translateX(200px);
+}
+
+.reason-card:nth-child(5) {
+    grid-column: 2 / 3;
+    transform: translateX(200px);
+}
+
+
+.reason-card {
+    background: transparent;
+    border-radius: 15px;
+    padding: 0;
+    transition: transform 0.3s ease;
+}
+
+.reason-card:hover {
+    transform: translateY(-10px);
+}
+
+/* Keep the horizontal offset for cards 4 and 5 on hover */
+.reason-card:nth-child(4):hover {
+    transform: translateX(200px) translateY(-10px);
+}
+
+.reason-card:nth-child(5):hover {
+    transform: translateX(200px) translateY(-10px);
+}
+
+.reason-card:nth-child(4),
+.reason-card:nth-child(5) {
+    /* Removed duplicate styling - now handled in .reasons-grid section */
+}
+
+/* Center the last row with 2 items */
+.reasons-grid::after {
+    content: '';
+    grid-column: 3;
+}
+
+.reason-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.reason-card h3 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 12px;
+}
+
+.reason-card p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #000;
+    margin: 0;
+}
+
+.reason-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reason-card ul li {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #000;
+    margin-bottom: 10px;
+}
+
+.reason-card ul li strong {
+    color: #000;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .reasons-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .reason-card:nth-child(4),
+    .reason-card:nth-child(5) {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .reasons-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-title {
+        font-size: 36px;
+    }
+}
+
+/* =========================================
+   VIRTUAL TOURS GALLERY
+   ========================================= */
+
+.virtual-tours-gallery {
+    padding: 60px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    margin-top: 50px;  /* Adjust this value to move images up or down */
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+}
+
+/* Second row with 4 images - centered */
+.gallery-item:nth-child(6) {
+    grid-column: 1 / 2;
+    transform: translateX(150px);
+}
+
+.gallery-item:nth-child(7) {
+    grid-column: 2 / 3;
+    transform: translateX(150px);
+}
+
+.gallery-item:nth-child(8) {
+    grid-column: 3 / 4;
+    transform: translateX(150px);
+}
+
+.gallery-item:nth-child(9) {
+    grid-column: 4 / 5;
+    transform: translateX(150px);
+}
+
+.gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-item:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Keep horizontal position for second row on hover */
+.gallery-item:nth-child(6):hover {
+    transform: translateX(150px) translateY(-10px);
+}
+
+.gallery-item:nth-child(7):hover {
+    transform: translateX(150px) translateY(-10px);
+}
+
+.gallery-item:nth-child(8):hover {
+    transform: translateX(150px) translateY(-10px);
+}
+
+.gallery-item:nth-child(9):hover {
+    transform: translateX(150px) translateY(-10px);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .gallery-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .gallery-item:nth-child(6),
+    .gallery-item:nth-child(7),
+    .gallery-item:nth-child(8),
+    .gallery-item:nth-child(9) {
+        grid-column: auto;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
+   CONTACT FORM SECTION
+   ========================================= */
+
+.contact-section {
+    padding: 60px 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.contact-box {
+    background: white;
+    border-radius: 20px;
+    padding: 50px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    gap: 60px;
+}
+
+.contact-left {
+    flex: 1;
+}
+
+.contact-right {
+    flex: 1;
+}
+
+.contact-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #2d8e45;
+    margin-bottom: 5px;
+}
+
+.contact-subtitle {
+    font-size: 18px;
+    color: #2d8e45;
+    margin-bottom: 30px;
+}
+
+.contact-description {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-left: -10px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: flex-start;
+}
+
+.contact-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.contact-item span {
+    font-size: 16px;
+    color: #333;
+}
+
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.form-group label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #f5f5f5;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2d8e45;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.send-btn {
+    background-color: #FFD700;
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 12px 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    align-self: flex-end;
+    transition: background-color 0.3s ease;
+}
+
+.send-btn:hover {
+    background-color: #FFC700;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .contact-box {
+        flex-direction: column;
+        gap: 40px;
+        padding: 30px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+    }
+}

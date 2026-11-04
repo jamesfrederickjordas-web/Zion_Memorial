@@ -1,0 +1,389 @@
+/* ==============================================================================
+   ZION MEMORIAL GARDEN - REGISTRATION MODAL
+   Figma Spec: Node 237:2 (ACCOUNT REGISTRATION) & Node 237:38 (Group 62)
+   Design System: Modern, Responsive, Afacad Typography, Spacious Proportions
+   ============================================================================== */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 18, 0.68);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 6000;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    animation: modalFadeIn 0.25s ease-out forwards;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.register-card {
+    display: flex;
+    flex-direction: row;
+    background: #F9F4EE;
+    width: 1220px;
+    max-width: 95vw;
+    min-height: 620px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    animation: cardScaleUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardScaleUp {
+    from {
+        transform: scale(0.96) translateY(12px);
+    }
+    to {
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* =========================================
+   LEFT BANNER WITH GATE PHOTO & LOGO OVERLAY
+   Compact, sleek ratio (~34% width)
+   ========================================= */
+.reg-left {
+    flex: 0 0 34%;
+    max-width: 420px;
+    min-width: 320px;
+    background-image: url('../assets/images/backgrounds/assetshero.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    position: relative;
+}
+
+.reg-left::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.35) 100%);
+    pointer-events: none;
+}
+
+.reg-logo-overlay {
+    position: absolute;
+    top: 26px;
+    left: 26px;
+    width: 100px;
+    height: 100px;
+    background: #ffffff;
+    border-radius: 50%;
+    padding: 7px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    object-fit: contain;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    z-index: 2;
+    transition: transform 0.3s ease;
+}
+
+.reg-logo-overlay:hover {
+    transform: scale(1.05);
+}
+
+/* =========================================
+   CLOSE BUTTON
+   ========================================= */
+.register-close {
+    position: absolute;
+    top: 20px;
+    right: 22px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+    color: #4A4A4A;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.register-close:hover {
+    background: rgba(0, 0, 0, 0.12);
+    color: #000000;
+    transform: rotate(90deg) scale(1.08);
+}
+
+/* =========================================
+   RIGHT FORM CONTAINER (Spacious, Wide, Generous)
+   ========================================= */
+.reg-right {
+    flex: 1;
+    padding: 48px 64px 40px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    background: #F9F4EE;
+    box-sizing: border-box;
+}
+
+.reg-right h2 {
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: #111111;
+    margin: 0 0 28px 0;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+/* =========================================
+   INPUT GRID & FORM CONTROLS
+   Wide two-column layout matching Figma specs
+   ========================================= */
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 28px;
+    text-align: left;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.75);
+    margin-bottom: 7px;
+    letter-spacing: 0.2px;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(217, 217, 217, 0.45);
+    border: 1px solid rgba(0, 0, 0, 0.38);
+    border-radius: 8px;
+    padding: 0 16px;
+    height: 54px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    background: #ffffff;
+    border-color: #2B9348;
+    box-shadow: 0 0 0 3px rgba(43, 147, 72, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.input-icon {
+    width: 22px;
+    height: 22px;
+    opacity: 0.75;
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+
+.input-wrapper input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: #1A1A1A;
+    outline: none;
+    min-width: 0;
+}
+
+.input-wrapper input::placeholder {
+    color: rgba(0, 0, 0, 0.45);
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.toggle-password {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    opacity: 0.6;
+    margin-left: 10px;
+    flex-shrink: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Hide default browser password eye */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-contacts-auto-fill-button {
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+}
+
+/* =========================================
+   SUBMIT BUTTON & LOGIN PROMPT
+   ========================================= */
+.btn-create-account {
+    width: 100%;
+    height: 56px;
+    background-color: #2B9348;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 21px;
+    font-weight: 700;
+    margin-top: 26px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(43, 147, 72, 0.32);
+    transition: all 0.22s ease;
+    letter-spacing: 0.3px;
+}
+
+.btn-create-account:hover {
+    background-color: #247A3C;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(43, 147, 72, 0.45);
+}
+
+.btn-create-account:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(43, 147, 72, 0.3);
+}
+
+.login-prompt {
+    margin-top: 20px;
+    margin-bottom: 0;
+    font-family: 'Afacad', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.login-prompt a {
+    color: #2B9348;
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 5px;
+    transition: color 0.2s ease;
+}
+
+.login-prompt a:hover {
+    color: #1E6B34;
+    text-decoration: underline;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+   ========================================= */
+@media (max-width: 1100px) {
+    .register-card {
+        width: 1000px;
+    }
+    .reg-right {
+        padding: 40px 48px 32px 48px;
+    }
+    .input-grid {
+        gap: 16px 20px;
+    }
+}
+
+@media (max-width: 960px) {
+    .register-card {
+        flex-direction: column;
+        width: 640px;
+        max-width: 94vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .reg-left {
+        flex: none;
+        height: 200px;
+        min-width: 100%;
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+    
+    .reg-logo-overlay {
+        width: 80px;
+        height: 80px;
+        top: 16px;
+        left: 16px;
+    }
+    
+    .reg-right {
+        padding: 32px 28px 28px 28px;
+    }
+    
+    .reg-right h2 {
+        font-size: 34px;
+        margin-bottom: 22px;
+    }
+}
+
+@media (max-width: 600px) {
+    .input-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    
+    .reg-right {
+        padding: 24px 18px;
+    }
+    
+    .reg-right h2 {
+        font-size: 28px;
+        margin-bottom: 16px;
+    }
+    
+    .input-wrapper {
+        height: 50px;
+    }
+    
+    .btn-create-account {
+        height: 50px;
+        font-size: 19px;
+        margin-top: 20px;
+    }
+    
+    .reg-left {
+        height: 150px;
+    }
+    
+    .reg-logo-overlay {
+        width: 68px;
+        height: 68px;
+    }
+}

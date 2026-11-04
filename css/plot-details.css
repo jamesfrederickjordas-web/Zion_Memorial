@@ -1,0 +1,2442 @@
+/* =========================================
+   PLOT DETAILS PAGE
+   ========================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f1f5f9;
+    color: #0f172a;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Header - Matching Deceased Family Design */
+.plot-details-header {
+    height: 52px;
+    flex-shrink: 0;
+    padding: 6px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f5f1e8;
+    border-bottom: 2px solid #2d4a36;
+    position: relative;
+    z-index: 50;
+    box-sizing: border-box;
+}
+
+.header-logo {
+    height: 40px;
+    width: auto;
+    display: block;
+}
+
+.header-right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.menu-icon-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 38px;
+    height: 38px;
+    padding: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.menu-icon-btn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.menu-icon-btn span {
+    width: 100%;
+    height: 2px;
+    background-color: #1e293b;
+    display: block;
+}
+
+.user-icon-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    padding: 2px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.user-icon-btn:hover {
+    border-color: #2d4a36;
+}
+
+.user-icon-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+/* Yellow Line Removed */
+.yellow-line {
+    display: none !important;
+}
+
+/* Main Content - Full Screen Edge to Edge */
+.plot-details-main {
+    height: calc(100vh - 52px);
+    max-height: calc(100vh - 52px);
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0;
+    padding: 8px 12px 10px 12px;
+    box-sizing: border-box;
+    overflow: hidden !important;
+    display: flex;
+}
+
+.content-wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden !important;
+    box-sizing: border-box;
+}
+
+/* Legend Section - Contained and Scrollable */
+.legend-section {
+    width: 320px;
+    min-width: 300px;
+    max-width: 330px;
+    flex-shrink: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+    box-sizing: border-box;
+    position: static;
+}
+
+.legend-section::-webkit-scrollbar {
+    width: 5px;
+}
+.legend-section::-webkit-scrollbar-track {
+    background: transparent;
+}
+.legend-section::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.legend-section::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.legend-box {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.legend-box h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #0f172a;
+}
+
+.legend-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.legend-color.occupied {
+    background-color: #dc2626;
+}
+
+.legend-color.available {
+    background-color: #16a34a;
+}
+
+.legend-color.reserved {
+    background-color: #eab308;
+}
+
+.legend-color.maintenance {
+    background-color: #334155;
+}
+
+.legend-item span:last-child {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Map Section */
+.map-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden !important;
+    background: transparent;
+    box-sizing: border-box;
+}
+
+.cemetery-map {
+    width: 100%;
+    max-width: 700px;
+    height: auto;
+    display: block;
+    border: 3px solid #333;
+}
+
+/* Plot Grid Container */
+.plot-grid-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+}
+
+/* Plot Grid */
+.plot-grid {
+    display: grid;
+    gap: 2px;
+    background-color: #333;
+    padding: 2px;
+    border: 2px solid #333;
+}
+
+/* Plot Cell */
+.plot-cell {
+    aspect-ratio: 1;
+    min-height: 20px;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.plot-cell:hover {
+    transform: scale(1.1);
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Plot Status Colors */
+.plot-cell.occupied {
+    background-color: #c41e3a;
+}
+
+.plot-cell.available {
+    background-color: #4a7c59;
+}
+
+.plot-cell.reserved {
+    background-color: #d4af37;
+}
+
+.plot-cell.available:hover {
+    background-color: #5a9c69;
+}
+
+.plot-cell.occupied:hover {
+    opacity: 0.8;
+}
+
+.plot-cell.reserved:hover {
+    background-color: #e4bf47;
+}
+
+/* Back Section */
+.back-section {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.back-to-map-btn {
+    background-color: white;
+    color: #333;
+    border: 2px solid #999;
+    padding: 15px 40px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.back-to-map-btn:hover {
+    background-color: #f5f5f5;
+    border-color: #666;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Design & Viewport Containment */
+@media (max-width: 1024px) {
+    .legend-section {
+        width: 290px;
+        min-width: 270px;
+    }
+}
+
+@media (max-width: 768px) {
+    .plot-details-header {
+        padding: 6px 12px;
+    }
+    .header-logo {
+        height: 34px;
+    }
+    .legend-section {
+        width: 260px;
+        min-width: 250px;
+    }
+}
+
+
+
+
+/* =========================================================================
+   PHASE 2: CLOUD-CONNECTED PLOT DETAILS STYLES
+   ========================================================================= */
+
+.grid-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 6px 0;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.grid-header-bar h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2b3e2b;
+    margin: 0;
+}
+
+.live-cloud-indicator {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid #c8e6c9;
+}
+
+.plot-info-box {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.plot-info-box h4 {
+    margin: 0 0 6px 0;
+    font-size: 1.25rem;
+    color: #3f593f;
+    font-weight: 800;
+}
+
+.sidebar-category {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.sidebar-price {
+    margin: 0 0 8px 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1565c0;
+}
+
+.sidebar-status {
+    margin: 0 0 14px 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.btn-reserve-plot-direct {
+    width: 100%;
+    background-color: #3f593f;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(63, 89, 63, 0.25);
+}
+
+.btn-reserve-plot-direct:hover {
+    background-color: #2a3c2a;
+    transform: translateY(-1px);
+}
+
+
+/* ==============================================================================
+   ADMIN PLOT LAYOUT EDITOR STYLES
+   ============================================================================== */
+
+/* Header Additions */
+.header-section-badge {
+    margin-left: 20px;
+    background: #f0f4f0;
+    color: #2e5a2e;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid #c8d8c8;
+}
+
+.admin-mode-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b;
+    color: #ffffff;
+    border: 1px solid #475569;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.25s ease;
+}
+
+.admin-mode-toggle-btn:hover {
+    background: #334155;
+    border-color: #d4af37;
+}
+
+.admin-mode-indicator {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.admin-mode-indicator.off {
+    background: #475569;
+    color: #cbd5e1;
+}
+
+.admin-mode-indicator.on {
+    background: #22c55e;
+    color: #052e16;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.back-to-map-btn-top {
+    background: transparent;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.back-to-map-btn-top:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* Admin Layout Toolbar */
+.admin-layout-toolbar {
+    background: #0f172a;
+    color: #f8fafc;
+    border-bottom: 3px solid #d4af37;
+    padding: 12px 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    animation: slideDownToolbar 0.25s ease-out;
+}
+
+@keyframes slideDownToolbar {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.toolbar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.toolbar-tag {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #d4af37;
+    background: rgba(212, 175, 55, 0.15);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.toolbar-select-group, .toolbar-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+}
+
+.toolbar-dropdown, .toolbar-dropdown-small {
+    background: #1e293b;
+    color: #ffffff;
+    border: 1px solid #475569;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.toolbar-dropdown:focus, .toolbar-dropdown-small:focus {
+    outline: none;
+    border-color: #d4af37;
+}
+
+.btn-toolbar-add {
+    background: #16a34a;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-toolbar-add:hover {
+    background: #15803d;
+}
+
+.grid-columns-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+}
+
+.btn-col-size {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-col-size.active {
+    background: #d4af37;
+    color: #0f172a;
+    border-color: #d4af37;
+}
+
+/* Header Subtitle and Stats Row */
+.section-subtitle {
+    display: block;
+    font-size: 0.88rem;
+    color: #64748b;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+.grid-header-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.grid-stats-row {
+    display: flex;
+    gap: 8px;
+}
+
+.grid-stat {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+.grid-stat.avail strong { color: #16a34a; }
+.grid-stat.res strong { color: #d97706; }
+.grid-stat.occ strong { color: #dc2626; }
+
+/* Grid Cells Admin Mode Enhancements */
+.plot-cell {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    user-select: none;
+}
+
+.plot-cell:hover {
+    transform: scale(1.08);
+    z-index: 5;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.plot-cell.selected {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 12px rgba(212, 175, 55, 1) !important;
+    transform: scale(1.12);
+    z-index: 10;
+}
+
+.plot-cell.admin-mode::after {
+    content: "✏️";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.55rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.plot-cell.admin-mode:hover::after {
+    opacity: 1;
+}
+
+.legend-color.maintenance, .plot-cell.maintenance {
+    background-color: #64748b;
+}
+
+/* Sidebar Admin Buttons */
+.sidebar-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #3f593f;
+    background: #e8f0e8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.sidebar-section-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0 0 6px 0;
+}
+
+.sidebar-status-tag {
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.sidebar-status-tag.available { background: #dcfce7; color: #166534; }
+.sidebar-status-tag.reserved { background: #fef3c7; color: #92400e; }
+.sidebar-status-tag.occupied { background: #fee2e2; color: #991b1b; }
+.sidebar-status-tag.maintenance { background: #f1f5f9; color: #475569; }
+
+.btn-admin-edit-plot, .btn-admin-cycle-status, .btn-admin-delete-plot {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.btn-admin-edit-plot {
+    background: #0284c7;
+    color: white;
+}
+.btn-admin-edit-plot:hover { background: #0369a1; }
+
+.btn-admin-cycle-status {
+    background: #f59e0b;
+    color: white;
+}
+.btn-admin-cycle-status:hover { background: #d97706; }
+
+.btn-admin-delete-plot {
+    background: #ef4444;
+    color: white;
+}
+.btn-admin-delete-plot:hover { background: #dc2626; }
+
+/* Quick Navigation Right Box */
+.quick-nav-box {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.quick-nav-box h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.15rem;
+    color: #1e293b;
+}
+
+.nav-hint {
+    margin: 0 0 12px 0;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.section-quick-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav-chip {
+    display: block;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #334155;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.nav-chip:hover {
+    background: #3f593f;
+    color: white;
+    border-color: #3f593f;
+    transform: translateX(3px);
+}
+
+/* ==============================================================================
+   ADMIN EDIT & ADD PLOT MODALS
+   ============================================================================== */
+.admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.admin-modal-overlay.active {
+    display: flex;
+    animation: fadeInModal 0.25s ease-out;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.admin-modal-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 580px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    border: 2px solid #3f593f;
+}
+
+.admin-modal-header {
+    background: #0f172a;
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-modal-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #ffffff;
+}
+
+.admin-modal-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.6rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.admin-modal-close:hover {
+    color: #ffffff;
+}
+
+.admin-modal-form {
+    padding: 24px;
+}
+
+.admin-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.admin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.admin-form-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.admin-form-group label .req {
+    color: #ef4444;
+}
+
+.admin-input {
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+
+.admin-input:focus {
+    outline: none;
+    border-color: #3f593f;
+    box-shadow: 0 0 0 3px rgba(63, 89, 63, 0.15);
+}
+
+.admin-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.modal-footer-right {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-modal-cancel {
+    padding: 9px 18px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-modal-cancel:hover {
+    background: #f1f5f9;
+}
+
+.btn-modal-save {
+    padding: 9px 20px;
+    border-radius: 6px;
+    border: none;
+    background: #3f593f;
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(63, 89, 63, 0.3);
+}
+
+.btn-modal-save:hover {
+    background: #2a3c2a;
+}
+
+.btn-modal-delete {
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-modal-delete:hover {
+    background: #fecaca;
+}
+
+
+/* ==============================================================================
+   EXACT LAYOUT STUDIO AREA SHAPE & PLOT BLUEPRINT STYLES
+   ============================================================================== */
+.pd-blueprint-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.pd-area-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pd-area-select-wrap label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pd-section-select {
+    padding: 7px 12px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pd-section-select:focus {
+    outline: none;
+    border-color: #2e5a2e;
+}
+
+.pd-status-filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pd-filter-pill {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pd-filter-pill:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.pd-filter-pill.active {
+    background: #2e5a2e;
+    color: #ffffff;
+    border-color: #2e5a2e;
+}
+
+.me-area-blueprint-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    overflow: auto;
+    max-width: 100%;
+}
+
+.me-area-blueprint-canvas {
+    position: relative;
+    width: 560px;
+    height: 700px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    border-radius: 12px;
+    border: 2px solid #94a3b8;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.area-shape-silhouette {
+    position: absolute;
+    inset: 28px;
+    width: calc(100% - 56px);
+    height: calc(100% - 56px);
+    object-fit: contain;
+    opacity: 0.38;
+    pointer-events: none;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+    z-index: 1;
+}
+
+.area-shape-stage {
+    position: absolute;
+    inset: 28px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.area-grid-layer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(var(--grid-cols, 22), 1fr);
+    grid-template-rows: repeat(var(--grid-rows, 28), 1fr);
+    gap: 2px;
+    background-image:
+        linear-gradient(to right, rgba(15, 23, 42, 0.14) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.14) 1px, transparent 1px);
+    background-size: calc(100% / var(--grid-cols, 22)) calc(100% / var(--grid-rows, 28));
+    border: 1.5px solid rgba(15, 23, 42, 0.25);
+    border-radius: 6px;
+}
+
+.area-plot-cell {
+    position: relative;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    border: 1.5px solid rgba(15, 23, 42, 0.65);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    overflow: hidden;
+    padding: 2px;
+    text-align: center;
+    line-height: 1.05;
+    z-index: 3;
+}
+
+.area-plot-cell.multi-cell-plot {
+    border-width: 2px;
+    border-color: #0f172a;
+    border-radius: 5px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+.area-plot-cell:hover {
+    transform: scale(1.06);
+    z-index: 15;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    border-color: #ffffff;
+}
+
+.area-plot-cell.selected {
+    outline: 3px solid #facc15;
+    outline-offset: 1px;
+    z-index: 20;
+    transform: scale(1.06);
+    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.35), 0 8px 18px rgba(0, 0, 0, 0.4);
+}
+
+.area-plot-cell.status-available,
+.area-plot-cell.available {
+    background: linear-gradient(145deg, #22c55e, #15803d);
+}
+
+.area-plot-cell.status-reserved,
+.area-plot-cell.reserved {
+    background: linear-gradient(145deg, #facc15, #ca8a04);
+    color: #0f172a;
+}
+
+.area-plot-cell.status-occupied,
+.area-plot-cell.occupied {
+    background: linear-gradient(145deg, #ef4444, #b91c1c);
+}
+
+.area-plot-cell.status-maintenance,
+.area-plot-cell.maintenance {
+    background: linear-gradient(145deg, #64748b, #475569);
+}
+
+.area-plot-code-text {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.area-plot-cell.status-reserved .area-plot-code-text,
+.area-plot-cell.reserved .area-plot-code-text {
+    text-shadow: none;
+}
+
+.area-plot-sub-text {
+    font-size: 0.48rem;
+    font-weight: 700;
+    opacity: 0.92;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+
+/* ==============================================================================
+   STEP 2: COMPLETE RESERVATION BOOKING FORM MODAL STYLES (plot-details.html)
+   ============================================================================== */
+.booking-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 5000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.booking-modal-overlay.active {
+    display: flex;
+}
+
+.booking-modal-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 680px;
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    animation: modalBounceIn 0.25s ease-out;
+}
+
+@keyframes modalBounceIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.booking-modal-header {
+    background: linear-gradient(135deg, #3f593f 0%, #293d29 100%);
+    color: white;
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.booking-modal-header h2 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+}
+
+.booking-subtitle {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.booking-close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.booking-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.booking-form-body {
+    padding: 22px 28px;
+    max-height: 68vh;
+    overflow-y: auto;
+}
+
+.chosen-plot-banner {
+    background: linear-gradient(135deg, #f7f9f6 0%, #eef3ed 100%);
+    border: 1.5px solid #d4dfd2;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.chosen-label, .price-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.chosen-plot-info h3 {
+    margin: 0 0 3px 0;
+    font-size: 1.4rem;
+    color: #3f593f;
+    font-weight: 800;
+}
+
+.chosen-plot-info p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #555;
+}
+
+.chosen-plot-price {
+    text-align: right;
+}
+
+.chosen-plot-price h3 {
+    margin: 0;
+    font-size: 1.45rem;
+    color: #1565c0;
+    font-weight: 800;
+}
+
+.form-section {
+    margin-bottom: 20px;
+}
+
+.section-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #2b2b2b;
+    margin-bottom: 8px;
+}
+
+.section-label .required {
+    color: #dc3545;
+}
+
+.plan-type-selector, .payment-option-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.radio-card {
+    border: 1.5px solid #dcdcd5;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: all 0.2s ease;
+    background: #fafaf8;
+}
+
+.radio-card input[type="radio"] {
+    margin-top: 3px;
+    accent-color: #3f593f;
+}
+
+.radio-card.active, .radio-card:has(input:checked) {
+    border-color: #3f593f;
+    background-color: #f2f7f1;
+    box-shadow: 0 2px 6px rgba(63, 89, 63, 0.15);
+}
+
+.radio-content strong {
+    display: block;
+    font-size: 0.92rem;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+
+.radio-content span {
+    display: block;
+    font-size: 0.78rem;
+    color: #666;
+    line-height: 1.3;
+}
+
+.amortization-panel {
+    background-color: #fbfbf9;
+    border: 1.5px solid #e0dfd5;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.amort-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.amort-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.form-select, .form-input, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    background: #ffffff;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-select:focus, .form-input:focus, .form-textarea:focus {
+    border-color: #3f593f;
+}
+
+.amort-calculation-box {
+    background: #ffffff;
+    border: 1px solid #e5e5df;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.calc-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    color: #444;
+}
+
+.calc-row.highlight {
+    background: #fff8e6;
+    margin: 4px -10px -4px -10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #fed7aa;
+}
+
+.monthly-figure {
+    color: #c2410c;
+    font-size: 1.05rem;
+}
+
+.payment-channels-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.channel-pill {
+    padding: 8px 16px;
+    background: #f3f3f0;
+    border: 1.5px solid #d1d1ca;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.channel-pill input {
+    accent-color: #3f593f;
+    margin: 0;
+}
+
+.channel-pill:has(input:checked) {
+    background: #3f593f;
+    color: white;
+    border-color: #3f593f;
+}
+
+.booking-modal-footer {
+    background: #f7f7f3;
+    padding: 16px 28px;
+    border-top: 1px solid #e0dfd5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel-booking {
+    background: #ffffff;
+    border: 1.5px solid #777;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel-booking:hover {
+    background: #f0f0f0;
+}
+
+.btn-submit-booking {
+    background: #3f593f;
+    color: white;
+    border: none;
+    padding: 10px 26px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 12px rgba(63, 89, 63, 0.25);
+}
+
+.btn-submit-booking:hover {
+    background: #2a3c2a;
+    transform: translateY(-1px);
+}
+
+
+/* ==============================================================================
+   COMBINED CEMETERY MAP & PLOT SETUP LOCATOR STUDIO STYLES
+   Combines Layout Editor (Entire Map Layout) and Plot Editor (Plot Blueprint Setup)
+   ============================================================================== */
+
+/* Left Sidebar Search & Locator Box */
+.locator-search-card {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+
+.locator-search-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e3a29;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.locator-search-input-wrap {
+    display: flex;
+    gap: 6px;
+}
+
+.locator-search-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.88rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.locator-search-input:focus {
+    border-color: #2d4a36;
+}
+
+.btn-locate-plot {
+    background: #2d4a36;
+    color: white;
+    border: 1px solid #2d4a36;
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-locate-plot:hover {
+    background: #1e3a29;
+}
+
+.search-notice-msg {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+.search-notice-msg.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.search-notice-msg.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* Sidebar Badge Row & Locator Indicator */
+.sidebar-badge-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.sidebar-locator-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+}
+
+.locator-beacon-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d97706;
+    animation: beaconPulse 1.4s infinite;
+}
+
+@keyframes beaconPulse {
+    0% { transform: scale(0.9); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.5; }
+    100% { transform: scale(0.9); opacity: 1; }
+}
+
+/* Deceased Memorial Card in Sidebar */
+.sidebar-deceased-card {
+    background: #fcfbf9;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #2d4a36;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 10px 0 14px 0;
+}
+
+.deceased-header-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #1e3a29;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.deceased-name {
+    margin: 0 0 4px 0;
+    font-size: 1.05rem;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.deceased-dates, .deceased-burial {
+    margin: 0 0 2px 0;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.deceased-epitaph {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #475569;
+    background: #f8fafc;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    border: 1px dashed #cbd5e1;
+}
+
+.btn-sidebar-secondary {
+    width: 100%;
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-sidebar-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+/* Center Section View Mode Switcher */
+.pd-mode-tabs {
+    display: inline-flex;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.pd-mode-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pd-mode-tab:hover {
+    color: #1e3a29;
+}
+
+.pd-mode-tab.active {
+    background: #2d4a36;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.pd-located-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fefce8;
+    color: #854d0e;
+    border: 1px solid #fef08a;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Canvas Viewport Container - The One Big Map */
+.big-map-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none;
+    position: relative;
+    width: 100%;
+    background: #f1f5f9;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden !important;
+    margin-top: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.pd-viewport {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    overflow: hidden;
+    background-color: #f8fafc;
+    background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+    cursor: grab;
+    user-select: none;
+}
+
+.pd-viewport.panning {
+    cursor: grabbing !important;
+}
+
+.pd-viewport-stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+    pointer-events: none;
+}
+
+/* Entire Cemetery Map Board */
+.pd-entire-map-board {
+    position: absolute;
+    left: -1200px;
+    top: -900px;
+    width: 2400px;
+    height: 1800px;
+    background: transparent;
+    pointer-events: auto;
+    overflow: visible;
+}
+
+.pd-blueprint-guide {
+    display: none !important;
+}
+
+/* Area Containers on the Big Map - Clean Architectural Plot Enclosures with Vector Lawn Silhouettes */
+.pd-map-area {
+    position: absolute;
+    transform-origin: center center;
+    pointer-events: auto;
+    z-index: 5;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.pd-map-area:hover {
+    z-index: 25 !important;
+}
+
+.pd-map-area.active-zone {
+    z-index: 30 !important;
+}
+
+/* Organic Lawn Vector Artwork Silhouette Image */
+.pd-area-shape-img {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.95;
+    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.28));
+    transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.pd-map-area:hover .pd-area-shape-img {
+    filter: drop-shadow(0 6px 20px rgba(45, 90, 55, 0.5)) brightness(1.04);
+}
+
+.pd-map-area.active-zone .pd-area-shape-img {
+    filter: drop-shadow(0 0 22px rgba(212, 175, 55, 0.85)) brightness(1.06) !important;
+}
+
+/* Floating Clean Zone Badge Above Area */
+.pd-area-floating-label {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.88);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.pd-area-floating-label .pd-area-tag-num {
+    color: #facc15;
+    font-weight: 800;
+}
+
+.pd-area-floating-label .pd-area-tag-cat {
+    color: #e2e8f0;
+    font-size: 0.65rem;
+}
+
+/* Background image hidden per user request */
+.pd-area-bg-img {
+    display: none !important;
+}
+
+/* Plot Grid Layer Taking Full Area Space Over the Vector Shape */
+.pd-area-plots-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    gap: 1.5px;
+    z-index: 3;
+    pointer-events: auto;
+    box-sizing: border-box;
+}
+
+/* Individual Plot Slot On the Big Map */
+.pd-map-plot-slot {
+    border: 0.8px solid rgba(0, 0, 0, 0.4);
+    border-radius: 1.5px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    user-select: none;
+    min-width: 4px;
+    min-height: 4px;
+}
+
+.pd-map-plot-slot:hover {
+    transform: scale(1.4);
+    z-index: 50 !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+    filter: brightness(1.25);
+}
+
+.pd-map-plot-slot.selected {
+    outline: 2px solid #facc15;
+    box-shadow: 0 0 12px #facc15;
+    transform: scale(1.45);
+    z-index: 60 !important;
+}
+
+/* Glowing Golden Spotlight for Located Plot Target */
+.pd-map-plot-slot.target-located-cell {
+    outline: 2.5px solid #facc15;
+    z-index: 80 !important;
+    transform: scale(1.5);
+    animation: targetCellGlow 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes targetCellGlow {
+    from {
+        box-shadow: 0 0 6px #facc15, 0 0 14px rgba(234, 179, 8, 0.7);
+    }
+    to {
+        box-shadow: 0 0 22px #eab308, 0 0 38px #ca8a04;
+    }
+}
+
+/* Slot Status Colors (Consistent with Sidebar Legend) */
+.pd-map-plot-slot.status-available {
+    background-color: #2d5a37;
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.pd-map-plot-slot.status-reserved {
+    background-color: #d97706;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.pd-map-plot-slot.status-occupied {
+    background-color: #c41e3a;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.pd-map-plot-slot.status-maintenance {
+    background-color: #64748b;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Plot Code Number Label (crisp on zoom) */
+.pd-slot-text {
+    font-size: 8px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+    pointer-events: none;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+/* Area Vector Contours on Entire Map */
+.pd-vec-element {
+    position: absolute;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+    user-select: none;
+    z-index: 5;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+}
+
+.pd-vec-element:hover {
+    filter: drop-shadow(0 0 12px rgba(45, 90, 55, 0.75)) brightness(1.08);
+    z-index: 12 !important;
+}
+
+.pd-vec-element.active-zone {
+    filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.95)) brightness(1.1) !important;
+    z-index: 15 !important;
+}
+
+/* Interactive Floating Badges on Each Area */
+.pd-area-tag {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1.5px solid #2d4a36;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e3a29;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 20;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.pd-area-tag.active {
+    background: #2d4a36;
+    color: #ffffff;
+    border-color: #d4af37;
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 25;
+}
+
+/* Target Located Pin Beacon on Entire Map */
+.pd-locator-pin {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+}
+
+@keyframes pinBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.pd-pin-badge {
+    background: #1e3a29;
+    color: #ffffff;
+    border: 2px solid #d4af37;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    animation: pinBounce 2s infinite ease-in-out;
+}
+}
+
+.pd-pin-beacon-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d4af37;
+    animation: beaconPulse 1.2s infinite;
+}
+
+.pd-pin-stem {
+    width: 3px;
+    height: 14px;
+    background: #d4af37;
+}
+
+.pd-pin-base-ripple {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.4);
+    animation: rippleWave 1.8s infinite ease-out;
+}
+
+@keyframes rippleWave {
+    0% { transform: translateX(-50%) scale(0.6); opacity: 0.9; }
+    100% { transform: translateX(-50%) scale(2.4); opacity: 0; }
+}
+
+/* Located Target Cell Highlight on Plot Grid */
+.area-plot-cell.target-located-cell {
+    outline: 3px solid #ffffff !important;
+    box-shadow: 0 0 0 4px #d4af37, 0 0 20px rgba(212, 175, 55, 1) !important;
+    z-index: 30 !important;
+    transform: scale(1.12);
+    animation: targetCellGlow 2s infinite ease-in-out;
+}
+
+@keyframes targetCellGlow {
+    0%, 100% { box-shadow: 0 0 0 4px #d4af37, 0 0 16px rgba(212, 175, 55, 0.9); }
+    50% { box-shadow: 0 0 0 5px #f59e0b, 0 0 26px rgba(245, 158, 11, 1); }
+}
+
+.area-plot-cell.target-located-cell::after {
+    content: "TARGET";
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #d4af37;
+    color: #1e3a29;
+    font-size: 0.6rem;
+    font-weight: 900;
+    padding: 1px 4px;
+    border-radius: 2px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Floating Canva-Style Zoom & Control Bar */
+.pd-zoom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #ffffff;
+    border-top: 1px solid #cbd5e1;
+    font-size: 0.8rem;
+    color: #64748b;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pd-zoom-hint {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.pd-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pd-zbtn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.pd-zbtn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.pd-zslider {
+    width: 90px;
+    accent-color: #2d4a36;
+    cursor: pointer;
+}
+
+.pd-zlabel {
+    min-width: 44px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #1e293b;
+}
+
+.pd-zbtn-toggle {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+    font-weight: 700;
+}
+
+.pd-zbtn-toggle:hover {
+    background: #dcfce7;
+}
+
+@media (max-width: 900px) {
+    .legend-section {
+        width: 250px;
+        min-width: 230px;
+    }
+    .pd-zoom-hint { display: none; }
+}
+
+
+/* ==============================================================================
+   SINGLE AREA BLUEPRINT & RESERVATION LAYOUT STYLES
+   ============================================================================== */
+
+.section-selector-card {
+    background: #ffffff;
+    border: 1.5px solid #2d4a36;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.section-selector-card label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2d4a36;
+    margin-bottom: 6px;
+}
+
+.section-dropdown-select {
+    width: 100%;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.section-dropdown-select:focus {
+    outline: none;
+    border-color: #2d4a36;
+    box-shadow: 0 0 0 3px rgba(45, 74, 54, 0.15);
+}
+
+.status-filter-pills {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.status-filter-btn {
+    flex: 1;
+    min-width: 60px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+}
+
+.status-filter-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.status-filter-btn.active {
+    background: #2d4a36;
+    color: #ffffff;
+    border-color: #2d4a36;
+}
+
+.single-area-blueprint-board {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: transparent;
+    pointer-events: auto;
+    overflow: visible;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.14);
+}
+
+.single-area-shape-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.95;
+    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.28));
+    transition: opacity 0.2s ease;
+}
+
+.single-area-plots-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    z-index: 10;
+    pointer-events: auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.single-area-plot-cell {
+    position: relative;
+    z-index: 12;
+    margin: 1.5px;
+    border-radius: 3px;
+    border: 1px solid rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+    user-select: none;
+}
+
+.single-area-plot-cell:hover {
+    transform: scale(1.06);
+    z-index: 22 !important;
+    filter: brightness(1.18);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.single-area-plot-cell.selected {
+    outline: 3.5px solid #d4af37 !important;
+    outline-offset: 1px;
+    z-index: 30 !important;
+    filter: brightness(1.22);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.95) !important;
+}
+
+.single-area-plot-cell.status-available {
+    background-color: #16a34a;
+    color: #ffffff;
+}
+
+.single-area-plot-cell.status-reserved {
+    background-color: #eab308;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.single-area-plot-cell.status-occupied {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.single-area-plot-cell.status-maintenance {
+    background-color: #334155;
+    color: #cbd5e1;
+}
+
+.single-area-plot-cell .plot-label {
+    font-family: monospace;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.master-map-link-card {
+    background: #f8fafc;
+    border: 1px dashed #94a3b8;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    text-align: center;
+}
+
+.master-map-link-card p {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.btn-open-master-map-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #1e293b;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: background 0.15s;
+}
+
+.btn-open-master-map-link:hover {
+    background: #334155;
+}
