@@ -2,7 +2,8 @@
 // EDIT PROFILE CONTROLLER (Personal Information & Avatar Management)
 // ==============================================================================
 
-let stagedAvatarDataUrl = null;
+let stagedAvatarBlob = null;
+let stagedAvatarPreviewUrl = null;
 
 async function initEditProfilePage() {
     setupEditProfileEventListeners();
@@ -10,6 +11,7 @@ async function initEditProfilePage() {
 
 function setupEditProfileEventListeners() {
     const editProfileBtn = document.getElementById("editProfileBtn");
+    const profileAvatarCard = document.querySelector(".profile-avatar");
     const closeBtn = document.getElementById("closeEditProfileBtn");
     const overlayComponent = document.getElementById("edit-profile-page-component");
     const changeAvatarBtn = document.getElementById("changeAvatarBtn");
@@ -17,9 +19,17 @@ function setupEditProfileEventListeners() {
     const avatarPreview = document.getElementById("avatarPreview");
     const form = document.getElementById("editProfileForm");
 
-    // Open Modal
+    // Open Modal from Edit button
     if (editProfileBtn) {
         editProfileBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openEditProfileModal();
+        });
+    }
+
+    // Open Modal by clicking on avatar in profile modal
+    if (profileAvatarCard) {
+        profileAvatarCard.addEventListener("click", (e) => {
             e.preventDefault();
             openEditProfileModal();
         });
@@ -42,6 +52,17 @@ function setupEditProfileEventListeners() {
         });
     }
 
+    // Change Password trigger from Edit Profile
+    const changePasswordTriggerBtn = document.getElementById("editProfileChangePasswordBtn");
+    if (changePasswordTriggerBtn) {
+        changePasswordTriggerBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (typeof window.openChangePasswordModal === "function") {
+                window.openChangePasswordModal();
+            }
+        });
+    }
+
     // Avatar upload trigger
     if (changeAvatarBtn && avatarInput) {
         changeAvatarBtn.addEventListener("click", () => {
@@ -49,7 +70,7 @@ function setupEditProfileEventListeners() {
         });
     }
 
-    // Avatar file selection with client-side canvas scaling to clean base64 data URL
+    // Avatar file selection with client-side canvas scaling and Blob preparation for bucket upload
     if (avatarInput) {
         avatarInput.addEventListener("change", (e) => {
             const file = e.target.files?.[0];
@@ -65,7 +86,7 @@ function setupEditProfileEventListeners() {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement("canvas");
-                    const maxDim = 320;
+                    const maxDim = 400;
                     let w = img.width;
                     let h = img.height;
 
@@ -86,12 +107,16 @@ function setupEditProfileEventListeners() {
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, w, h);
 
-                    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-                    stagedAvatarDataUrl = dataUrl;
+                    // Convert to Blob for direct Supabase Storage 'profiles' bucket upload
+                    canvas.toBlob((blob) => {
+                        if (!blob) return;
+                        stagedAvatarBlob = blob;
+                        stagedAvatarPreviewUrl = canvas.toDataURL("image/jpeg", 0.9);
 
-                    if (avatarPreview) {
-                        avatarPreview.src = dataUrl;
-                    }
+                        if (avatarPreview) {
+                            avatarPreview.src = stagedAvatarPreviewUrl;
+                        }
+                    }, "image/jpeg", 0.9);
                 };
                 img.src = event.target.result;
             };
@@ -139,12 +164,45 @@ function setupEditProfileEventListeners() {
                     updated_at: new Date().toISOString()
                 };
 
-                if (stagedAvatarDataUrl) {
-                    updatePayload.avatar_url = stagedAvatarDataUrl;
-                    localStorage.setItem("userProfilePicture", stagedAvatarDataUrl);
+                let newAvatarUrl = null;
+
+                // 1. Upload avatar image directly into Supabase Storage 'profiles' bucket
+                if (stagedAvatarBlob) {
+                    if (submitBtn) submitBtn.textContent = "Uploading Avatar...";
+
+                    // Storage path: {user_id}/avatar-{timestamp}.jpg (strictly matches RLS policy: folder name = auth.uid())
+                    const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
+
+                    const { error: uploadError } = await supabaseClient
+                        .storage
+                        .from("profiles")
+                        .upload(filePath, stagedAvatarBlob, {
+                            cacheControl: "3600",
+                            upsert: true,
+                            contentType: "image/jpeg"
+                        });
+
+                    if (uploadError) {
+                        console.error("Profiles bucket upload error:", uploadError);
+                        throw new Error("Failed to upload avatar to 'profiles' bucket: " + uploadError.message);
+                    }
+
+                    // Retrieve the public URL from the public 'profiles' bucket
+                    const { data: urlData } = supabaseClient
+                        .storage
+                        .from("profiles")
+                        .getPublicUrl(filePath);
+
+                    newAvatarUrl = urlData?.publicUrl || null;
+                    if (newAvatarUrl) {
+                        updatePayload.avatar_url = newAvatarUrl;
+                        localStorage.setItem("userProfilePicture", newAvatarUrl);
+                    }
                 }
 
-                // 1. Update profiles table
+                if (submitBtn) submitBtn.textContent = "Saving Details...";
+
+                // 2. Update profiles table
                 const { error: profileUpdateError } = await supabaseClient
                     .from("profiles")
                     .update(updatePayload)
@@ -152,20 +210,21 @@ function setupEditProfileEventListeners() {
 
                 if (profileUpdateError) throw profileUpdateError;
 
-                // 2. Sync Supabase auth user_metadata
+                // 3. Sync Supabase auth user_metadata
                 try {
                     await supabaseClient.auth.updateUser({
                         data: {
                             full_name: fullName,
                             username: username,
-                            phone: phone || null
+                            phone: phone || null,
+                            ...(newAvatarUrl ? { avatar_url: newAvatarUrl } : {})
                         }
                     });
                 } catch (metaErr) {
                     console.warn("Auth metadata sync notice:", metaErr);
                 }
 
-                // 3. Update DOM in Profile Modal instantly
+                // 4. Update DOM across Dashboard & modals instantly
                 const nameDisplay = document.getElementById("profileDisplayName");
                 if (nameDisplay) nameDisplay.textContent = fullName.toUpperCase();
 
@@ -181,20 +240,23 @@ function setupEditProfileEventListeners() {
                 const phoneEl = document.getElementById("profilePhone");
                 if (phoneEl) phoneEl.textContent = phone || "Not set";
 
-                if (stagedAvatarDataUrl) {
+                const finalAvatar = newAvatarUrl || localStorage.getItem("userProfilePicture");
+                if (finalAvatar) {
                     const profilePic = document.getElementById("profilePicture");
-                    if (profilePic) profilePic.src = stagedAvatarDataUrl;
+                    if (profilePic) profilePic.src = finalAvatar;
 
-                    document.querySelectorAll(".profile-user-btn img, .user-btn img").forEach((img) => {
-                        img.src = stagedAvatarDataUrl;
+                    document.querySelectorAll(
+                        ".profile-user-btn img, .user-btn img, #reservationUserAvatar, #myReservationUserAvatar, #deceasedFamilyUserAvatar, #featuredSpacesUserAvatar, #maintenanceUserAvatar, #supportTicketsUserAvatar, #plotDetailsUserAvatar"
+                    ).forEach((img) => {
+                        img.src = finalAvatar;
                     });
                 }
 
-                // 4. Close modal & alert
+                // 5. Close modal & alert
                 closeEditProfileModal();
 
                 if (typeof showSuccessModal === "function") {
-                    showSuccessModal("Profile Updated", "Your profile details have been saved successfully.");
+                    showSuccessModal("Profile Updated", "Your profile details and avatar have been saved to the profiles bucket.");
                 } else {
                     alert("Profile updated successfully!");
                 }
@@ -219,7 +281,8 @@ async function openEditProfileModal() {
     editProfilePage.style.display = "flex";
     editProfilePage.classList.add("active");
 
-    stagedAvatarDataUrl = null;
+    stagedAvatarBlob = null;
+    stagedAvatarPreviewUrl = null;
 
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -235,7 +298,7 @@ async function openEditProfileModal() {
         const username = profile?.username || user.user_metadata?.username || user.email.split("@")[0];
         const phone = profile?.phone || user.user_metadata?.phone || "";
         const email = user.email || "";
-        const avatarUrl = profile?.avatar_url || localStorage.getItem("userProfilePicture") || "assets/images/icons/image 6.png";
+        const avatarUrl = profile?.avatar_url || localStorage.getItem("userProfilePicture") || "assets/images/default-avatar.png";
 
         const fullNameInput = document.getElementById("editFullName");
         const usernameInput = document.getElementById("editUsername");
@@ -260,6 +323,8 @@ function closeEditProfileModal() {
         editProfilePage.style.display = "none";
         editProfilePage.classList.remove("active");
     }
+    stagedAvatarBlob = null;
+    stagedAvatarPreviewUrl = null;
 }
 
 window.openEditProfileModal = openEditProfileModal;

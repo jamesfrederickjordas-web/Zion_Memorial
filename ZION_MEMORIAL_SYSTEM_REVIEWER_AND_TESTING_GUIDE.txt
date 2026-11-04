@@ -1,0 +1,360 @@
+================================================================================
+ZION MEMORIAL GARDEN: SYSTEM REVIEWER, BUILD GUIDE & TESTING MANUAL
+================================================================================
+
+Project Title: Cloud-Based Online Reservation and Records Management System 
+               with Interactive Mapping for Zion Memorial Garden
+Course / Subject: IS110: Systems Analysis & Design (SAD 1 & 2)
+Institution: Camarines Norte State College - College of Computing and Multimedia Studies
+Prepared For: Project Defense, System Review, and Technical Documentation for Team Members
+Date: October / November 2026
+
+================================================================================
+PART 1: COMPREHENSIVE SYSTEM REVIEWER (CHEAT SHEET FOR DEFENSE)
+================================================================================
+
+1. PROJECT BACKGROUND & PROBLEM STATEMENT
+--------------------------------------------------------------------------------
+* The Manual Problem:
+  Zion Memorial Garden previously operated on physical paper logbooks, manual 
+  ledgers, and verbal plot allocations. This caused:
+  1. Risk of duplicate plot reservations (double-selling).
+  2. Severe delays in plot location during burials and family visits.
+  3. Tedious installment (amortization) tracking and calculation errors.
+  4. Physical vulnerability of paper records to deterioration and loss.
+
+* The Solution:
+  A secure, cloud-enabled Software-as-a-Service (SaaS) web application integrating:
+  - Interactive SVG/Canvas cemetery mapping
+  - Online self-service reservations
+  - Walk-in cashier point-of-sale (POS)
+  - Automated financial amortization tracking
+  - Centralized deceased interment records & public grave locator
+
+
+2. SYSTEM ARCHITECTURE & TECH STACK
+--------------------------------------------------------------------------------
+* Architecture Pattern: 
+  3-Tier Web Application (Frontend Client/Admin -> Local State/Event Bus -> Cloud BaaS)
+
+* Frontend:
+  - Clean Semantic HTML5
+  - CSS3 Custom Properties (Design System with nature-inspired palette)
+  - Vanilla ES6+ JavaScript (Zero heavy framework overhead, fast on all devices)
+
+* Backend & Database:
+  - Supabase (PostgreSQL 15) providing relational data integrity, Foreign Keys, 
+    and Row-Level Security (RLS) policies.
+  - Built-in Supabase Auth for JWT session management.
+
+* Mapping Engine:
+  - Custom SVG coordinate-mapped canvas layered over high-res aerial boundary
+    imagery (assets/images/backgrounds/cemetery-boundary-bg.png).
+
+* Financial & Payment Engine:
+  - Pure JavaScript amortization engine calculating Spot Cash and Installments
+    (12, 24, 36, and 60 months).
+  - Dynamic QR code generator, Base64 image compressor, and printable receipts.
+
+
+3. CORE DATABASE TABLES & DATA DICTIONARY
+--------------------------------------------------------------------------------
+1. profiles:
+   Extends auth users with personal contact info.
+   Key Columns: id (UUID PK), full_name, phone, role ('client', 'staff', 'admin').
+
+2. memorial_spaces:
+   Master cemetery plot inventory & coordinates.
+   Key Columns: id, plot_identifier, category, section_name, price, down_payment, 
+                status ('available', 'reserved', 'occupied', 'maintenance'), 
+                map_coordinates.
+
+3. reservations:
+   Booking contracts and financial terms.
+   Key Columns: id, reservation_number, user_id, space_id, 
+                plan_type ('PRE-NEED', 'AT-NEED'), payment_method, 
+                installment_term_months, total_price, down_payment_amount, 
+                monthly_amortization, total_paid, balance, 
+                status ('PENDING', 'APPROVED', 'CANCELLED'), notes.
+
+4. payments:
+   Financial transactions and remittances.
+   Key Columns: id, reservation_id, payment_reference, amount, 
+                payment_type ('DOWN_PAYMENT', 'MONTHLY_INSTALLMENT', 'FULL_PAYMENT'), 
+                payment_method, status ('COMPLETED', 'PENDING'), paid_at.
+
+5. payment_schedules:
+   Monthly amortization ledger dues.
+   Key Columns: id, reservation_id, installment_number, due_date, amount_due, 
+                status ('PENDING', 'PAID', 'OVERDUE').
+
+6. memorial_records:
+   Deceased interment details & grave index.
+   Key Columns: id, space_id, family_contact_id, deceased_name, birth_date, 
+                death_date, burial_date, gender ('Male', 'Female', 'Other'), 
+                epitaph, memorial_photo_url.
+
+7. system_settings:
+   Dynamic cloud portal settings.
+   Key Columns: key (TEXT PK), value (JSONB), description, updated_at, updated_by.
+   Example key: 'gcash_qr_config' (Stores Base64 QR image, merchant name & mobile).
+
+8. audit_logs:
+   Immutable system event trail.
+   Key Columns: id, admin_user_id, action_type, table_name, record_id, details, 
+                created_at.
+
+
+4. CRITICAL BUSINESS LOGIC (KEY RULES FOR DEFENSE)
+--------------------------------------------------------------------------------
+A. Pre-Need vs. At-Need Plan Types:
+   - Pre-Need: Acquired in advance as estate planning or future family investment.
+     Deceased details are OPTIONAL upon reservation and can be assigned later.
+     Plot status is set to 'reserved'.
+   - At-Need: Acquired for an immediate death and interment.
+     Deceased First Name, Last Name, and Date of Burial are MANDATORY.
+     A record is immediately generated in memorial_records and plot status is 
+     set to 'occupied'.
+
+B. Online Portal vs. Admin Walk-In Reservation:
+   - Online Portal: Customer is already logged in with an authenticated account.
+     Customer selects GCash QR, Maya, Bank, or Cash. Status begins as 'PENDING'.
+   - Admin Walk-In Form: Physical customer is at the office counter. Cashier inputs 
+     client contact details, takes cash, immediately approves the booking ('APPROVED'), 
+     and prints an official cash receipt.
+
+C. Dynamic GCash QR Gateway:
+   - Admin uploads custom QR in Admin Setup.
+   - Compressed client-side via HTML5 Canvas into Base64 and saved in system_settings.
+   - Syncs in real time via DOM events, cached in localStorage, with static SVG fallback.
+
+
+================================================================================
+PART 2: STEP-BY-STEP IMPLEMENTATION GUIDE (HOW WE BUILT IT)
+================================================================================
+
+PHASE 1: REQUIREMENTS ANALYSIS & SAD CONCEPTUAL MODELING
+1. Discovered pain points through park administration interviews.
+2. Drafted Use Case Models for Client and Staff/Admin actors.
+3. Designed Entity Relationship Diagram (ERD) defining relational foreign keys.
+
+PHASE 2: DATABASE SCHEMA & CLOUD SETUP
+1. Provisioned Supabase PostgreSQL instance.
+2. Executed complete SQL DDL schema (sql/complete_setup.sql) with check constraints.
+3. Implemented Row-Level Security (RLS) policies isolating client records.
+
+PHASE 3: MODULAR FRONTEND & DESIGN SYSTEM
+1. Established color palette: forest green (#2d4a36), gold accents, crisp typography.
+2. Modularized UI components (reservation-modal, login-modal, notification-modal).
+
+PHASE 4: INTERACTIVE CEMETERY VECTOR MAPPING
+1. Scaled vector coordinates over park blueprint canvas.
+2. Synchronized database plot states in real-time with color coded plot markers:
+   Green = Available, Amber = Reserved, Blue = Occupied, Gray = Maintenance.
+
+PHASE 5: FINANCIAL AMORTIZATION & SCHEDULE GENERATOR
+1. Formulated mathematical amortization engine:
+   Remaining Balance = Total Price - Down Payment
+   Monthly Amortization = Remaining Balance / Term (12, 24, 36, or 60 Months)
+2. Automated schedule generation producing monthly dues with calendar due dates.
+
+PHASE 6: PAYMENT GATEWAYS & RECEIPT ENGINE
+1. Built dynamic GCash manager supporting custom QR uploads with canvas compression.
+2. Programmed formatted printable receipts with reference codes and QR markers.
+
+PHASE 7: ADMINISTRATIVE MANAGEMENT SUITE & WALK-IN POS
+1. Constructed Admin KPIs for revenue, occupied spaces, and overdue amortizations.
+2. Built Walk-In Reservation point-of-sale modal for counter transactions.
+3. Created automated PDF and CSV export tools for masterlists and audit logs.
+
+PHASE 8: PUBLIC GRAVE LOCATOR
+1. Indexed memorial_records to power fast name searching.
+2. Displays deceased dates, plot location, and epitaph for park visitors.
+
+
+================================================================================
+PART 3: TOP DEFENSE QUESTIONS & ANSWERS (Q&A CHEAT SHEET)
+================================================================================
+
+Q1: Why use Supabase instead of traditional MySQL with PHP?
+A1: Supabase provides enterprise PostgreSQL with built-in JWT authentication, 
+    Row-Level Security (RLS) directly inside the database engine, and instant 
+    RESTful APIs. This eliminates massive backend boilerplate code while 
+    guaranteeing tighter security.
+
+Q2: How does the system prevent double-selling of plots?
+A2: Atomic database transactions and SQL status checks verify that space_id has 
+    status = 'available' before committing the reservation row.
+
+Q3: What is the difference between Pre-Need and At-Need in the database?
+A3: At-Need strictly requires Deceased First Name, Last Name, and Date of Burial, 
+    inserting an immediate record into memorial_records and updating the space to 
+    'occupied'. Pre-Need allows deceased fields to be null/empty, setting the 
+    space to 'reserved'.
+
+Q4: Where is the GCash QR code stored?
+A4: Stored in the Supabase table public.system_settings under key 'gcash_qr_config' 
+    as JSONB holding a compressed Base64 data URL. It is cached in browser 
+    localStorage and defaults to assets/images/gcash-qr-default.svg if unconfigured.
+
+
+================================================================================
+PART 4: COMPREHENSIVE SYSTEM TESTING GUIDE
+================================================================================
+
+1. TEST ENVIRONMENT PRE-REQUISITES
+--------------------------------------------------------------------------------
+* Serve project files via a local HTTP server (Live Server or 'python -m http.server 8000').
+* Verify Supabase API keys are connected.
+* Open Browser DevTools (F12) to monitor Console and Network tabs.
+
+
+2. COMPREHENSIVE TEST EXECUTION MATRIX
+--------------------------------------------------------------------------------
+TEST ID: TC-01
+Module: Client Registration
+Objective: Verify new user sign-up with contact validation
+Steps:
+  1. Open index.html
+  2. Click "Register"
+  3. Enter valid name, email, phone, and password
+  4. Submit form
+Expected Result: Profile created in profiles table; auto-redirects to dashboard.html.
+
+TEST ID: TC-02
+Module: Security & RBAC
+Objective: Prevent unauthorized clients from opening Admin Portal
+Steps:
+  1. Log in as a standard client
+  2. Type admin.html directly into URL bar
+Expected Result: System intercepts non-staff user and redirects to dashboard/login.
+
+TEST ID: TC-03
+Module: Interactive Vector Map
+Objective: Ensure plot markers reflect live database status
+Steps:
+  1. Open dashboard.html
+  2. Switch between lawn tabs (Condo, Supreme, etc.)
+  3. Observe node colors
+Expected Result: Available plots show Green, Reserved Amber, Occupied Blue.
+
+TEST ID: TC-04
+Module: Amortization Calculations
+Objective: Validate monthly installment calculation accuracy
+Steps:
+  1. Select plot priced at P71,486.37
+  2. Down payment: P10,200.00
+  3. Choose 60-Month installment term
+Expected Result: Monthly Amortization displays exactly P1,021.44 / mo:
+                 (71486.37 - 10200) / 60 = 1021.44
+
+TEST ID: TC-05
+Module: Pre-Need Booking
+Objective: Test advance planning booking with optional deceased details
+Steps:
+  1. Select "PRE-NEED" plan type card
+  2. Leave deceased fields empty
+  3. Pick payment channel and submit
+Expected Result: Reservation saves with status PENDING; plot marked 'reserved'.
+
+TEST ID: TC-06
+Module: At-Need Booking (Validation Rule)
+Objective: Ensure system enforces deceased details for immediate burials
+Steps:
+  1. Select "AT-NEED" plan type card
+  2. Leave deceased First/Last Name blank
+  3. Attempt submission
+Expected Result: Submission blocked with prompt requiring Deceased Name & Burial Date.
+
+TEST ID: TC-07
+Module: At-Need Booking (Success)
+Objective: Immediate burial booking with complete deceased record
+Steps:
+  1. Select "AT-NEED"
+  2. Enter deceased full name and burial date
+  3. Submit booking
+Expected Result: Record added to memorial_records; plot status becomes 'occupied'.
+
+TEST ID: TC-08
+Module: Admin Walk-In POS (Cashier)
+Objective: Process in-person customer reservation with cash receipt
+Steps:
+  1. Open admin.html -> Reservations tab
+  2. Click "+ New Walk-In Reservation"
+  3. Select available plot from dropdown
+  4. Fill client details, plan type, and cash tendered
+  5. Click "Issue Receipt & Confirm Booking"
+Expected Result: Instant approval (APPROVED); payment marked COMPLETED; 
+                 official receipt dialog triggered.
+
+TEST ID: TC-09
+Module: Dynamic GCash QR Upload
+Objective: Admin uploads and compresses custom merchant QR code
+Steps:
+  1. Admin -> GCash Setup tab
+  2. Select image file (PNG/JPG)
+  3. Click "Save QR Gateway Configuration"
+Expected Result: Compressed image saved to system_settings; preview updates.
+
+TEST ID: TC-10
+Module: Live QR Client Sync
+Objective: Client reservation modal displays updated Admin QR code
+Steps:
+  1. Open Client Reservation Modal in second tab
+  2. Select GCash payment option
+Expected Result: Displays the newly uploaded Admin QR code and merchant details.
+
+TEST ID: TC-11
+Module: Public Grave Locator
+Objective: Search and find buried loved ones
+Steps:
+  1. Open plot-locator.html
+  2. Search for deceased surname
+  3. Click matching result card
+Expected Result: Map highlights plot location; shows burial date and epitaph.
+
+TEST ID: TC-12
+Module: Masterlist Reporting & Export
+Objective: Download official park PDF and CSV reports
+Steps:
+  1. Admin -> Reports tab
+  2. Click "Download Official PDF" and "CSV"
+Expected Result: Generates downloadable files containing reservation masterlist.
+
+
+3. STEP-BY-STEP LIVE DEFENSE DEMONSTRATION SCRIPT
+--------------------------------------------------------------------------------
+Sequence for presenting to the panel:
+Step 1: Admin System Settings
+  - Open admin.html -> GCash Gateway Setup.
+  - Show dynamic configuration stored in the cloud.
+Step 2: Client Interactive Map & Real-Time Availability
+  - Open dashboard.html.
+  - Switch lawn tabs and show real-time color markers.
+  - Click an available plot to open the Reservation Modal.
+Step 3: Financial Engine & Pre-Need vs At-Need Rules
+  - Demo amortization calculator with 12 to 60 months terms.
+  - Show Pre-Need: Deceased info optional.
+  - Switch to At-Need: Red requirement indicators trigger for burial dates.
+  - Submit reservation using GCash QR.
+Step 4: Admin Verification & Walk-In POS
+  - Switch to admin.html -> Reservations.
+  - Show newly received reservation.
+  - Demo "+ New Walk-In Reservation" for counter cash sales.
+Step 5: Records Management & Grave Locator
+  - Open plot-locator.html.
+  - Search for the deceased name and demonstrate instant grave location.
+
+
+4. USER ACCEPTANCE TESTING (UAT) SIGN-OFF CHECKLIST
+--------------------------------------------------------------------------------
+[ ] Zero JavaScript console errors on initial load.
+[ ] Supabase database connection and Row-Level Security active.
+[ ] Official cash receipt prints cleanly on one page.
+[ ] Responsive layout verified on mobile (375px) and desktop (1440px).
+[ ] All team members rehearsed on their respective modules.
+
+================================================================================
+END OF SYSTEM REVIEWER & TESTING MANUAL
+================================================================================
+

@@ -19,7 +19,7 @@
                 <span></span>
             </button>
             <button class="my-reservation-user-btn" id="myReservationUserBtn" title="View Profile">
-                <img src="assets/images/icons/image 6.png" alt="User" id="myReservationUserAvatar">
+                <img src="assets/images/default-avatar.png" alt="User" id="myReservationUserAvatar">
             </button>
         </div>
     </header>
@@ -27,50 +27,71 @@
     <!-- Content -->
     <main class="my-reservation-content">
         <div class="my-reservation-header">
-            <h1>My Reservation</h1>
-            <p>View and Manage your plot reservation</p>
+            <h1 id="myResHeaderTitle">My Reservations &amp; Payments</h1>
+            <p id="myResHeaderDesc">View your reserved memorial plots, settle monthly amortization, and manage GCash auto-debit</p>
         </div>
 
-        <!-- Main Reservation Card matching Figma Frame 120_91 -->
-        <div class="my-reservation-box">
-            <div class="my-reservation-box-header">
-                <h2>My Reservation</h2>
-                <button class="quick-reserve-btn" id="headerReservePlotBtn">+ Reserve Another Plot</button>
-            </div>
-            
-            <!-- Table Container (Shown when reservations exist) -->
-            <div id="reservationTableContainer" class="reservation-table-wrapper" style="display: none;">
-                <table class="reservation-table">
-                    <thead>
-                        <tr>
-                            <th>RESERVATION #</th>
-                            <th>PLOT LOCATION</th>
-                            <th>PLAN TYPE</th>
-                            <th>PAYMENT</th>
-                            <th>INTERRED / DECEASED</th>
-                            <th>STATUS</th>
-                            <th>DATE</th>
-                            <th style="text-align: center;">ACTION</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reservationTableBody">
-                        <!-- Populated dynamically via my-reservation-page.js -->
-                    </tbody>
-                </table>
-            </div>
+        <!-- Subpage Tabs Bar -->
+        <div class="subpage-tabs-bar" style="margin-top: 14px; margin-bottom: 20px;">
+            <button type="button" class="subpage-tab-btn active" id="tabMyResPlots">
+                📋 My Reserved Plots
+            </button>
+            <button type="button" class="subpage-tab-btn" id="tabMyResPayments">
+                💳 Payments &amp; Auto-Debit
+            </button>
+            <button type="button" class="subpage-tab-btn" id="tabMyResHistory">
+                🕒 Payment History &amp; Receipts
+            </button>
+        </div>
 
-            <!-- Empty State Container (Shown when 0 reservations) -->
-            <div id="reservationEmptyState" class="my-reservation-box-content">
-                <img src="assets/images/icons/calendar.png" alt="Calendar" class="calendar-icon">
-                <p class="no-reservation-text">You don't have any reservations yet.</p>
-                <button class="reserve-plot-btn" id="reservePlotBtn">+ Reserve a Plot</button>
-            </div>
+        <!-- PANE 1: My Reservations Table -->
+        <div id="paneMyResPlots" class="my-reservation-pane-container">
+            <!-- Main Reservation Card matching Figma Frame 120_91 -->
+            <div class="my-reservation-box">
+                <div class="my-reservation-box-header">
+                    <h2>My Reserved Plots</h2>
+                    <button class="quick-reserve-btn" id="headerReservePlotBtn">+ Reserve Another Plot</button>
+                </div>
+                
+                <!-- Table Container (Shown when reservations exist) -->
+                <div id="reservationTableContainer" class="reservation-table-wrapper" style="display: none;">
+                    <table class="reservation-table">
+                        <thead>
+                            <tr>
+                                <th>RESERVATION #</th>
+                                <th>PLOT LOCATION</th>
+                                <th>PLAN TYPE</th>
+                                <th>PAYMENT</th>
+                                <th>INTERRED / DECEASED</th>
+                                <th>STATUS</th>
+                                <th>DATE</th>
+                                <th style="text-align: center;">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservationTableBody">
+                            <!-- Populated dynamically via my-reservation-page.js -->
+                        </tbody>
+                    </table>
+                </div>
 
-            <!-- Loading State -->
-            <div id="reservationLoadingState" class="reservation-loading-state" style="display: none;">
-                <div class="spinner"></div>
-                <p>Loading your reservations...</p>
+                <!-- Empty State Container (Shown when 0 reservations) -->
+                <div id="reservationEmptyState" class="my-reservation-box-content">
+                    <img src="assets/images/icons/calendar.png" alt="Calendar" class="calendar-icon">
+                    <p class="no-reservation-text">You don't have any reservations yet.</p>
+                    <button class="reserve-plot-btn" id="reservePlotBtn">+ Reserve a Plot</button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="reservationLoadingState" class="reservation-loading-state" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Loading your reservations...</p>
+                </div>
             </div>
+        </div>
+
+        <!-- PANE 2 & 3: Payments & Auto-Debit / Payment History Ledger -->
+        <div id="paneMyResPaymentsUnified" class="my-reservation-pane-container" style="display: none;">
+            <div id="paneMyResPaymentsMount"></div>
         </div>
     </main>
 </div>

@@ -1,0 +1,21 @@
+{
+  "name": "zion-memorial-garden",
+  "version": "1.0.0",
+  "description": "Zion Memorial Garden - Cemetery Management System",
+  "scripts": {
+    "dev": "npx serve -l 3000",
+    "start": "npx serve -l 3000",
+    "serve": "npx serve -l 3000",
+    "python-server": "python -m http.server 3000"
+  },
+  "keywords": [
+    "cemetery",
+    "management",
+    "supabase",
+    "gis",
+    "memorial"
+  ],
+  "author": "Zion Memorial Garden",
+  "license": "ISC"
+}
+

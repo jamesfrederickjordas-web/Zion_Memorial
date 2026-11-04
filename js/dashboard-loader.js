@@ -295,7 +295,7 @@ async function initializeDashboard() {
 
     // Initialize Notification Bell & Center
     if (typeof window.initDashboardNotifications === 'function') {
-        window.initDashboardNotifications();
+        window.initDashboardNotifications(user);
     }
 
     // =========================================
@@ -1810,7 +1810,7 @@ async function loadLiveUserProfile(user) {
         const fullName = profile?.full_name || user.user_metadata?.full_name || user.email.split('@')[0];
         const username = profile?.username || user.user_metadata?.username || user.email.split('@')[0];
         const phone = profile?.phone || user.user_metadata?.phone || 'Not set';
-        const avatarUrl = profile?.avatar_url || localStorage.getItem('userProfilePicture') || 'assets/dashboard/image 8.png';
+        const avatarUrl = profile?.avatar_url || localStorage.getItem('userProfilePicture') || 'assets/images/default-avatar.png';
         if (profile?.avatar_url) {
             localStorage.setItem('userProfilePicture', profile.avatar_url);
         }

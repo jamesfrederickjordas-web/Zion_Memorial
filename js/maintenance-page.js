@@ -164,6 +164,18 @@ function initMaintenancePage() {
         });
     }
 
+    // Proof Modal close handlers
+    const proofModal = document.getElementById('maintProofModal');
+    const closeProofBtn = document.getElementById('btnCloseMaintProofModal');
+    const dismissProofBtn = document.getElementById('btnDismissMaintProofModal');
+    if (closeProofBtn) closeProofBtn.addEventListener('click', () => window.closeMaintenanceProofModal());
+    if (dismissProofBtn) dismissProofBtn.addEventListener('click', () => window.closeMaintenanceProofModal());
+    if (proofModal) {
+        proofModal.addEventListener('click', (e) => {
+            if (e.target === proofModal) window.closeMaintenanceProofModal();
+        });
+    }
+
     // Tab activation observer
     if (maintenancePage) {
         const observer = new MutationObserver((mutations) => {
@@ -235,6 +247,7 @@ async function loadMaintenancePageData(preselectedSpaceId = null) {
                 scheduled_date,
                 status,
                 notes,
+                proof_image_url,
                 completed_at,
                 space_id,
                 memorial_spaces (id, plot_identifier, section_name, category)
@@ -372,16 +385,59 @@ function renderMaintenanceTable(records = maintenanceVisitsCache, isFiltered = f
                     <span class="subpage-badge ${badgeClass}">${badgeLabel}</span>
                 </td>
                 <td style="text-align: center; white-space: nowrap;">
-                    ${status === 'scheduled' ? `
-                        <button type="button" class="btn-subpage-danger" onclick="cancelClientMaintenanceVisit(${v.id})">Cancel</button>
-                    ` : `
-                        <span style="color: #94a3b8; font-size: 0.78rem;">--</span>
-                    `}
+                    <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: center;">
+                        ${v.proof_image_url ? `
+                            <button type="button" class="btn-subpage-outline" style="font-size: 0.74rem; padding: 3px 8px; border-color: #16a34a; color: #166534; font-weight: 700; background: #f0fdf4; cursor: pointer;" onclick="openMaintenanceProofModal(${v.id})" title="View completion proof photo">
+                                📷 View Proof
+                            </button>
+                        ` : ''}
+                        ${status === 'scheduled' ? `
+                            <button type="button" class="btn-subpage-danger" onclick="cancelClientMaintenanceVisit(${v.id})">Cancel</button>
+                        ` : (!v.proof_image_url ? `
+                            <span style="color: #94a3b8; font-size: 0.78rem;">--</span>
+                        ` : '')}
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 }
+
+window.openMaintenanceProofModal = function(visitId) {
+    const v = maintenanceVisitsCache.find(x => x.id === visitId);
+    if (!v) return;
+
+    const modal = document.getElementById('maintProofModal');
+    if (!modal) return;
+
+    const space = v.memorial_spaces || {};
+    const plotEl = document.getElementById('maintProofPlot');
+    const typeEl = document.getElementById('maintProofType');
+    const dateEl = document.getElementById('maintProofDate');
+    const notesEl = document.getElementById('maintProofNotes');
+    const imgEl = document.getElementById('maintProofImg');
+    const downloadBtn = document.getElementById('btnDownloadMaintProof');
+
+    if (plotEl) plotEl.textContent = `${space.plot_identifier || 'Plot'} (${space.section_name || 'Grounds'})`;
+    if (typeEl) typeEl.textContent = v.visit_type || 'Grounds Care';
+    if (dateEl) {
+        const dt = v.completed_at || v.scheduled_date;
+        dateEl.textContent = dt ? new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Completed';
+    }
+    if (notesEl) notesEl.textContent = v.notes || 'Task completed and inspected by cemetery grounds staff.';
+    if (imgEl) imgEl.src = v.proof_image_url || '';
+    if (downloadBtn) {
+        downloadBtn.href = v.proof_image_url || '#';
+        downloadBtn.style.display = v.proof_image_url ? 'inline-block' : 'none';
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.closeMaintenanceProofModal = function() {
+    const modal = document.getElementById('maintProofModal');
+    if (modal) modal.style.display = 'none';
+};
 
 window.cancelClientMaintenanceVisit = async function(visitId) {
     if (!await showConfirmModal({ title: "Cancel Service Request", message: "Are you sure you want to cancel this scheduled service request?", confirmText: "Cancel Request", cancelText: "Keep", type: "warning", danger: true })) return;

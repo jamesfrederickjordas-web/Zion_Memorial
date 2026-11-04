@@ -30,6 +30,9 @@
                 <button type="button" class="admin-nav-item active" id="tabAdminDashboard">
                     <span class="nav-label">Dashboard</span>
                 </button>
+                <button type="button" class="admin-nav-item" id="tabAdminProfile">
+                    <span class="nav-label">&#128100; My Profile</span>
+                </button>
                 <button type="button" class="admin-nav-item" id="tabAdminLovedOnesLocator">
                     <span class="nav-label">&#128205; Locate Loved Ones</span>
                 </button>
@@ -86,7 +89,7 @@
 
             <div class="admin-sidebar-footer">
                 <!-- Removed back-to-client link for staff/admin home screen -->
-                <div class="sidebar-user-card">
+                <div class="sidebar-user-card" id="sidebarUserCardBtn" style="cursor: pointer;" title="Open My Profile">
                     <div class="sidebar-user-avatar" id="sidebarUserAvatar">A</div>
                     <div class="sidebar-user-info">
                         <span class="sidebar-user-name" id="sidebarUserName">Admin User</span>
@@ -253,6 +256,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 2: Map Editor (standalone page) — link in sidebar -->
 
                 <!-- VIEW 3: PLOT LAYOUT EDITOR -->
@@ -325,6 +453,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 4: RESERVATION MANAGEMENT (Figma Frame 505_8) -->
                 <section id="viewReservation" class="admin-view" style="display: none;">
                     <div class="table-section-header">
@@ -385,6 +638,131 @@
                                 </span>
                             </div>
                             <div class="pagination-controls" id="resPaginationControls"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -506,6 +884,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 5: DECEASED INVENTORY VIEW -->
                 <section id="viewDeceased" class="admin-view" style="display: none;">
                     <div class="table-section-header">
@@ -558,6 +1061,131 @@
                                 </span>
                             </div>
                             <div class="pagination-controls" id="decPaginationControls"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -663,6 +1291,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 7: USER & CLIENT ACCOUNT MANAGEMENT (Separated Online Clients vs Walk-In Counter Payers) -->
                 <section id="viewAccounts" class="admin-view" style="display: none;">
                     <div class="table-section-header">
@@ -758,6 +1511,131 @@
                                 </span>
                             </div>
                             <div class="pagination-controls" id="accPaginationControls"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -900,6 +1778,131 @@
                                     <tr><td colspan="7" style="text-align:center; padding:18px; color:#64748b;">No recent manual backups generated yet. Click "Download Backup" above.</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1079,6 +2082,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 9: MAINTENANCE & VISITS MANAGEMENT -->
                 <section id="viewMaintenance" class="admin-view" style="display: none;">
                     <div class="table-section-header">
@@ -1138,6 +2266,131 @@
                                     <tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">Loading maintenance visits...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1205,6 +2458,131 @@
                     </div>
                 </section>
 
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW 11: AUDIT TRAIL & LOGS -->
                 <section id="viewAuditLogs" class="admin-view" style="display: none;">
                     <div class="table-section-header">
@@ -1251,6 +2629,256 @@
                                     <tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">Loading audit logs...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08); overflow: hidden;">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 12: STAFF & ADMINISTRATOR PROFILE -->
+                <section id="viewAdminProfile" class="admin-view" style="display: none;">
+                    <div class="table-section-header">
+                        <div>
+                            <h2>My Account &amp; Profile</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                                Manage your administrative identity, upload profile picture, and maintain account credentials.
+                            </p>
+                        </div>
+                        <div class="table-controls">
+                            <span id="adminProfileRoleBadgeTop" class="admin-badge available" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700;">ADMINISTRATOR</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(280px, 320px) 1fr; gap: 24px; align-items: start; margin-top: 8px;">
+                        <!-- Left Column: Avatar & Quick Info Card -->
+                        <div class="admin-table-card" style="padding: 24px; text-align: center;">
+                            <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 16px auto; border-radius: 50%; border: 3px solid #2d5a27; padding: 4px; background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+                                <img id="adminProfileAvatarImg" src="assets/images/default-avatar.png" alt="Profile Picture" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">
+                            </div>
+                            
+                            <h3 id="adminProfileCardName" style="margin: 0 0 4px 0; color: #1e293b; font-size: 1.15rem; font-weight: 700;">Admin User</h3>
+                            <p id="adminProfileCardEmail" style="margin: 0 0 12px 0; color: #64748b; font-size: 0.85rem;">admin@example.com</p>
+                            
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; color: #2e7d32; font-size: 0.78rem; font-weight: 700; margin-bottom: 20px;">
+                                <span style="width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                                <span id="adminProfileCardRole">Administrator</span>
+                            </div>
+
+                            <input type="file" id="adminProfileAvatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button type="button" class="btn-modal-submit" id="adminUploadAvatarBtn" style="width: 100%; padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                    📷 Upload New Photo
+                                </button>
+                                <button type="button" class="btn-modal-cancel" id="adminRemoveAvatarBtn" style="width: 100%; padding: 8px 16px; font-size: 0.8rem; color: #b91c1c; cursor: pointer;">
+                                    Remove Photo
+                                </button>
+                            </div>
+                            <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                Supported: JPG, PNG, WEBP.<br>Compressed and synced to cloud storage.
+                            </p>
+                        </div>
+
+                        <!-- Right Column: Personal Information & Password Security -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Personal Information Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        👤 Personal Information
+                                    </h3>
+                                </div>
+                                <form id="adminProfileDetailsForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileFullNameInput">Full Name *</label>
+                                            <input type="text" id="adminProfileFullNameInput" class="admin-input" placeholder="Enter your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfileUsernameInput">Username *</label>
+                                            <input type="text" id="adminProfileUsernameInput" class="admin-input" placeholder="Enter your username" required>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminProfileEmailInput">Email Address (Read-Only)</label>
+                                            <input type="email" id="adminProfileEmailInput" class="admin-input" readonly style="background: #f8fafc; color: #64748b; cursor: not-allowed;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminProfilePhoneInput">Phone Number</label>
+                                            <input type="tel" id="adminProfilePhoneInput" class="admin-input" placeholder="09XXXXXXXXX" maxlength="11">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminSaveDetailsBtn" style="padding: 9px 24px; cursor: pointer;">
+                                            💾 Save Profile Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Security & Password Change Card -->
+                            <div class="admin-table-card" style="padding: 24px;">
+                                <div class="admin-table-title-bar" style="margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                                    <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                        🔒 Security &amp; Change Password
+                                    </h3>
+                                </div>
+                                <form id="adminProfilePasswordForm">
+                                    <div class="form-group">
+                                        <label for="adminCurrentPasswordInput">Current / Past Password *</label>
+                                        <div style="position: relative;">
+                                            <input type="password" id="adminCurrentPasswordInput" class="admin-input" placeholder="Enter your current sign-in password" required autocomplete="current-password" style="padding-right: 60px;">
+                                            <button type="button" class="admin-pwd-toggle-btn" data-target="adminCurrentPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                                        <div class="form-group">
+                                            <label for="adminNewPasswordInput">New Password * (Min. 6 characters)</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminNewPasswordInput" class="admin-input" placeholder="Enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminNewPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="adminConfirmPasswordInput">Confirm New Password *</label>
+                                            <div style="position: relative;">
+                                                <input type="password" id="adminConfirmPasswordInput" class="admin-input" placeholder="Re-enter new password" required autocomplete="new-password" style="padding-right: 60px;">
+                                                <button type="button" class="admin-pwd-toggle-btn" data-target="adminConfirmPasswordInput" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Show</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="adminPasswordErrorMsg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 0.82rem; margin-top: 14px;"></div>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                                        <button type="submit" class="btn-modal-submit" id="adminUpdatePasswordBtn" style="padding: 9px 24px; cursor: pointer; background: #1e3a8a;">
+                                            🔑 Update Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>

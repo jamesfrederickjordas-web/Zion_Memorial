@@ -3,21 +3,28 @@
 // Implements Figma Frame 120_91 & Frame 213_2
 // ==============================================================================
 
-// Only Family Estate plots may hold multiple deceased; every other category holds exactly one.
+// Deceased capacity per plot category (e.g. Condominium columbarium vault holds up to 4 urns, Mausoleum holds up to 8, Family Estate holds up to 8, Supreme holds up to 2).
 const CATEGORY_CAPACITY = {
-    'Single Teired': 1,
-    'Supreme': 1,
-    'Special Supreme': 1,
-    'Condominium': 1,
+    'Condominium': 4,
+    'Mausoleum': 8,
     'Family Estate Jr.': 8,
     'Family Estate': 8,
-    'Mausoleum': 1
+    'Special Supreme': 2,
+    'Supreme': 2,
+    'Single Teired': 1,
+    'Single Tiered': 1
 };
 
 function getCategoryCapacity(category) {
     if (!category) return 1;
-    const cat = String(category).trim();
-    return CATEGORY_CAPACITY[cat] || 1;
+    const trimmed = String(category).trim();
+    if (CATEGORY_CAPACITY[trimmed]) return CATEGORY_CAPACITY[trimmed];
+    const cat = trimmed.toLowerCase();
+    if (cat.includes('family estate') || cat.includes('estate')) return 8;
+    if (cat.includes('mausoleum')) return 8;
+    if (cat.includes('condominium') || cat.includes('columbarium') || cat.includes('condo')) return 4;
+    if (cat.includes('supreme')) return 2;
+    return 1;
 }
 
 function parseFullName(fullName) {
@@ -81,6 +88,15 @@ function initMyReservationPage() {
     if (reservePlotBtn) reservePlotBtn.addEventListener('click', handleReserveClick);
     if (headerReservePlotBtn) headerReservePlotBtn.addEventListener('click', handleReserveClick);
 
+    // Setup Subpage Tabs: Plots, Payments, and History
+    const tabPlots = document.getElementById('tabMyResPlots');
+    const tabPayments = document.getElementById('tabMyResPayments');
+    const tabHistory = document.getElementById('tabMyResHistory');
+
+    if (tabPlots) tabPlots.addEventListener('click', () => window.switchMyReservationTab('plots'));
+    if (tabPayments) tabPayments.addEventListener('click', () => window.switchMyReservationTab('payments'));
+    if (tabHistory) tabHistory.addEventListener('click', () => window.switchMyReservationTab('history'));
+
     // Setup sidebar navigation links from My Reservation page
     setupMyReservationSidebarNavigation();
 
@@ -94,7 +110,10 @@ function initMyReservationPage() {
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.attributeName === 'class' && myReservationPage.classList.contains('active')) {
-                loadMyReservations();
+                const isPlotsTab = !tabPayments?.classList.contains('active') && !tabHistory?.classList.contains('active');
+                if (isPlotsTab) {
+                    loadMyReservations();
+                }
             }
         });
     });
@@ -106,6 +125,60 @@ function initMyReservationPage() {
         }
     }
 }
+
+// Subpage Tab Switcher for Unified Reservations & Payments
+window.switchMyReservationTab = function(tabName = 'plots', showNotice = false) {
+    const panePlots = document.getElementById('paneMyResPlots');
+    const panePaymentsUnified = document.getElementById('paneMyResPaymentsUnified');
+    const tabPlots = document.getElementById('tabMyResPlots');
+    const tabPayments = document.getElementById('tabMyResPayments');
+    const tabHistory = document.getElementById('tabMyResHistory');
+    const headerTitle = document.getElementById('myResHeaderTitle');
+    const headerDesc = document.getElementById('myResHeaderDesc');
+
+    if (tabName === 'payments') {
+        if (tabPlots) tabPlots.classList.remove('active');
+        if (tabPayments) tabPayments.classList.add('active');
+        if (tabHistory) tabHistory.classList.remove('active');
+
+        if (panePlots) panePlots.style.display = 'none';
+        if (panePaymentsUnified) panePaymentsUnified.style.display = 'block';
+
+        if (headerTitle) headerTitle.textContent = 'Payments, GCash & Bank Settlements';
+        if (headerDesc) headerDesc.textContent = 'Scan official QR, link your wallet for auto-debit, settle monthly dues, or pay via partner banks.';
+
+        if (typeof window.renderPaymentsInTabMount === 'function') {
+            window.renderPaymentsInTabMount('payments', showNotice);
+        }
+    } else if (tabName === 'history') {
+        if (tabPlots) tabPlots.classList.remove('active');
+        if (tabPayments) tabPayments.classList.remove('active');
+        if (tabHistory) tabHistory.classList.add('active');
+
+        if (panePlots) panePlots.style.display = 'none';
+        if (panePaymentsUnified) panePaymentsUnified.style.display = 'block';
+
+        if (headerTitle) headerTitle.textContent = 'Payment History & Receipts Ledger';
+        if (headerDesc) headerDesc.textContent = 'Track all past transactions, verify payment statuses, and view or download official PDF receipts.';
+
+        if (typeof window.renderPaymentsInTabMount === 'function') {
+            window.renderPaymentsInTabMount('history', showNotice);
+        }
+    } else {
+        // Default: 'plots'
+        if (tabPlots) tabPlots.classList.add('active');
+        if (tabPayments) tabPayments.classList.remove('active');
+        if (tabHistory) tabHistory.classList.remove('active');
+
+        if (panePlots) panePlots.style.display = 'block';
+        if (panePaymentsUnified) panePaymentsUnified.style.display = 'none';
+
+        if (headerTitle) headerTitle.textContent = 'My Reservations & Payments';
+        if (headerDesc) headerDesc.textContent = 'View your reserved memorial plots, settle monthly amortization, and manage GCash auto-debit';
+
+        loadMyReservations();
+    }
+};
 
 // ==============================================================================
 // FETCH & RENDER RESERVATIONS FROM SUPABASE
@@ -336,7 +409,11 @@ function setupReservationDetailsModal() {
 
     if (printBtn) {
         printBtn.addEventListener('click', () => {
+            document.body.classList.add('is-printing-receipt');
             window.print();
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-receipt');
+            }, 1200);
         });
     }
 }

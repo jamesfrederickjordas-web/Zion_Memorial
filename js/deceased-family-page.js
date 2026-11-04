@@ -62,12 +62,8 @@ function initDeceasedFamilyPage() {
     if (dfOpenPaymentHistoryLink) {
         dfOpenPaymentHistoryLink.addEventListener('click', (e) => {
             e.preventDefault();
-            const payHistoryModal = document.getElementById('paymentHistoryModal');
-            if (payHistoryModal) {
-                payHistoryModal.classList.add('active');
-                if (typeof window.loadPaymentHistoryModal === 'function') {
-                    window.loadPaymentHistoryModal();
-                }
+            if (typeof window.openGcashPaymentsFullPage === 'function') {
+                window.openGcashPaymentsFullPage(false, 'history');
             }
         });
     }

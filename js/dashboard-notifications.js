@@ -1,7 +1,8 @@
 // ==============================================================================
-// ZION MEMORIAL GARDEN - CLIENT DASHBOARD NOTIFICATIONS SYSTEM
+// ZION MEMORIAL GARDEN - CLIENT DASHBOARD REAL-TIME NOTIFICATIONS SYSTEM
 // Handles Notification Bell across ALL Navbars, Live Badge Counter,
-// Floating Notification Dropdown, and Event Routing.
+// Floating Notification Dropdown, Real-time Push Listener, Floating Toasts,
+// Audio Chimes, and Task Completion Proof Viewer.
 // ==============================================================================
 
 (function() {
@@ -11,10 +12,11 @@
     let pollInterval = null;
     let activeBellBtn = null;
     let isInitialized = false;
+    let realtimeChannel = null;
 
     /**
-     * Inject self-contained styles so bell buttons and dropdown always render
-     * at exact 38x38px across all navbars regardless of stylesheet cache.
+     * Inject self-contained styles so bell buttons, dropdown, and floating toasts
+     * always render reliably across all pages regardless of stylesheet caching.
      */
     function ensureNotificationStyles() {
         if (document.getElementById('zmgNotifBellStyles')) return;
@@ -36,11 +38,14 @@
                 justify-content: center;
                 position: relative;
                 flex-shrink: 0;
-                transition: background 0.15s ease, border-color 0.15s ease;
+                transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
             }
             .notif-bell-btn:hover {
                 background: #f8fafc;
                 border-color: #2d4a36;
+            }
+            .notif-bell-btn:active {
+                transform: scale(0.96);
             }
             .notif-bell-btn .bell-icon {
                 width: 20px !important;
@@ -72,17 +77,23 @@
                 box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
                 pointer-events: none;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                animation: zmgPulseBadge 0.3s ease-out;
+            }
+            @keyframes zmgPulseBadge {
+                0% { transform: scale(0.6); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
             }
             .notif-dropdown-panel {
                 position: fixed !important;
                 top: 60px;
                 right: 32px;
-                width: 380px;
+                width: 390px;
                 max-width: calc(100vw - 24px);
                 background: #ffffff;
                 border: 1.5px solid #d4dfd2;
-                border-radius: 6px;
-                box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+                border-radius: 8px;
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
                 z-index: 99999 !important;
                 display: none;
                 flex-direction: column;
@@ -161,7 +172,7 @@
                 font-weight: 700;
             }
             .notif-panel-list {
-                max-height: 360px;
+                max-height: 380px;
                 overflow-y: auto;
                 display: flex;
                 flex-direction: column;
@@ -196,6 +207,7 @@
                 text-decoration: none;
                 color: inherit;
                 position: relative;
+                transition: background 0.15s ease;
             }
             .notif-item:hover {
                 background: #f8fafc;
@@ -283,8 +295,86 @@
                 color: #dc2626;
                 background: #fee2e2;
             }
+
+            /* Floating Live Toast Container */
+            .zmg-notif-toast-container {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                z-index: 999999;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+                max-width: 420px;
+                width: calc(100vw - 32px);
+                font-family: 'Georgia', serif;
+            }
+            .zmg-notif-toast {
+                background: #ffffff;
+                border-radius: 8px;
+                border-left: 5px solid #16a34a;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+                padding: 14px 16px;
+                pointer-events: auto;
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                animation: zmgToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                transition: transform 0.25s ease, opacity 0.25s ease;
+                cursor: pointer;
+                border-top: 1px solid #e2e8f0;
+                border-right: 1px solid #e2e8f0;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .zmg-notif-toast.type-danger { border-left-color: #dc2626; }
+            .zmg-notif-toast.type-warning { border-left-color: #d97706; }
+            .zmg-notif-toast.type-info { border-left-color: #0284c7; }
+            @keyframes zmgToastSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(24px) scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+            .zmg-notif-toast-closing {
+                opacity: 0 !important;
+                transform: translateY(12px) scale(0.95) !important;
+            }
         `;
         document.head.appendChild(style);
+    }
+
+    /**
+     * Synthesize soft pleasant audio chime using Web Audio API
+     */
+    function playNotificationChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            osc.frequency.exponentialRampToValueAtTime(880.00, now + 0.12); // A5
+
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.start(now);
+            osc.stop(now + 0.35);
+        } catch (e) {
+            // AudioContext not yet unlocked by user interaction, fail silently
+        }
     }
 
     /**
@@ -333,32 +423,308 @@
     }
 
     /**
+     * Global Proof Viewer Modal for viewing task completion photos from anywhere
+     */
+    function openGlobalProofViewer(url, title, desc) {
+        let modal = document.getElementById('globalProofViewerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'globalProofViewerModal';
+            modal.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(4px); z-index: 9999999; align-items: center; justify-content: center; padding: 16px; font-family: Georgia, serif;';
+            modal.innerHTML = `
+                <div style="background: #ffffff; border-radius: 8px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; display: flex; flex-direction: column;">
+                    <div style="background: #1e3a29; color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 7px; border-top-right-radius: 7px;">
+                        <div>
+                            <h3 id="globalProofModalTitle" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #ffffff;">Service Completion Proof</h3>
+                            <p style="margin: 0; font-size: 0.75rem; color: #d4dfd2;">Cemetery Grounds Verified Task</p>
+                        </div>
+                        <button type="button" id="closeGlobalProofBtn" style="background: none; border: none; color: #ffffff; font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 4px;">&times;</button>
+                    </div>
+                    <div style="padding: 16px;">
+                        <div style="background: #0f172a; border-radius: 6px; overflow: hidden; text-align: center; margin-bottom: 12px; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                            <img id="globalProofModalImg" src="" alt="Proof Photo" style="max-width: 100%; max-height: 440px; object-fit: contain; display: block; margin: 0 auto;">
+                        </div>
+                        <div id="globalProofModalDesc" style="background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.82rem; color: #334155; line-height: 1.4;"></div>
+                    </div>
+                    <div style="padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <a id="globalProofDownloadLink" href="#" target="_blank" download="maintenance-proof.jpg" style="color: #1e3a29; font-size: 0.78rem; font-weight: 700; text-decoration: none;">⬇ Download Full Image</a>
+                        <button type="button" id="dismissGlobalProofBtn" style="background: #2d4a36; color: #fff; border: none; border-radius: 4px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const close = () => { modal.style.display = 'none'; };
+            modal.querySelector('#closeGlobalProofBtn').onclick = close;
+            modal.querySelector('#dismissGlobalProofBtn').onclick = close;
+            modal.onclick = (e) => { if (e.target === modal) close(); };
+        }
+
+        modal.querySelector('#globalProofModalTitle').textContent = title || 'Service Completion Proof';
+        modal.querySelector('#globalProofModalImg').src = url;
+        modal.querySelector('#globalProofModalDesc').textContent = desc || 'Cemetery staff has completed this task and attached this verified photo.';
+        modal.querySelector('#globalProofDownloadLink').href = url;
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Show live floating toast popup banner
+     */
+    function showNotificationToast(notif) {
+        playNotificationChime();
+
+        let container = document.getElementById('zmgNotifToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'zmgNotifToastContainer';
+            container.className = 'zmg-notif-toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        const toastType = notif.type === 'danger' ? 'type-danger' : (notif.type === 'warning' ? 'type-warning' : (notif.type === 'success' ? 'type-success' : 'type-info'));
+        toast.className = `zmg-notif-toast ${toastType}`;
+
+        const iconType = notif.iconType || (notif.category === 'maintenance' ? 'service' : (notif.category === 'support' ? 'support' : notif.category || 'reservation'));
+
+        toast.innerHTML = `
+            <div class="notif-item-icon type-${iconType}" style="margin-top: 0; width: 34px; height: 34px;">
+                ${getIconSvg(iconType)}
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <strong style="font-size: 0.86rem; color: #0f172a; line-height: 1.25;">${escapeHtml(notif.title)}</strong>
+                    <button type="button" class="btn-toast-close" style="background: none; border: none; font-size: 1.2rem; line-height: 1; color: #94a3b8; cursor: pointer; padding: 0 2px;">&times;</button>
+                </div>
+                <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: #475569; line-height: 1.35;">${escapeHtml(notif.desc || notif.message)}</p>
+                ${notif.proof_image_url ? `
+                    <div style="margin-top: 8px;">
+                        <button type="button" class="btn-toast-proof" style="background: #166534; color: white; border: none; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            📷 View Proof Photo
+                        </button>
+                    </div>
+                ` : ''}
+                <span style="font-size: 0.68rem; color: #94a3b8; display: block; margin-top: 4px;">Just now</span>
+            </div>
+        `;
+
+        const closeToast = () => {
+            toast.classList.add('zmg-notif-toast-closing');
+            setTimeout(() => toast.remove(), 260);
+        };
+
+        const proofBtn = toast.querySelector('.btn-toast-proof');
+        if (proofBtn) {
+            proofBtn.onclick = (e) => {
+                e.stopPropagation();
+                openGlobalProofViewer(notif.proof_image_url, notif.title, notif.desc || notif.message);
+                closeToast();
+            };
+        }
+
+        const closeBtn = toast.querySelector('.btn-toast-close');
+        if (closeBtn) {
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                closeToast();
+            };
+        }
+
+        toast.onclick = () => {
+            closeToast();
+            handleNotificationAction(notif.actionType || notif.link_action || 'myreservation');
+        };
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentElement) closeToast();
+        }, 9000);
+    }
+
+    /**
+     * Resolve Supabase Client safely across all loading states
+     */
+    function getSupabaseClient() {
+        return window.supabaseClient || (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+    }
+
+    /**
+     * Subscribe to Real-Time Updates via Supabase Realtime Channels
+     */
+    function subscribeToRealtimeNotifications() {
+        const client = getSupabaseClient();
+        if (!client || !currentUser) return;
+
+        try {
+            if (realtimeChannel) {
+                client.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+
+            realtimeChannel = client.channel('zmg-notifications-' + currentUser.id);
+
+            // 1. Listen for new inserts into public.notifications
+            realtimeChannel.on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${currentUser.id}`
+            }, (payload) => {
+                const row = payload.new;
+                if (!row) return;
+
+                const iconType = row.type === 'danger' ? 'reservation-danger' : 
+                                (row.category === 'payment' ? 'payment' : 
+                                (row.category === 'maintenance' ? 'service' : 
+                                (row.category === 'support' ? 'support' : 'reservation')));
+
+                const cat = (row.category === 'maintenance' || row.category === 'support') ? 'service' : row.category;
+
+                const newNotif = {
+                    id: `db_${row.id}`,
+                    dbId: row.id,
+                    category: cat,
+                    iconType: iconType,
+                    title: row.title,
+                    desc: row.message,
+                    time: row.created_at,
+                    unread: true,
+                    actionType: row.link_action || 'myreservation',
+                    referenceId: row.reference_id,
+                    proof_image_url: row.proof_image_url || null
+                };
+
+                // Prepend to memory list if not already present
+                if (!notificationsList.some(n => n.id === newNotif.id)) {
+                    notificationsList.unshift(newNotif);
+                    updateBadge();
+                    renderNotificationsList();
+                    showNotificationToast(newNotif);
+                }
+            });
+
+            // 2. Direct listeners on reservations, maintenance_visits, support_tickets, payments for instant live refresh
+            realtimeChannel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'reservations',
+                filter: `user_id=eq.${currentUser.id}`
+            }, () => {
+                fetchAndRenderNotifications();
+                if (typeof window.loadMyReservations === 'function') {
+                    window.loadMyReservations();
+                }
+            });
+
+            realtimeChannel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'maintenance_visits',
+                filter: `requested_by=eq.${currentUser.id}`
+            }, () => {
+                fetchAndRenderNotifications();
+                if (typeof window.loadMaintenancePageData === 'function') {
+                    window.loadMaintenancePageData();
+                }
+            });
+
+            realtimeChannel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'support_tickets',
+                filter: `user_id=eq.${currentUser.id}`
+            }, () => {
+                fetchAndRenderNotifications();
+                if (typeof window.loadSupportTicketsData === 'function') {
+                    window.loadSupportTicketsData();
+                }
+            });
+
+            realtimeChannel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'payments'
+            }, () => {
+                fetchAndRenderNotifications();
+            });
+
+            realtimeChannel.subscribe((status) => {
+                console.log('[ZMG Realtime Notifications] Subscription status:', status);
+            });
+
+        } catch (subErr) {
+            console.error('[ZMG Realtime Notifications] Failed to connect channel:', subErr);
+        }
+    }
+
+    /**
      * Initialize Dashboard Notifications
      */
-    async function initDashboardNotifications() {
+    async function initDashboardNotifications(userOpt = null) {
         try {
             ensureNotificationStyles();
             getOrCreateDropdownPanel();
             setupNotificationUI();
 
-            if (!window.supabaseClient) {
+            const client = getSupabaseClient();
+            if (!client) {
+                setTimeout(() => initDashboardNotifications(userOpt), 300);
                 return;
             }
 
-            const { data: { user }, error: authErr } = await supabaseClient.auth.getUser();
-            if (authErr || !user) {
+            if (userOpt && userOpt.id) {
+                currentUser = userOpt;
+            } else if (!currentUser) {
+                const storedId = sessionStorage.getItem("userId");
+                const storedEmail = sessionStorage.getItem("userEmail");
+                if (storedId) {
+                    currentUser = { id: storedId, email: storedEmail };
+                }
+                try {
+                    const { data: sessionData } = await client.auth.getSession();
+                    if (sessionData?.session?.user) {
+                        currentUser = sessionData.session.user;
+                    } else if (!currentUser) {
+                        const { data: userData } = await client.auth.getUser();
+                        if (userData?.user) currentUser = userData.user;
+                    }
+                } catch (authErr) {
+                    console.warn('[ZMG Notifications] Auth lookup error:', authErr);
+                }
+            }
+
+            if (!currentUser) {
+                renderEmptyNotificationsList('Sign in to view your notifications.');
                 return;
             }
 
-            currentUser = user;
             isInitialized = true;
 
             await fetchAndRenderNotifications();
+            subscribeToRealtimeNotifications();
 
+            // Background fallback sync
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(fetchAndRenderNotifications, 35000);
+            pollInterval = setInterval(fetchAndRenderNotifications, 15000);
+
+            // Listen for auth state changes (e.g. login/logout)
+            client.auth.onAuthStateChange((event, session) => {
+                if (session && session.user) {
+                    currentUser = session.user;
+                    fetchAndRenderNotifications();
+                    subscribeToRealtimeNotifications();
+                } else {
+                    currentUser = null;
+                    notificationsList = [];
+                    updateBadge();
+                    renderEmptyNotificationsList('Sign in to view your notifications.');
+                }
+            });
+
         } catch (err) {
             console.error('Failed to init dashboard notifications:', err);
+            renderEmptyNotificationsList('Could not load notifications.');
         }
     }
 
@@ -392,6 +758,7 @@
                         const rightOffset = Math.max(12, window.innerWidth - rect.right);
                         panel.style.right = `${rightOffset}px`;
                         panel.style.display = 'flex';
+                        fetchAndRenderNotifications();
                     }
                     return;
                 }
@@ -454,7 +821,13 @@
             saveReadIds(readIds);
         }
         const item = notificationsList.find(n => n.id === notifId);
-        if (item) item.unread = false;
+        if (item) {
+            item.unread = false;
+            const client = getSupabaseClient();
+            if (item.dbId && client) {
+                client.from('notifications').update({ is_read: true }).eq('id', item.dbId).then();
+            }
+        }
         updateBadge();
         renderNotificationsList();
     }
@@ -468,6 +841,10 @@
             n.unread = false;
         });
         saveReadIds(readIds);
+        const client = getSupabaseClient();
+        if (currentUser && client) {
+            client.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).then();
+        }
         updateBadge();
         renderNotificationsList();
     }
@@ -478,196 +855,315 @@
         renderNotificationsList();
     }
 
+    function renderEmptyNotificationsList(message = "You're completely up to date.") {
+        const listEl = document.getElementById('notifPanelList');
+        if (!listEl) return;
+        listEl.innerHTML = `
+            <div class="notif-empty-state">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <p style="font-weight: 600; color: #475569; margin-bottom: 2px;">No notifications found</p>
+                <span style="font-size: 0.72rem; color: #94a3b8;">${escapeHtml(message)}</span>
+            </div>
+        `;
+    }
+
+    /**
+     * Query notifications table with seamless fallback
+     */
     async function fetchAndRenderNotifications() {
-        if (!currentUser) return;
+        const client = getSupabaseClient();
+        if (!client) return;
+
+        if (!currentUser) {
+            try {
+                const { data } = await client.auth.getSession();
+                currentUser = data?.session?.user;
+                if (!currentUser) {
+                    const { data: userData } = await client.auth.getUser();
+                    currentUser = userData?.user;
+                }
+            } catch (e) {}
+        }
+
+        if (!currentUser) {
+            renderEmptyNotificationsList('Sign in to view your notifications.');
+            return;
+        }
+
+        const readIds = getReadIds();
+        let compiled = [];
+        let usedDbTable = false;
 
         try {
-            const readIds = getReadIds();
-            const compiled = [];
+            // 1. Try querying the dedicated 'notifications' table first
+            try {
+                const { data: dbNotifs, error: dbErr } = await client
+                    .from('notifications')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
 
-            // 1. Fetch Reservations
-            const { data: reservations } = await supabaseClient
-                .from('reservations')
-                .select(`
-                    id,
-                    reservation_number,
-                    status,
-                    plan_type,
-                    created_at,
-                    updated_at,
-                    notes,
-                    memorial_spaces (
-                        plot_identifier,
-                        section_name,
-                        category
-                    )
-                `)
-                .eq('user_id', currentUser.id)
-                .order('updated_at', { ascending: false });
+                if (!dbErr && Array.isArray(dbNotifs) && dbNotifs.length > 0) {
+                    usedDbTable = true;
+                    compiled = dbNotifs.map(n => {
+                        const iconType = n.type === 'danger' ? 'reservation-danger' : 
+                                        (n.category === 'payment' ? 'payment' : 
+                                        (n.category === 'maintenance' ? 'service' : 
+                                        (n.category === 'support' ? 'support' : 'reservation')));
 
-            const resList = reservations || [];
-            const resIds = resList.map(r => r.id);
+                        const cat = (n.category === 'maintenance' || n.category === 'support') ? 'service' : n.category;
 
-            resList.forEach(res => {
-                const plotCode = res.memorial_spaces?.plot_identifier || 'Memorial Space';
-                const section = res.memorial_spaces?.section_name || 'Grounds';
-                const status = (res.status || 'PENDING').toUpperCase();
-
-                if (status === 'CONFIRMED' || status === 'APPROVED') {
-                    compiled.push({
-                        id: `res_conf_${res.id}_${status}`,
-                        category: 'reservation',
-                        iconType: 'reservation',
-                        title: 'Reservation Approved & Confirmed',
-                        desc: `Plot ${plotCode} (${section}) has been officially reserved and confirmed.`,
-                        time: res.updated_at || res.created_at,
-                        unread: !readIds.includes(`res_conf_${res.id}_${status}`),
-                        actionType: 'myreservation'
-                    });
-                } else if (status === 'CANCELLED' || status === 'REJECTED') {
-                    compiled.push({
-                        id: `res_canc_${res.id}_${status}`,
-                        category: 'reservation',
-                        iconType: 'reservation-danger',
-                        title: 'Reservation Cancelled',
-                        desc: `Booking #${res.reservation_number || res.id} for plot ${plotCode} was cancelled. ${res.notes || ''}`,
-                        time: res.updated_at || res.created_at,
-                        unread: !readIds.includes(`res_canc_${res.id}_${status}`),
-                        actionType: 'myreservation'
-                    });
-                } else if (status === 'OVERDUE') {
-                    compiled.push({
-                        id: `res_over_${res.id}`,
-                        category: 'reservation',
-                        iconType: 'reservation-danger',
-                        title: 'Payment Schedule Reminder',
-                        desc: `Monthly amortization payment for plot ${plotCode} is currently pending.`,
-                        time: res.updated_at || res.created_at,
-                        unread: !readIds.includes(`res_over_${res.id}`),
-                        actionType: 'myreservation'
-                    });
-                } else {
-                    compiled.push({
-                        id: `res_pend_${res.id}`,
-                        category: 'reservation',
-                        iconType: 'reservation',
-                        title: 'Reservation Under Review',
-                        desc: `Your reservation request for plot ${plotCode} (${section}) was received and is being verified by staff.`,
-                        time: res.created_at,
-                        unread: !readIds.includes(`res_pend_${res.id}`),
-                        actionType: 'myreservation'
+                        return {
+                            id: `db_${n.id}`,
+                            dbId: n.id,
+                            category: cat,
+                            iconType: iconType,
+                            title: n.title,
+                            desc: n.message,
+                            time: n.created_at,
+                            unread: !n.is_read && !readIds.includes(`db_${n.id}`),
+                            actionType: n.link_action || 'myreservation',
+                            referenceId: n.reference_id,
+                            proof_image_url: n.proof_image_url || null
+                        };
                     });
                 }
-            });
-
-            // 2. Fetch Payments
-            if (resIds.length > 0) {
-                const { data: payments } = await supabaseClient
-                    .from('payments')
-                    .select('id, reservation_id, amount, payment_type, payment_method, payment_reference, status, created_at')
-                    .in('reservation_id', resIds)
-                    .order('created_at', { ascending: false });
-
-                (payments || []).forEach(pay => {
-                    const amtStr = Number(pay.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                    const payTypeStr = pay.payment_type === 'DOWN_PAYMENT' ? 'Down Payment' : (pay.payment_type === 'FULL_PAYMENT' ? 'Full Settlement' : 'Installment Payment');
-                    const refStr = pay.payment_reference ? ` (Ref: ${pay.payment_reference})` : '';
-
-                    compiled.push({
-                        id: `pay_${pay.id}`,
-                        category: 'payment',
-                        iconType: 'payment',
-                        title: `Payment Receipt: ₱${amtStr}`,
-                        desc: `${payTypeStr} received via ${pay.payment_method || 'Official Channel'}${refStr}. Status: Verified.`,
-                        time: pay.created_at,
-                        unread: !readIds.includes(`pay_${pay.id}`),
-                        actionType: 'payment'
-                    });
-                });
+            } catch (dbErr) {
+                console.warn('[ZMG Notifications] Notifications table query fallback:', dbErr);
             }
 
-            // 3. Fetch Maintenance Visits
-            const { data: maintVisits } = await supabaseClient
-                .from('maintenance_visits')
-                .select(`
-                    id,
-                    visit_type,
-                    scheduled_date,
-                    status,
-                    notes,
-                    created_at,
-                    memorial_spaces (
-                        plot_identifier,
-                        section_name
-                    )
-                `)
-                .eq('requested_by', currentUser.id)
-                .order('created_at', { ascending: false });
+            // 2. If notifications table is empty or trigger hasn't fired yet, fallback to compiling joins
+            if (!usedDbTable || compiled.length === 0) {
+                let resIds = [];
 
-            (maintVisits || []).forEach(mv => {
-                const plotCode = mv.memorial_spaces?.plot_identifier || 'Memorial Lot';
-                const mStatus = (mv.status || '').toLowerCase();
-                const visitTitle = mv.visit_type || 'Grounds Maintenance';
+                // Fetch Reservations
+                try {
+                    const { data: reservations } = await client
+                        .from('reservations')
+                        .select(`
+                            id,
+                            reservation_number,
+                            status,
+                            plan_type,
+                            created_at,
+                            updated_at,
+                            notes,
+                            memorial_spaces (
+                                plot_identifier,
+                                section_name,
+                                category
+                            )
+                        `)
+                        .eq('user_id', currentUser.id)
+                        .order('updated_at', { ascending: false });
 
-                let title = `Maintenance Service: ${visitTitle}`;
-                let desc = `Scheduled service for plot ${plotCode} on ${mv.scheduled_date || 'designated date'}.`;
+                    const resList = reservations || [];
+                    resIds = resList.map(r => r.id);
 
-                if (mStatus === 'completed') {
-                    title = `Work Completed: ${visitTitle}`;
-                    desc = `Grounds team has completed work on plot ${plotCode}. ${mv.notes || ''}`;
-                } else if (mStatus === 'in_progress') {
-                    title = `In Progress: ${visitTitle}`;
-                    desc = `Cemetery staff is currently servicing plot ${plotCode}.`;
+                    resList.forEach(res => {
+                        const plotCode = res.memorial_spaces?.plot_identifier || 'Memorial Space';
+                        const section = res.memorial_spaces?.section_name || 'Grounds';
+                        const status = (res.status || 'PENDING').toUpperCase();
+
+                        if (status === 'CONFIRMED' || status === 'APPROVED') {
+                            compiled.push({
+                                id: `res_conf_${res.id}_${status}`,
+                                category: 'reservation',
+                                iconType: 'reservation',
+                                title: 'Reservation Approved & Confirmed 🎉',
+                                desc: `Plot ${plotCode} (${section}) has been officially reserved and confirmed.`,
+                                time: res.updated_at || res.created_at,
+                                unread: !readIds.includes(`res_conf_${res.id}_${status}`),
+                                actionType: 'myreservation'
+                            });
+                        } else if (status === 'CANCELLED' || status === 'REJECTED') {
+                            compiled.push({
+                                id: `res_canc_${res.id}_${status}`,
+                                category: 'reservation',
+                                iconType: 'reservation-danger',
+                                title: 'Reservation Cancelled',
+                                desc: `Booking #${res.reservation_number || res.id} for plot ${plotCode} was cancelled. ${res.notes || ''}`,
+                                time: res.updated_at || res.created_at,
+                                unread: !readIds.includes(`res_canc_${res.id}_${status}`),
+                                actionType: 'myreservation'
+                            });
+                        } else if (status === 'OVERDUE') {
+                            compiled.push({
+                                id: `res_over_${res.id}`,
+                                category: 'reservation',
+                                iconType: 'reservation-danger',
+                                title: 'Payment Schedule Reminder',
+                                desc: `Monthly amortization payment for plot ${plotCode} is currently pending.`,
+                                time: res.updated_at || res.created_at,
+                                unread: !readIds.includes(`res_over_${res.id}`),
+                                actionType: 'myreservation'
+                            });
+                        } else {
+                            compiled.push({
+                                id: `res_pend_${res.id}`,
+                                category: 'reservation',
+                                iconType: 'reservation',
+                                title: 'Reservation Under Review',
+                                desc: `Your reservation request for plot ${plotCode} (${section}) was received and is being verified by staff.`,
+                                time: res.created_at,
+                                unread: !readIds.includes(`res_pend_${res.id}`),
+                                actionType: 'myreservation'
+                            });
+                        }
+                    });
+                } catch (resErr) {
+                    console.warn('[ZMG Notifications] Reservations query fallback:', resErr);
                 }
 
-                compiled.push({
-                    id: `maint_${mv.id}_${mStatus}`,
-                    category: 'service',
-                    iconType: 'service',
-                    title: title,
-                    desc: desc,
-                    time: mv.created_at,
-                    unread: !readIds.includes(`maint_${mv.id}_${mStatus}`),
-                    actionType: 'maintenance'
-                });
-            });
+                // Fetch Payments
+                if (resIds.length > 0) {
+                    try {
+                        const { data: payments } = await client
+                            .from('payments')
+                            .select('id, reservation_id, amount, payment_type, payment_method, payment_reference, status, created_at')
+                            .in('reservation_id', resIds)
+                            .order('created_at', { ascending: false });
 
-            // 4. Fetch Support Tickets
-            const { data: tickets } = await supabaseClient
-                .from('support_tickets')
-                .select('id, ticket_number, subject, category, status, resolution_notes, created_at, updated_at')
-                .eq('user_id', currentUser.id)
-                .order('updated_at', { ascending: false });
+                        (payments || []).forEach(pay => {
+                            const amtStr = Number(pay.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                            const payTypeStr = pay.payment_type === 'DOWN_PAYMENT' ? 'Down Payment' : (pay.payment_type === 'FULL_PAYMENT' ? 'Full Settlement' : 'Installment Payment');
+                            const refStr = pay.payment_reference ? ` (Ref: ${pay.payment_reference})` : '';
 
-            (tickets || []).forEach(tck => {
-                const tStatus = (tck.status || '').toLowerCase();
-                let title = `Support Ticket: ${tck.ticket_number || '#' + tck.id}`;
-                let desc = `${tck.subject || 'Inquiry'}: Status updated to '${tck.status}'.`;
-
-                if (tck.resolution_notes) {
-                    desc = `Staff Response: "${tck.resolution_notes.slice(0, 90)}${tck.resolution_notes.length > 90 ? '...' : ''}"`;
+                            compiled.push({
+                                id: `pay_${pay.id}`,
+                                category: 'payment',
+                                iconType: 'payment',
+                                title: `Payment Receipt: ₱${amtStr}`,
+                                desc: `${payTypeStr} received via ${pay.payment_method || 'Official Channel'}${refStr}. Status: Verified.`,
+                                time: pay.created_at,
+                                unread: !readIds.includes(`pay_${pay.id}`),
+                                actionType: 'payment'
+                            });
+                        });
+                    } catch (payErr) {
+                        console.warn('[ZMG Notifications] Payments query fallback:', payErr);
+                    }
                 }
 
-                compiled.push({
-                    id: `tck_${tck.id}_${tStatus}`,
-                    category: 'service',
-                    iconType: 'support',
-                    title: title,
-                    desc: desc,
-                    time: tck.updated_at || tck.created_at,
-                    unread: !readIds.includes(`tck_${tck.id}_${tStatus}`),
-                    actionType: 'support'
-                });
-            });
+                // Fetch Maintenance Visits
+                try {
+                    let maintVisits = null;
+                    const { data: mv1, error: mvErr1 } = await client
+                        .from('maintenance_visits')
+                        .select(`
+                            id,
+                            visit_type,
+                            scheduled_date,
+                            status,
+                            notes,
+                            proof_image_url,
+                            created_at,
+                            memorial_spaces (
+                                plot_identifier,
+                                section_name
+                            )
+                        `)
+                        .eq('requested_by', currentUser.id)
+                        .order('created_at', { ascending: false });
+
+                    if (mvErr1) {
+                        const { data: mv2 } = await client
+                            .from('maintenance_visits')
+                            .select(`
+                                id,
+                                visit_type,
+                                scheduled_date,
+                                status,
+                                notes,
+                                created_at,
+                                memorial_spaces (
+                                    plot_identifier,
+                                    section_name
+                                )
+                            `)
+                            .eq('requested_by', currentUser.id)
+                            .order('created_at', { ascending: false });
+                        maintVisits = mv2 || [];
+                    } else {
+                        maintVisits = mv1 || [];
+                    }
+
+                    (maintVisits || []).forEach(mv => {
+                        const plotCode = mv.memorial_spaces?.plot_identifier || 'Memorial Lot';
+                        const mStatus = (mv.status || '').toLowerCase();
+                        const visitTitle = mv.visit_type || 'Grounds Maintenance';
+
+                        let title = `Maintenance Service: ${visitTitle}`;
+                        let desc = `Scheduled service for plot ${plotCode} on ${mv.scheduled_date || 'designated date'}.`;
+
+                        if (mStatus === 'completed') {
+                            title = `Work Completed: ${visitTitle} ✅`;
+                            desc = `Grounds team has completed work on plot ${plotCode}. ${mv.notes || ''}` + (mv.proof_image_url ? ' Proof photo attached.' : '');
+                        } else if (mStatus === 'in-progress') {
+                            title = `In Progress: ${visitTitle} 🛠️`;
+                            desc = `Cemetery staff is currently servicing plot ${plotCode}.`;
+                        }
+
+                        compiled.push({
+                            id: `maint_${mv.id}_${mStatus}`,
+                            category: 'service',
+                            iconType: 'service',
+                            title: title,
+                            desc: desc,
+                            time: mv.created_at,
+                            unread: !readIds.includes(`maint_${mv.id}_${mStatus}`),
+                            actionType: 'maintenance',
+                            proof_image_url: mv.proof_image_url || null
+                        });
+                    });
+                } catch (mvErr) {
+                    console.warn('[ZMG Notifications] Maintenance visits fallback:', mvErr);
+                }
+
+                // Fetch Support Tickets
+                try {
+                    const { data: tickets } = await client
+                        .from('support_tickets')
+                        .select('id, ticket_number, subject, category, status, message, created_at, updated_at')
+                        .eq('user_id', currentUser.id)
+                        .order('updated_at', { ascending: false });
+
+                    (tickets || []).forEach(tck => {
+                        const tStatus = (tck.status || '').toLowerCase();
+                        let title = `Support Ticket: ${tck.ticket_number || '#' + tck.id}`;
+                        let desc = `${tck.subject || 'Inquiry'}: Status updated to '${tck.status}'.`;
+
+                        if (tck.message) {
+                            desc = `${tck.subject || 'Support'}: "${tck.message.slice(0, 90)}${tck.message.length > 90 ? '...' : ''}"`;
+                        }
+
+                        compiled.push({
+                            id: `tck_${tck.id}_${tStatus}`,
+                            category: 'service',
+                            iconType: 'support',
+                            title: title,
+                            desc: desc,
+                            time: tck.updated_at || tck.created_at,
+                            unread: !readIds.includes(`tck_${tck.id}_${tStatus}`),
+                            actionType: 'support'
+                        });
+                    });
+                } catch (tckErr) {
+                    console.warn('[ZMG Notifications] Support tickets fallback:', tckErr);
+                }
+            }
 
             compiled.sort((a, b) => new Date(b.time) - new Date(a.time));
-
             notificationsList = compiled;
+        } catch (err) {
+            console.error('[ZMG Notifications] Error fetching notifications:', err);
+        } finally {
             updateBadge();
             renderNotificationsList();
-
-        } catch (err) {
-            console.error('Error fetching notifications:', err);
         }
     }
 
@@ -726,6 +1222,14 @@
             const unreadClass = notif.unread ? 'unread' : '';
             const unreadDot = notif.unread ? '<span class="notif-item-dot"></span>' : '';
 
+            const proofBtn = notif.proof_image_url ? `
+                <div style="margin-top: 6px;">
+                    <button type="button" class="btn-notif-proof" data-proof-url="${escapeHtml(notif.proof_image_url)}" data-proof-title="${escapeHtml(notif.title)}" data-proof-desc="${escapeHtml(notif.desc)}" style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                        📷 View Proof Photo
+                    </button>
+                </div>
+            ` : '';
+
             return `
                 <div class="notif-item ${unreadClass}" data-id="${escapeHtml(notif.id)}" data-action="${notif.actionType}">
                     <div class="notif-item-icon type-${notif.iconType}">
@@ -737,12 +1241,25 @@
                             ${unreadDot}
                         </div>
                         <p class="notif-item-desc">${escapeHtml(notif.desc)}</p>
+                        ${proofBtn}
                         <p class="notif-item-time">${timeAgo}</p>
                     </div>
                 </div>
             `;
         }).join('');
 
+        // Wire proof buttons inside dropdown
+        listEl.querySelectorAll('.btn-notif-proof').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const url = btn.getAttribute('data-proof-url');
+                const title = btn.getAttribute('data-proof-title');
+                const desc = btn.getAttribute('data-proof-desc');
+                openGlobalProofViewer(url, title, desc);
+            };
+        });
+
+        // Wire clicking notification items
         listEl.querySelectorAll('.notif-item').forEach(item => {
             item.onclick = (e) => {
                 e.stopPropagation();
@@ -894,4 +1411,5 @@
 
     window.initDashboardNotifications = initDashboardNotifications;
     window.refreshDashboardNotifications = fetchAndRenderNotifications;
+    window.openGlobalProofViewer = openGlobalProofViewer;
 })();

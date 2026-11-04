@@ -21,16 +21,28 @@ let decPageSize = 8;
 let accCurrentPage = 1;
 let accPageSize = 8;
 
-// Deceased capacity per plot category.
-// Only Family Estate plots may hold multiple deceased; all other categories hold exactly one.
+// Deceased capacity per plot category (e.g. Condominium columbarium vaults hold up to 4 urns, Mausoleum up to 8, Family Estate up to 8, Supreme up to 2).
 const ADMIN_CATEGORY_CAPACITY = {
+    'Condominium': 4,
+    'Mausoleum': 8,
     'Family Estate Jr.': 8,
-    'Family Estate': 8
+    'Family Estate': 8,
+    'Special Supreme': 2,
+    'Supreme': 2,
+    'Single Teired': 1,
+    'Single Tiered': 1
 };
 
 function getAdminCategoryCapacity(category) {
     if (!category) return 1;
-    return ADMIN_CATEGORY_CAPACITY[String(category).trim()] || 1;
+    const trimmed = String(category).trim();
+    if (ADMIN_CATEGORY_CAPACITY[trimmed]) return ADMIN_CATEGORY_CAPACITY[trimmed];
+    const cat = trimmed.toLowerCase();
+    if (cat.includes('family estate') || cat.includes('estate')) return 8;
+    if (cat.includes('mausoleum')) return 8;
+    if (cat.includes('condominium') || cat.includes('columbarium') || cat.includes('condo')) return 4;
+    if (cat.includes('supreme')) return 2;
+    return 1;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -54,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupAdminMaintenanceModule();
     setupAdminSupportTicketsModule();
     setupAdminAuditLogsModule();
+    setupAdminProfileModule();
     setupAdminCharts();
     await loadAdminData();
 });
@@ -79,7 +92,7 @@ async function verifyStaffOrAdminAccess() {
         }
         const { data: profile } = await supabaseClient
             .from('profiles')
-            .select('role, full_name, username')
+            .select('id, role, full_name, username, phone, avatar_url')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -113,7 +126,14 @@ async function verifyStaffOrAdminAccess() {
 
         setText('sidebarUserName', displayName);
         setText('sidebarUserRole', roleLabel);
-        setText('sidebarUserAvatar', avatarInitial);
+        const sidebarAvatarEl = document.getElementById('sidebarUserAvatar');
+        if (sidebarAvatarEl) {
+            if (profile?.avatar_url) {
+                sidebarAvatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="Avatar">`;
+            } else {
+                sidebarAvatarEl.textContent = avatarInitial;
+            }
+        }
         setText('adminHeaderRoleBadge', roleBadge);
 
         // Strictly exclude staff: hide Audit, Backup & Recovery, and Studio Mapping from staff accounts
@@ -180,6 +200,28 @@ function setupTabNavigation() {
 
     if (tabDashboard && viewDashboard) {
         tabDashboard.addEventListener('click', () => activateTab(tabDashboard, viewDashboard, 'Dashboard Overview'));
+    }
+
+    const tabAdminProfile = document.getElementById('tabAdminProfile');
+    const viewAdminProfile = document.getElementById('viewAdminProfile');
+    if (tabAdminProfile && viewAdminProfile) {
+        tabAdminProfile.addEventListener('click', () => {
+            activateTab(tabAdminProfile, viewAdminProfile, 'My Account & Profile');
+            loadAdminProfileView();
+        });
+    }
+
+    const sidebarUserCardBtn = document.getElementById('sidebarUserCardBtn');
+    if (sidebarUserCardBtn) {
+        sidebarUserCardBtn.addEventListener('click', (e) => {
+            const logoutBtn = document.getElementById('adminLogoutBtn');
+            if (logoutBtn && (e.target === logoutBtn || logoutBtn.contains(e.target))) {
+                return;
+            }
+            if (tabAdminProfile) {
+                tabAdminProfile.click();
+            }
+        });
     }
     if (tabReservation && viewReservation) {
         tabReservation.addEventListener('click', () => activateTab(tabReservation, viewReservation, 'Client Reservations Management'));
@@ -1368,9 +1410,25 @@ window.deleteDeceasedRecordAdmin = async function(recordId, name) {
     })) return;
 
     try {
-        const rec = (adminDeceasedCache || []).find(x => x.id === recordId);
-        const targetSpaceId = rec?.space_id;
+        // 1. Identify target space_id before deletion (from cache or live DB lookup)
+        let targetSpaceId = (adminDeceasedCache || []).find(x => String(x.id) === String(recordId))?.space_id;
+        let targetPlotIdentifier = null;
+        if (!targetSpaceId) {
+            try {
+                const { data: recRow } = await supabaseClient
+                    .from('memorial_records')
+                    .select('space_id, memorial_spaces(plot_identifier)')
+                    .eq('id', recordId)
+                    .maybeSingle();
+                targetSpaceId = recRow?.space_id;
+                targetPlotIdentifier = recRow?.memorial_spaces?.plot_identifier;
+            } catch (_) {}
+        } else {
+            const cachedSp = (adminSpacesCache || []).find(s => String(s.id) === String(targetSpaceId));
+            targetPlotIdentifier = cachedSp?.plot_identifier;
+        }
 
+        // 2. Delete the record from public.memorial_records
         const { error } = await supabaseClient
             .from('memorial_records')
             .delete()
@@ -1378,36 +1436,65 @@ window.deleteDeceasedRecordAdmin = async function(recordId, name) {
 
         if (error) throw error;
 
-        // If no more deceased records remain for this space, update space status
+        // 3. Update in-memory deceased cache immediately
+        adminDeceasedCache = (adminDeceasedCache || []).filter(x => String(x.id) !== String(recordId));
+
+        // 4. If no more deceased records remain for this space, update space status to 'reserved' or 'available'
         if (targetSpaceId) {
-            const { count } = await supabaseClient
+            const { count: decCount } = await supabaseClient
                 .from('memorial_records')
                 .select('id', { count: 'exact', head: true })
                 .eq('space_id', targetSpaceId);
 
-            if ((count || 0) === 0) {
-                const { count: resCount } = await supabaseClient
+            if ((decCount || 0) === 0) {
+                // Check if active reservation exists for this plot
+                const { data: resRows } = await supabaseClient
                     .from('reservations')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('space_id', targetSpaceId)
-                    .not('status', 'in', '("CANCELLED","REJECTED")');
+                    .select('id, status')
+                    .eq('space_id', targetSpaceId);
 
-                const newStatus = (resCount || 0) > 0 ? 'reserved' : 'available';
+                const hasActiveRes = (resRows || []).some(r => {
+                    const st = String(r.status || '').toUpperCase();
+                    return !['CANCELLED', 'REJECTED'].includes(st);
+                });
+
+                const newStatus = hasActiveRes ? 'reserved' : 'available';
                 await supabaseClient
                     .from('memorial_spaces')
                     .update({ status: newStatus, updated_at: new Date().toISOString() })
                     .eq('id', targetSpaceId);
+
+                // Update in-memory spaces cache
+                const spCache = (adminSpacesCache || []).find(s => String(s.id) === String(targetSpaceId));
+                if (spCache) spCache.status = newStatus;
             }
         }
 
-        alert("Deceased record deleted.");
+        // 5. Reload all data tables, KPI cards, and interactive map locator
         await Promise.all([
             loadDeceasedTable(),
             loadInventoryTable(),
             loadKPISummary(),
-            loadReservationsTable()
+            loadReservationsTable(),
+            typeof loadAdminLocMapData === 'function' ? loadAdminLocMapData() : Promise.resolve()
         ]);
+
+        if (typeof renderAdminLocMapBoard === 'function') renderAdminLocMapBoard();
+        if (typeof renderAdminLocatorDirectoryList === 'function') renderAdminLocatorDirectoryList();
+        if (typeof updateAdminLocStatsSummary === 'function') updateAdminLocStatsSummary();
+
+        // 6. If currently inspecting this plot on the map, refresh its inspector card immediately
+        if (targetPlotIdentifier) {
+            const cleanCode = String(targetPlotIdentifier).toUpperCase();
+            if (adminLocSelectedPlotCode && adminLocSelectedPlotCode.toUpperCase() === cleanCode) {
+                const refreshedPlot = adminLocPlotsByCode[cleanCode] || (adminSpacesCache || []).find(s => String(s.plot_identifier).toUpperCase() === cleanCode);
+                renderAdminLocSelectedDetailCard(refreshedPlot, null, []);
+            }
+        }
+
+        alert("Deceased record deleted successfully. Plot status and interactive map updated.");
     } catch (e) {
+        console.error("Failed to delete record:", e);
         alert("Failed to delete record: " + e.message);
     }
 };
@@ -1539,7 +1626,7 @@ function generateAdminLocArea5Blueprint() {
                 plot_identifier: code,
                 section_name: sectionName,
                 category: category,
-                status: (seq % 11 === 0) ? 'occupied' : (seq % 7 === 0) ? 'reserved' : 'available',
+                status: 'available',
                 price: 85000,
                 down_payment: 12500,
                 col_num: c,
@@ -1571,7 +1658,7 @@ function generateAdminLocGenericBlueprint(sectionName, shapeInfo) {
                 plot_identifier: code,
                 section_name: sectionName,
                 category: shapeInfo.category,
-                status: (seq % 13 === 0) ? 'occupied' : (seq % 8 === 0) ? 'reserved' : 'available',
+                status: 'available',
                 price: price,
                 down_payment: dp,
                 col_num: c,
@@ -1624,11 +1711,21 @@ async function loadAdminLocMapData() {
             } catch (_) {}
         }
 
-        // Also map deceased records by plot code so occupied plots always reflect real deceased records
+        // Map deceased records by plot code so occupied plots strictly reflect real deceased records
         const occupiedPlotCodes = new Set();
         (adminDeceasedCache || []).forEach(rec => {
             const code = rec.memorial_spaces?.plot_identifier;
-            if (code) occupiedPlotCodes.add(String(code).toUpperCase());
+            if (code) occupiedPlotCodes.add(String(code).toUpperCase().trim());
+        });
+
+        // Map active reservations by plot code so reserved plots strictly reflect active bookings
+        const reservedPlotCodes = new Set();
+        (adminReservationsCache || []).forEach(res => {
+            const st = String(res.status || '').toUpperCase().trim();
+            if (!['CANCELLED', 'REJECTED'].includes(st)) {
+                const code = res.memorial_spaces?.plot_identifier;
+                if (code) reservedPlotCodes.add(String(code).toUpperCase().trim());
+            }
         });
 
         Object.keys(ADMIN_LOC_SECTION_SHAPE_MAP).forEach(secName => {
@@ -1641,11 +1738,15 @@ async function loadAdminLocMapData() {
                     : generateAdminLocGenericBlueprint(secName, shapeInfo);
             }
 
-            // Ensure any plot that has a deceased record in adminDeceasedCache is marked occupied
+            // Dynamically reconcile plot statuses based on real database records
             sectionPlots.forEach(p => {
-                const codeUpper = String(p.plot_identifier).toUpperCase();
+                const codeUpper = String(p.plot_identifier).toUpperCase().trim();
                 if (occupiedPlotCodes.has(codeUpper)) {
                     p.status = 'occupied';
+                } else if (reservedPlotCodes.has(codeUpper)) {
+                    p.status = 'reserved';
+                } else {
+                    p.status = 'available';
                 }
                 adminLocPlotsList.push(p);
                 adminLocPlotsByCode[codeUpper] = p;
@@ -2355,17 +2456,38 @@ async function populateDeceasedModalDropdowns(selectedResId = '', selectedSpaceI
     if (spaceSelect) {
         if (!spaceSelect.options || spaceSelect.options.length <= 1) {
             spaceSelect.innerHTML = '<option value="">Loading cemetery plots...</option>';
-            const { data: spaces } = await supabaseClient
-                .from('memorial_spaces')
-                .select('id, plot_identifier, section_name, category, status')
-                .order('plot_identifier', { ascending: true });
+            const [{ data: spaces }, { data: records }] = await Promise.all([
+                supabaseClient
+                    .from('memorial_spaces')
+                    .select('id, plot_identifier, section_name, category, status')
+                    .order('plot_identifier', { ascending: true }),
+                supabaseClient
+                    .from('memorial_records')
+                    .select('space_id')
+            ]);
+
+            const interredCountBySpace = {};
+            (records || []).forEach(r => {
+                if (r.space_id) {
+                    interredCountBySpace[r.space_id] = (interredCountBySpace[r.space_id] || 0) + 1;
+                }
+            });
 
             spaceSelect.innerHTML = '<option value="">-- Select Plot --</option>' +
-                (spaces || []).map(s => `
-                    <option value="${s.id}">
-                        ${escapeHtml(s.plot_identifier)} - ${escapeHtml(s.section_name)} [${s.status.toUpperCase()}]
-                    </option>
-                `).join('');
+                (spaces || []).map(s => {
+                    const maxCap = getAdminCategoryCapacity(s.category);
+                    const currentCount = interredCountBySpace[s.id] || 0;
+                    const isFull = currentCount >= maxCap;
+                    const capLabel = maxCap > 1 
+                        ? ` (${currentCount}/${maxCap} Interred)` 
+                        : (currentCount > 0 ? ' (Occupied)' : ' (Available)');
+                    const tag = isFull ? 'FULL' : (currentCount > 0 ? 'PARTIAL' : s.status.toUpperCase());
+                    return `
+                        <option value="${s.id}" ${isFull ? 'disabled style="color: #94a3b8;"' : ''}>
+                            ${escapeHtml(s.plot_identifier)} - ${escapeHtml(s.section_name)} - ${escapeHtml(s.category || 'Plot')} [${tag}${capLabel}]
+                        </option>
+                    `;
+                }).join('');
         }
         if (selectedSpaceId) {
             spaceSelect.value = String(selectedSpaceId);
@@ -2744,9 +2866,7 @@ function setupAddDeceasedModal() {
 
                 const maxCapacity = getAdminCategoryCapacity(spaceRow?.category);
                 if ((existingCount || 0) >= maxCapacity) {
-                    const msg = maxCapacity > 1
-                        ? `This Family Estate plot (${spaceRow?.plot_identifier || spaceId}) is already at full capacity (${maxCapacity} deceased).`
-                        : `Plot ${spaceRow?.plot_identifier || spaceId} (${spaceRow?.category || 'standard'}) already holds a deceased. Only Family Estate plots may hold multiple deceased.`;
+                    const msg = `Plot ${spaceRow?.plot_identifier || spaceId} (${spaceRow?.category || 'Lot'}) is already at maximum capacity (${maxCapacity} interred).`;
                     throw new Error(msg);
                 }
 
@@ -2780,7 +2900,12 @@ function setupAddDeceasedModal() {
                         .eq('id', parseInt(resId));
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction(
+                    'DECEASED_INTERRED',
+                    'memorial_records',
+                    String(spaceId),
+                    `Interred deceased '${deceasedName}' into plot ${spaceRow?.plot_identifier || spaceId} (${spaceRow?.category || 'Plot'})`
+                );
 
                 alert(`Interment record for ${deceasedName} successfully saved, and plot marked as Occupied!`);
                 closeModal();
@@ -2789,8 +2914,12 @@ function setupAddDeceasedModal() {
                     loadDeceasedTable(),
                     loadInventoryTable(),
                     loadKPISummary(),
-                    loadReservationsTable()
+                    loadReservationsTable(),
+                    typeof loadAdminLocMapData === 'function' ? loadAdminLocMapData() : Promise.resolve()
                 ]);
+                if (typeof renderAdminLocMapBoard === 'function') renderAdminLocMapBoard();
+                if (typeof renderAdminLocatorDirectoryList === 'function') renderAdminLocatorDirectoryList();
+                if (typeof updateAdminLocStatsSummary === 'function') updateAdminLocStatsSummary();
 
             } catch (err) {
                 alert("Failed to save deceased record: " + err.message);
@@ -4518,24 +4647,127 @@ window.openCreateAccountModal = function(defaultRole = 'staff') {
 };
 
 // ==============================================================================
-// REPORTS & ANALYTICS MODULE (SAD Requirement #7)
+// REPORTS & ANALYTICS MODULE (SAD Requirement #7: Text Tables & Graphs)
 // ==============================================================================
 let reportCategoryBreakdownCache = [];
+let reportFinancialsCache = [];
+let reportReservationsCache = [];
+let reportDeceasedCache = [];
+let activeAdminReportTab = 'inventory';
+
+function setupReportsModule() {
+    // Clean Report Tab Switching
+    const tabs = document.querySelectorAll('.report-subnav-btn');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            activeAdminReportTab = btn.getAttribute('data-report') || 'inventory';
+            document.querySelectorAll('.report-content-panel').forEach(p => p.style.display = 'none');
+            const targetPanel = document.getElementById(`reportPanel_${activeAdminReportTab}`);
+            if (targetPanel) targetPanel.style.display = 'block';
+        });
+    });
+
+    // Top Header Action: Download whichever report is currently active
+    document.getElementById('adminDownloadActiveReportPdfBtn')?.addEventListener('click', () => {
+        if (activeAdminReportTab === 'inventory') generateCategoryBreakdownPdf();
+        else if (activeAdminReportTab === 'financials') generateFinancialsPdf();
+        else if (activeAdminReportTab === 'reservations') generateReservationsPdf();
+        else if (activeAdminReportTab === 'deceased') generateDeceasedRegistryPdf();
+    });
+
+    document.getElementById('adminExportActiveReportCsvBtn')?.addEventListener('click', () => {
+        if (activeAdminReportTab === 'inventory') exportInventoryCsv();
+        else if (activeAdminReportTab === 'financials') exportFinancialsCsv();
+        else if (activeAdminReportTab === 'reservations') exportReservationsCsv();
+        else if (activeAdminReportTab === 'deceased') exportDeceasedCsv();
+    });
+
+    // Specific Table Export Buttons
+    document.getElementById('adminDownloadCategoryPdfBtn')?.addEventListener('click', generateCategoryBreakdownPdf);
+    document.getElementById('adminDownloadInventoryMasterPdfBtn')?.addEventListener('click', generateInventoryPdf);
+    document.getElementById('adminExportCategoryCsvBtn')?.addEventListener('click', exportInventoryCsv);
+
+    document.getElementById('adminDownloadFinancialsPdfBtn')?.addEventListener('click', generateFinancialsPdf);
+    document.getElementById('adminExportFinancialsCsvBtn')?.addEventListener('click', exportFinancialsCsv);
+
+    document.getElementById('adminDownloadReservationsPdfBtn')?.addEventListener('click', generateReservationsPdf);
+    document.getElementById('adminExportReservationsCsvBtn')?.addEventListener('click', exportReservationsCsv);
+
+    document.getElementById('adminDownloadDeceasedPdfBtn')?.addEventListener('click', generateDeceasedRegistryPdf);
+    document.getElementById('adminExportDeceasedCsvBtn')?.addEventListener('click', exportDeceasedCsv);
+
+    // Real-time Text Table Filters
+    document.getElementById('reportFilterFinancialsInput')?.addEventListener('input', (e) => {
+        renderReportFinancialsTable(e.target.value.toLowerCase().trim());
+    });
+    document.getElementById('reportFilterReservationsInput')?.addEventListener('input', (e) => {
+        renderReportReservationsTable(e.target.value.toLowerCase().trim());
+    });
+    document.getElementById('reportFilterDeceasedInput')?.addEventListener('input', (e) => {
+        renderReportDeceasedTable(e.target.value.toLowerCase().trim());
+    });
+}
 
 async function loadReportsView() {
     try {
-        const [spacesRes, paymentsRes, reservationsRes] = await Promise.all([
-            supabaseClient.from('memorial_spaces').select('id, category, status, price'),
-            supabaseClient.from('payments').select('amount').eq('status', 'COMPLETED'),
-            supabaseClient.from('reservations').select('balance, status')
+        const timeEl = document.getElementById('adminReportGeneratedTime');
+        if (timeEl) timeEl.textContent = `Live Audit: ${new Date().toLocaleString()}`;
+
+        // Fetch all reporting datasets in parallel
+        const [spacesRes, paymentsRes, reservationsRes, deceasedRes] = await Promise.all([
+            supabaseClient.from('memorial_spaces').select('id, plot_identifier, section_name, category, status, price'),
+            supabaseClient.from('payments').select(`
+                id,
+                amount,
+                payment_method,
+                payment_type,
+                status,
+                paid_at,
+                payment_reference,
+                reservation_id,
+                reservations (
+                    reservation_number,
+                    memorial_spaces (plot_identifier),
+                    profiles (full_name)
+                )
+            `).order('paid_at', { ascending: false }),
+            supabaseClient.from('reservations').select(`
+                id,
+                reservation_number,
+                plan_type,
+                status,
+                total_price,
+                total_paid,
+                balance,
+                created_at,
+                memorial_spaces (plot_identifier, category),
+                profiles (full_name)
+            `).order('created_at', { ascending: false }),
+            supabaseClient.from('memorial_records').select(`
+                id,
+                deceased_name,
+                birth_date,
+                death_date,
+                burial_date,
+                memorial_spaces (plot_identifier, section_name, category),
+                profiles (full_name)
+            `).order('burial_date', { ascending: false })
         ]);
 
         const spaces = spacesRes.data || [];
         const payments = paymentsRes.data || [];
         const reservations = reservationsRes.data || [];
+        const deceased = deceasedRes.data || [];
 
+        reportFinancialsCache = payments;
+        reportReservationsCache = reservations;
+        reportDeceasedCache = deceased;
+
+        // 1. KPI Calculations
         const totalValuation = spaces.reduce((sum, s) => sum + Number(s.price || 0), 0);
-        const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const totalCollected = payments.filter(p => p.status === 'COMPLETED').reduce((sum, p) => sum + Number(p.amount || 0), 0);
         const totalReceivables = reservations
             .filter(r => r.status === 'APPROVED')
             .reduce((sum, r) => sum + Number(r.balance || 0), 0);
@@ -4549,6 +4781,7 @@ async function loadReportsView() {
         setText('kpiReportReceivables', '₱ ' + totalReceivables.toLocaleString('en-US', { minimumFractionDigits: 2 }));
         setText('kpiReportOccupancy', `${occupancyRate}%`);
 
+        // 2. Report Table 1: Category Breakdown Data
         const categories = ['Supreme', 'Special Supreme', 'Condominium', 'Single Teired', 'Family Estate Jr.', 'Mausoleum'];
         reportCategoryBreakdownCache = categories.map(cat => {
             const catPlots = spaces.filter(s => s.category === cat);
@@ -4569,45 +4802,313 @@ async function loadReportsView() {
             };
         });
 
-        const previewBody = document.getElementById('adminReportPreviewBody');
-        const timeEl = document.getElementById('adminReportGeneratedTime');
-        if (timeEl) timeEl.textContent = `Generated: ${new Date().toLocaleString()}`;
+        renderReportInventoryTable();
 
-        if (previewBody) {
-            previewBody.innerHTML = reportCategoryBreakdownCache.map(r => `
-                <tr>
-                    <td><strong>${escapeHtml(r.category)}</strong></td>
-                    <td>${r.total}</td>
-                    <td><span class="admin-badge available">${r.available}</span></td>
-                    <td><span class="admin-badge reserve">${r.reserved}</span></td>
-                    <td><span class="admin-badge paid">${r.occupied}</span></td>
-                    <td><strong>${r.occupancyPct}%</strong></td>
-                    <td>₱ ${r.valuation.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `).join('');
-        }
+        // 3. Render Graphs
+        renderReportGraphs(reportCategoryBreakdownCache, payments);
+
+        // 4. Render Other Text Tables
+        renderReportFinancialsTable('');
+        renderReportReservationsTable('');
+        renderReportDeceasedTable('');
 
     } catch (e) {
         console.error('Failed to load reports view:', e);
     }
 }
 
-function setupReportsModule() {
-    document.getElementById('adminPrintCurrentReportBtn')?.addEventListener('click', () => window.print());
-    document.getElementById('adminPrintInventoryBtn')?.addEventListener('click', () => window.print());
-    document.getElementById('adminPrintFinancialsBtn')?.addEventListener('click', () => window.print());
-    document.getElementById('adminPrintReservationsBtn')?.addEventListener('click', () => window.print());
+// ------------------------------------------------------------------------------
+// VISUAL ANALYTICS GRAPHS (Clean SVG & CSS Visualizations)
+// ------------------------------------------------------------------------------
+function renderReportGraphs(catBreakdown, paymentsList) {
+    // Graph 1: Category Plot Inventory & Occupancy
+    const catGraphContainer = document.getElementById('reportCategoryBarChart');
+    if (catGraphContainer) {
+        catGraphContainer.innerHTML = catBreakdown.map(c => {
+            const occWidth = c.total > 0 ? (c.occupied / c.total) * 100 : 0;
+            const resWidth = c.total > 0 ? (c.reserved / c.total) * 100 : 0;
+            const availWidth = c.total > 0 ? (c.available / c.total) * 100 : 0;
 
-    // Official Client-Side PDF Exports (jsPDF + AutoTable)
-    document.getElementById('adminDownloadCategoryPdfBtn')?.addEventListener('click', generateCategoryBreakdownPdf);
-    document.getElementById('adminExportInventoryPdfBtn')?.addEventListener('click', generateInventoryPdf);
-    document.getElementById('adminExportFinancialsPdfBtn')?.addEventListener('click', generateFinancialsPdf);
-    document.getElementById('adminExportReservationsPdfBtn')?.addEventListener('click', generateReservationsPdf);
+            return `
+                <div style="font-size: 0.78rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 600; color: #1e293b;">
+                        <span>${escapeHtml(c.category)}</span>
+                        <span>${c.occupied}/${c.total} occupied (${c.occupancyPct}%) • ${c.available} available</span>
+                    </div>
+                    <div style="height: 10px; border-radius: 5px; background: #e2e8f0; overflow: hidden; display: flex;">
+                        <div style="width: ${occWidth}%; background: #166534;" title="Occupied: ${c.occupied}"></div>
+                        <div style="width: ${resWidth}%; background: #d97706;" title="Reserved: ${c.reserved}"></div>
+                        <div style="width: ${availWidth}%; background: #94a3b8;" title="Available: ${c.available}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('') + `
+            <div style="display: flex; gap: 14px; font-size: 0.72rem; margin-top: 6px; color: #64748b; font-weight: 600;">
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #166534; border-radius: 2px;"></span> Occupied</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #d97706; border-radius: 2px;"></span> Reserved</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: #94a3b8; border-radius: 2px;"></span> Available</span>
+            </div>
+        `;
+    }
 
-    // CSV Data Exports
-    document.getElementById('adminExportInventoryCsvBtn')?.addEventListener('click', exportInventoryCsv);
-    document.getElementById('adminExportFinancialsCsvBtn')?.addEventListener('click', exportFinancialsCsv);
-    document.getElementById('adminExportReservationsCsvBtn')?.addEventListener('click', exportReservationsCsv);
+    // Graph 2: Financial Collections by Channel
+    const collGraphContainer = document.getElementById('reportCollectionsBarChart');
+    if (collGraphContainer) {
+        const verified = paymentsList.filter(p => p.status === 'COMPLETED');
+        const total = verified.reduce((sum, p) => sum + Number(p.amount || 0), 0) || 1;
+
+        const methodMap = {};
+        verified.forEach(p => {
+            const m = (p.payment_method || 'Cash').toUpperCase();
+            methodMap[m] = (methodMap[m] || 0) + Number(p.amount || 0);
+        });
+
+        const channels = Object.keys(methodMap);
+        const methodColors = {
+            'CASH': '#2d4a36',
+            'GCASH': '#0284c7',
+            'BANK TRANSFER': '#7c3aed',
+            'CHECK': '#b45309',
+            'OFFICIAL RECEIPT': '#166534'
+        };
+
+        if (channels.length === 0) {
+            collGraphContainer.innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; text-align: center; padding: 20px;">No verified payment collections recorded yet.</div>';
+        } else {
+            collGraphContainer.innerHTML = channels.map(m => {
+                const amt = methodMap[m];
+                const pct = ((amt / total) * 100).toFixed(1);
+                const color = methodColors[m] || '#059669';
+
+                return `
+                    <div style="font-size: 0.78rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 600; color: #1e293b;">
+                            <span>${escapeHtml(m)}</span>
+                            <span>₱ ${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${pct}%)</span>
+                        </div>
+                        <div style="height: 10px; border-radius: 5px; background: #e2e8f0; overflow: hidden;">
+                            <div style="width: ${pct}%; height: 100%; background: ${color};" title="${m}: ₱ ${amt.toLocaleString()}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('') + `
+                <div style="margin-top: 6px; font-size: 0.74rem; color: #475569; font-weight: 700; text-align: right;">
+                    Total Verified Revenue: ₱ ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </div>
+            `;
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------
+// PURE TEXT DATA TABLES RENDERING
+// ------------------------------------------------------------------------------
+
+// Table 1: Inventory Summary by Category
+function renderReportInventoryTable() {
+    const previewBody = document.getElementById('adminReportPreviewBody');
+    const previewFoot = document.getElementById('adminReportPreviewFoot');
+    if (!previewBody) return;
+
+    previewBody.innerHTML = reportCategoryBreakdownCache.map(r => `
+        <tr>
+            <td><strong>${escapeHtml(r.category)}</strong></td>
+            <td style="text-align: center;">${r.total}</td>
+            <td style="text-align: center;"><span class="admin-badge available">${r.available}</span></td>
+            <td style="text-align: center;"><span class="admin-badge reserve">${r.reserved}</span></td>
+            <td style="text-align: center;"><span class="admin-badge paid">${r.occupied}</span></td>
+            <td style="text-align: center;"><strong>${r.occupancyPct}%</strong></td>
+            <td style="text-align: right; font-weight: 600;">₱ ${r.valuation.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+        </tr>
+    `).join('');
+
+    const totalPlots = reportCategoryBreakdownCache.reduce((sum, r) => sum + r.total, 0);
+    const totalAvail = reportCategoryBreakdownCache.reduce((sum, r) => sum + r.available, 0);
+    const totalRes = reportCategoryBreakdownCache.reduce((sum, r) => sum + r.reserved, 0);
+    const totalOcc = reportCategoryBreakdownCache.reduce((sum, r) => sum + r.occupied, 0);
+    const totalVal = reportCategoryBreakdownCache.reduce((sum, r) => sum + r.valuation, 0);
+    const overallOcc = totalPlots > 0 ? ((totalOcc / totalPlots) * 100).toFixed(1) : '0.0';
+
+    if (previewFoot) {
+        previewFoot.innerHTML = `
+            <tr>
+                <td>OVERALL TOTALS:</td>
+                <td style="text-align: center;">${totalPlots}</td>
+                <td style="text-align: center;">${totalAvail}</td>
+                <td style="text-align: center;">${totalRes}</td>
+                <td style="text-align: center;">${totalOcc}</td>
+                <td style="text-align: center;">${overallOcc}%</td>
+                <td style="text-align: right; color: #166534;">₱ ${totalVal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            </tr>
+        `;
+    }
+}
+
+// Table 2: Financial Collections Audit Table
+function renderReportFinancialsTable(query = '') {
+    const tbody = document.getElementById('reportFinancialsBody');
+    const tfoot = document.getElementById('reportFinancialsFoot');
+    if (!tbody) return;
+
+    const filtered = reportFinancialsCache.filter(p => {
+        if (!query) return true;
+        const ref = (p.payment_reference || '').toLowerCase();
+        const resNum = (p.reservations?.reservation_number || '').toLowerCase();
+        const client = (p.reservations?.profiles?.full_name || '').toLowerCase();
+        const method = (p.payment_method || '').toLowerCase();
+        return ref.includes(query) || resNum.includes(query) || client.includes(query) || method.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">No payment records match filter.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+        const clientName = p.reservations?.profiles?.full_name || 'Walk-in Client';
+        const resNum = p.reservations?.reservation_number || '-';
+        const dateStr = p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+        const status = (p.status || 'COMPLETED').toUpperCase();
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(p.payment_reference || `#PAY-${p.id}`)}</strong></td>
+                <td>${escapeHtml(resNum)}</td>
+                <td>${escapeHtml(clientName)}</td>
+                <td><span class="admin-badge available">${escapeHtml(p.payment_method || 'Cash')}</span></td>
+                <td>${escapeHtml(p.payment_type || 'Installment')}</td>
+                <td style="text-align: right; font-weight: 700; color: #166534;">₱ ${Number(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: center;"><span class="admin-badge ${status === 'COMPLETED' ? 'paid' : 'overdue'}">${status}</span></td>
+                <td>${dateStr}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const totalAmt = filtered.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="5">TOTAL COLLECTIONS (${filtered.length} TRANSACTIONS):</td>
+                <td style="text-align: right; color: #166534;">₱ ${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td colspan="2"></td>
+            </tr>
+        `;
+    }
+}
+
+// Table 3: Reservations & Receivables Ledger Table
+function renderReportReservationsTable(query = '') {
+    const tbody = document.getElementById('reportReservationsBody');
+    const tfoot = document.getElementById('reportReservationsFoot');
+    if (!tbody) return;
+
+    const filtered = reportReservationsCache.filter(r => {
+        if (!query) return true;
+        const num = (r.reservation_number || '').toLowerCase();
+        const client = (r.profiles?.full_name || '').toLowerCase();
+        const plot = (r.memorial_spaces?.plot_identifier || '').toLowerCase();
+        return num.includes(query) || client.includes(query) || plot.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 24px; color: #64748b;">No reservations match filter.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(r => {
+        const client = r.profiles?.full_name || 'Client';
+        const plot = r.memorial_spaces?.plot_identifier || '-';
+        const category = r.memorial_spaces?.category || '-';
+        const contract = Number(r.total_price || 0);
+        const paid = Number(r.total_paid || 0);
+        const balance = Number(r.balance || 0);
+        const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+        const status = (r.status || 'PENDING').toUpperCase();
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(r.reservation_number || `ZMG-${r.id}`)}</strong></td>
+                <td>${escapeHtml(client)}</td>
+                <td><strong>${escapeHtml(plot)}</strong></td>
+                <td>${escapeHtml(category)}</td>
+                <td><span class="admin-badge" style="background: #f1f5f9; color: #334155;">${escapeHtml(r.plan_type || 'Pre-Need')}</span></td>
+                <td style="text-align: right; font-weight: 600;">₱ ${contract.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right; color: #166534; font-weight: 600;">₱ ${paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right; color: ${balance > 0 ? '#b45309' : '#166534'}; font-weight: 700;">₱ ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: center;"><span class="admin-badge ${status === 'APPROVED' || status === 'COMPLETED' ? 'paid' : (status === 'REJECTED' || status === 'CANCELLED' ? 'overdue' : 'reserve')}">${status}</span></td>
+                <td>${dateStr}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const sumContract = filtered.reduce((acc, r) => acc + Number(r.total_price || 0), 0);
+    const sumPaid = filtered.reduce((acc, r) => acc + Number(r.total_paid || 0), 0);
+    const sumBalance = filtered.reduce((acc, r) => acc + Number(r.balance || 0), 0);
+
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="5">TOTALS (${filtered.length} BOOKINGS):</td>
+                <td style="text-align: right;">₱ ${sumContract.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right; color: #166534;">₱ ${sumPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right; color: #b45309;">₱ ${sumBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td colspan="2"></td>
+            </tr>
+        `;
+    }
+}
+
+// Table 4: Deceased & Interments Registry Table
+function renderReportDeceasedTable(query = '') {
+    const tbody = document.getElementById('reportDeceasedBody');
+    const tfoot = document.getElementById('reportDeceasedFoot');
+    if (!tbody) return;
+
+    const filtered = reportDeceasedCache.filter(d => {
+        if (!query) return true;
+        const name = (d.deceased_name || '').toLowerCase();
+        const plot = (d.memorial_spaces?.plot_identifier || '').toLowerCase();
+        return name.includes(query) || plot.includes(query);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">No deceased interment records match filter.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(d => {
+        const plot = d.memorial_spaces?.plot_identifier || '-';
+        const section = d.memorial_spaces?.section_name || '-';
+        const category = d.memorial_spaces?.category || '-';
+        const birth = d.birth_date ? new Date(d.birth_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+        const death = d.death_date ? new Date(d.death_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+        const burial = d.burial_date ? new Date(d.burial_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+        const contact = d.profiles?.full_name || 'Family Contact';
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(d.deceased_name)}</strong></td>
+                <td><strong>${escapeHtml(plot)}</strong></td>
+                <td>${escapeHtml(section)}</td>
+                <td><span class="admin-badge available">${escapeHtml(category)}</span></td>
+                <td>${birth}</td>
+                <td>${death}</td>
+                <td><span style="font-weight: 600; color: #1e3a29;">${burial}</span></td>
+                <td>${escapeHtml(contact)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="8">TOTAL INTERRED DECEASED: ${filtered.length} RECORDS</td>
+            </tr>
+        `;
+    }
 }
 
 // ------------------------------------------------------------------------------
@@ -4861,41 +5362,42 @@ async function generateFinancialsPdf() {
         const doc = getJsPdfInstance({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         addPdfBrandingHeader(doc, 'Revenue & Amortization Collections Audit', 'Verified payment receipts, downpayments, and recurring installment collections');
 
-        const { data: payments, error } = await supabaseClient
-            .from('payments')
-            .select(`
-                id,
-                amount,
-                payment_method,
-                payment_type,
-                status,
-                paid_at,
-                reference,
-                reservations (
-                    reservation_number,
-                    profiles (
-                        full_name,
-                        phone
-                    )
-                )
-            `)
-            .order('paid_at', { ascending: false });
+        let paymentsList = reportFinancialsCache;
+        if (!paymentsList || paymentsList.length === 0) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('payments')
+                    .select('*, reservations(reservation_number, profiles(full_name, phone))')
+                    .order('paid_at', { ascending: false });
+                if (!error && data) {
+                    paymentsList = data;
+                }
+            } catch (queryErr) {
+                console.warn('Fallback payments query for PDF:', queryErr);
+                const { data } = await supabaseClient.from('payments').select('*');
+                paymentsList = data || [];
+            }
+        }
 
-        if (error) throw error;
-
-        const paymentsList = payments || [];
+        paymentsList = paymentsList || [];
         const headers = [['#', 'Reference / ID', 'Reservation #', 'Client Name', 'Amount (PHP)', 'Method', 'Type', 'Status', 'Date Paid']];
-        const body = paymentsList.map((p, index) => [
-            (index + 1).toString(),
-            p.reference || `#${p.id}`,
-            p.reservations?.reservation_number || '-',
-            p.reservations?.profiles?.full_name || 'Walk-in Client',
-            `₱ ${Number(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-            (p.payment_method || '-').toUpperCase(),
-            (p.payment_type || 'Installment').toUpperCase(),
-            (p.status || '-').toUpperCase(),
-            p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'
-        ]);
+        const body = paymentsList.map((p, index) => {
+            const refCode = p.payment_reference || p.reference || `#PAY-${p.id}`;
+            const resNum = p.reservations?.reservation_number || (p.reservation_id ? `ZMG-${p.reservation_id}` : '-');
+            const client = p.reservations?.profiles?.full_name || p.payer_name || 'Counter Walk-in';
+            const dateStr = p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : (p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-');
+            return [
+                (index + 1).toString(),
+                refCode,
+                resNum,
+                client,
+                `₱ ${Number(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                (p.payment_method || '-').toUpperCase(),
+                (p.payment_type || 'Installment').toUpperCase(),
+                (p.status || '-').toUpperCase(),
+                dateStr
+            ];
+        });
 
         const totalAmount = paymentsList.reduce((acc, p) => acc + Number(p.amount || 0), 0);
         const foot = [['', '', '', 'TOTAL COLLECTIONS', `₱ ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, '', '', '', '']];
@@ -5033,23 +5535,14 @@ function exportInventoryCsv() {
 
 async function exportFinancialsCsv() {
     try {
-        const { data: payments } = await supabaseClient
-            .from('payments')
-            .select(`
-                id,
-                amount,
-                payment_method,
-                payment_type,
-                status,
-                paid_at,
-                reservations (
-                    reservation_number,
-                    profiles (
-                        full_name
-                    )
-                )
-            `)
-            .order('paid_at', { ascending: false });
+        let payments = reportFinancialsCache;
+        if (!payments || payments.length === 0) {
+            const { data } = await supabaseClient
+                .from('payments')
+                .select('*, reservations(reservation_number, profiles(full_name))')
+                .order('paid_at', { ascending: false });
+            payments = data || [];
+        }
 
         const headers = ["Payment ID", "Reservation #", "Client Name", "Amount (PHP)", "Method", "Type", "Status", "Paid At"];
         const rows = [headers];
@@ -5096,6 +5589,87 @@ function exportReservationsCsv() {
         ]);
     });
     downloadCsvFile(`zion_reservations_masterlist_${new Date().toISOString().split('T')[0]}.csv`, rows);
+}
+
+async function generateDeceasedRegistryPdf() {
+    try {
+        if (!adminDeceasedCache || adminDeceasedCache.length === 0) {
+            alert('Deceased records data is currently loading. Please wait a moment and try again.');
+            return;
+        }
+
+        const doc = getJsPdfInstance({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        addPdfBrandingHeader(doc, 'Interments & Deceased Memorial Registry', 'Certified registry of interred loved ones, cemetery plot allocations, and family contacts');
+
+        const headers = [['#', 'Deceased Full Name', 'Plot ID', 'Lawn Section', 'Category', 'Date of Birth', 'Date of Death', 'Burial Date', 'Family Contact']];
+        const body = adminDeceasedCache.map((d, index) => [
+            (index + 1).toString(),
+            d.deceased_name || '-',
+            d.memorial_spaces?.plot_identifier || '-',
+            d.memorial_spaces?.section_name || '-',
+            d.memorial_spaces?.category || '-',
+            d.birth_date ? new Date(d.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-',
+            d.death_date ? new Date(d.death_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-',
+            d.burial_date ? new Date(d.burial_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-',
+            d.profiles?.full_name || '-'
+        ]);
+
+        const foot = [['', 'TOTAL RECORDED INTERMENTS', '', '', '', '', '', '', adminDeceasedCache.length.toString()]];
+
+        doc.autoTable({
+            head: headers,
+            body: body,
+            foot: foot,
+            startY: 40,
+            theme: 'striped',
+            headStyles: { fillColor: [45, 74, 54], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59] },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            footStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 44, fontStyle: 'bold' },
+                2: { cellWidth: 26, fontStyle: 'bold' },
+                3: { cellWidth: 42 },
+                4: { cellWidth: 30 },
+                5: { cellWidth: 24, halign: 'center' },
+                6: { cellWidth: 24, halign: 'center' },
+                7: { cellWidth: 24, halign: 'center' },
+                8: { cellWidth: 'auto' }
+            },
+            margin: { left: 14, right: 14, bottom: 20 }
+        });
+
+        addPdfFooterAndSignatures(doc);
+        const fileName = `zion_deceased_interments_registry_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+    } catch (err) {
+        console.error('Failed to generate Deceased Registry PDF:', err);
+        alert('Failed to generate Deceased Registry PDF: ' + err.message);
+    }
+}
+
+function exportDeceasedCsv() {
+    if (!adminDeceasedCache || adminDeceasedCache.length === 0) {
+        alert("Deceased records data is currently loading. Please try again in a moment.");
+        return;
+    }
+    const headers = ["#", "Deceased Full Name", "Plot ID", "Lawn Section", "Category", "Date of Birth", "Date of Death", "Burial Date", "Family Contact"];
+    const rows = [headers];
+    adminDeceasedCache.forEach((d, idx) => {
+        rows.push([
+            idx + 1,
+            `"${d.deceased_name || ''}"`,
+            `"${d.memorial_spaces?.plot_identifier || ''}"`,
+            `"${d.memorial_spaces?.section_name || ''}"`,
+            `"${d.memorial_spaces?.category || ''}"`,
+            `"${d.birth_date || ''}"`,
+            `"${d.death_date || ''}"`,
+            `"${d.burial_date || ''}"`,
+            `"${d.profiles?.full_name || ''}"`
+        ]);
+    });
+    downloadCsvFile(`zion_deceased_interments_${new Date().toISOString().split('T')[0]}.csv`, rows);
 }
 
 function setupFilters() {
@@ -6808,6 +7382,61 @@ async function loadWalkInPlotsDropdown() {
 // ==============================================================================
 let adminMaintenanceCache = [];
 
+// Helper: compress image file via canvas to DataURL and Blob for fast, crisp upload
+function compressImageToDataUrl(file, maxWidth = 1200, maxHeight = 1200, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Failed to decode image'));
+            img.onload = () => {
+                let w = img.width;
+                let h = img.height;
+                if (w > maxWidth || h > maxHeight) {
+                    if (w / maxWidth > h / maxHeight) {
+                        h = Math.round((h * maxWidth) / w);
+                        w = maxWidth;
+                    } else {
+                        w = Math.round((w * maxHeight) / h);
+                        h = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                canvas.toBlob((blob) => {
+                    resolve({ dataUrl, blob });
+                }, 'image/jpeg', quality);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Helper: direct notification insertion for dual-guarantee delivery
+async function sendDirectNotification(userId, title, message, category, type, linkAction, referenceId, proofImageUrl) {
+    if (!userId || !window.supabaseClient) return;
+    try {
+        await supabaseClient.from('notifications').insert({
+            user_id: userId,
+            title: title,
+            message: message,
+            category: category || 'general',
+            type: type || 'info',
+            link_action: linkAction || null,
+            reference_id: referenceId ? String(referenceId) : null,
+            proof_image_url: proofImageUrl || null
+        });
+    } catch (err) {
+        console.warn('Direct notification insertion fallback (DB trigger handles primary):', err);
+    }
+}
+
 function setupAdminMaintenanceModule() {
     const filterSelect = document.getElementById('adminFilterMaintStatus');
     const searchInput = document.getElementById('adminSearchMaintInput');
@@ -6816,6 +7445,13 @@ function setupAdminMaintenanceModule() {
     const cancelBtn = document.getElementById('cancelUpdateMaintBtn');
     const form = document.getElementById('updateMaintenanceForm');
 
+    const proofFileInput = document.getElementById('editMaintProofFile');
+    const proofUrlInput = document.getElementById('editMaintProofUrl');
+    const proofPreviewBox = document.getElementById('editMaintProofPreviewBox');
+    const proofPreviewImg = document.getElementById('editMaintProofPreviewImg');
+    const proofStatus = document.getElementById('editMaintProofStatus');
+    const clearProofBtn = document.getElementById('btnClearMaintProof');
+
     if (filterSelect) filterSelect.addEventListener('change', () => renderAdminMaintenanceTable());
     if (searchInput) searchInput.addEventListener('input', () => renderAdminMaintenanceTable());
 
@@ -6823,7 +7459,75 @@ function setupAdminMaintenanceModule() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
+    // Proof photo file handler with automatic compression and Supabase storage upload
+    if (proofFileInput) {
+        proofFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
 
+            if (proofStatus) {
+                proofStatus.style.display = 'block';
+                proofStatus.textContent = 'Processing & compressing photo...';
+                proofStatus.style.color = '#2563eb';
+            }
+
+            try {
+                const { dataUrl, blob } = await compressImageToDataUrl(file, 1200, 1200, 0.85);
+
+                // Show preview immediately
+                if (proofPreviewImg) proofPreviewImg.src = dataUrl;
+                if (proofPreviewBox) proofPreviewBox.style.display = 'block';
+                if (proofUrlInput) proofUrlInput.value = dataUrl;
+
+                // Try uploading to Supabase Storage 'profiles' bucket (folder 'maintenance')
+                const visitId = document.getElementById('editMaintId')?.value || 'maint';
+                const fileName = `maintenance/proof_${visitId}_${Date.now()}.jpg`;
+
+                try {
+                    if (proofStatus) proofStatus.textContent = 'Uploading proof photo to cloud storage...';
+                    const { data: uploadData, error: uploadErr } = await supabaseClient.storage
+                        .from('profiles')
+                        .upload(fileName, blob, {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+
+                    if (!uploadErr && uploadData) {
+                        const { data: urlData } = supabaseClient.storage
+                            .from('profiles')
+                            .getPublicUrl(fileName);
+
+                        if (urlData?.publicUrl) {
+                            proofUrlInput.value = urlData.publicUrl;
+                        }
+                    }
+                } catch (storageErr) {
+                    console.warn('Storage bucket upload fallback to inline data URL:', storageErr);
+                }
+
+                if (proofStatus) {
+                    proofStatus.textContent = '✓ Proof photo attached successfully';
+                    proofStatus.style.color = '#16a34a';
+                }
+            } catch (procErr) {
+                console.error('Failed to process proof photo:', procErr);
+                if (proofStatus) {
+                    proofStatus.textContent = 'Failed to process image: ' + procErr.message;
+                    proofStatus.style.color = '#dc2626';
+                }
+            }
+        });
+    }
+
+    if (clearProofBtn) {
+        clearProofBtn.addEventListener('click', () => {
+            if (proofFileInput) proofFileInput.value = '';
+            if (proofUrlInput) proofUrlInput.value = '';
+            if (proofPreviewImg) proofPreviewImg.src = '';
+            if (proofPreviewBox) proofPreviewBox.style.display = 'none';
+            if (proofStatus) proofStatus.style.display = 'none';
+        });
+    }
 
     if (form) {
         form.addEventListener('submit', async (e) => {
@@ -6831,6 +7535,7 @@ function setupAdminMaintenanceModule() {
             const id = document.getElementById('editMaintId')?.value;
             const status = document.getElementById('editMaintStatus')?.value;
             const notes = document.getElementById('editMaintNotes')?.value.trim();
+            const proofUrl = document.getElementById('editMaintProofUrl')?.value || null;
             const submitBtn = form.querySelector('button[type="submit"]');
 
             if (!id || !status) return;
@@ -6843,7 +7548,8 @@ function setupAdminMaintenanceModule() {
             try {
                 const updatePayload = {
                     status: status,
-                    notes: notes || null
+                    notes: notes || null,
+                    proof_image_url: proofUrl
                 };
                 if (status === 'completed') {
                     updatePayload.completed_at = new Date().toISOString();
@@ -6860,8 +7566,31 @@ function setupAdminMaintenanceModule() {
                     'MAINTENANCE_UPDATED',
                     'maintenance_visits',
                     id,
-                    `Updated maintenance request #${id} status to '${status}'. Notes: ${notes || 'None'}`
+                    `Updated maintenance request #${id} status to '${status}'. Proof: ${proofUrl ? 'Yes' : 'No'}. Notes: ${notes || 'None'}`
                 );
+
+                // Send real-time notification to user (dual-guarantee alongside trigger)
+                const cachedVisit = adminMaintenanceCache.find(x => x.id === parseInt(id));
+                if (cachedVisit && cachedVisit.requested_by) {
+                    const plotName = cachedVisit.memorial_spaces?.plot_identifier || 'Memorial Lot';
+                    const title = status === 'completed' 
+                        ? `Maintenance Completed: ${cachedVisit.visit_type || 'Task'} ✅` 
+                        : (status === 'in-progress' ? `Maintenance In-Progress: ${cachedVisit.visit_type || 'Task'} 🛠️` : `Maintenance Request ${status.toUpperCase()}`);
+                    const msg = `Cemetery staff updated your request for plot ${plotName} to '${status}'.` + 
+                        (notes ? ` Staff note: "${notes}"` : '') + 
+                        (proofUrl ? ` Completion proof photo attached.` : '');
+
+                    sendDirectNotification(
+                        cachedVisit.requested_by,
+                        title,
+                        msg,
+                        'maintenance',
+                        status === 'completed' ? 'success' : (status === 'cancelled' ? 'danger' : 'info'),
+                        'maintenance',
+                        String(id),
+                        proofUrl
+                    );
+                }
 
                 closeModal();
                 await loadAdminMaintenanceTable();
@@ -6893,6 +7622,7 @@ async function loadAdminMaintenanceTable() {
                 scheduled_date,
                 status,
                 notes,
+                proof_image_url,
                 completed_at,
                 space_id,
                 requested_by,
@@ -6980,12 +7710,16 @@ function renderAdminMaintenanceTable() {
         if (status === 'completed') badgeClass = 'paid';
         else if (status === 'cancelled') badgeClass = 'overdue';
 
+        const proofBadge = v.proof_image_url ? `
+            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; margin-left: 6px;" title="Proof photo uploaded">📷 Proof</span>
+        ` : '';
+
         return `
             <tr>
                 <td><strong>#MNT-${v.id}</strong></td>
                 <td><strong>${escapeHtml(space.plot_identifier || 'N/A')}</strong></td>
                 <td>${escapeHtml(space.section_name || '-')}</td>
-                <td><span style="font-weight: 600; color: #1e3a29;">${escapeHtml(v.visit_type)}</span></td>
+                <td><span style="font-weight: 600; color: #1e3a29;">${escapeHtml(v.visit_type)}</span>${proofBadge}</td>
                 <td>${escapeHtml(clientName)}</td>
                 <td>${v.scheduled_date ? new Date(v.scheduled_date).toLocaleDateString() : '-'}</td>
                 <td><span class="admin-badge ${badgeClass}">${status.toUpperCase()}</span></td>
@@ -7015,6 +7749,26 @@ window.openUpdateMaintenanceModal = function(visitId) {
 
     const notesInput = document.getElementById('editMaintNotes');
     if (notesInput) notesInput.value = v.notes || '';
+
+    // Reset and populate proof photo preview
+    const proofFileInput = document.getElementById('editMaintProofFile');
+    const proofUrlInput = document.getElementById('editMaintProofUrl');
+    const proofPreviewBox = document.getElementById('editMaintProofPreviewBox');
+    const proofPreviewImg = document.getElementById('editMaintProofPreviewImg');
+    const proofStatus = document.getElementById('editMaintProofStatus');
+
+    if (proofFileInput) proofFileInput.value = '';
+    if (proofStatus) proofStatus.style.display = 'none';
+
+    if (v.proof_image_url) {
+        if (proofUrlInput) proofUrlInput.value = v.proof_image_url;
+        if (proofPreviewImg) proofPreviewImg.src = v.proof_image_url;
+        if (proofPreviewBox) proofPreviewBox.style.display = 'block';
+    } else {
+        if (proofUrlInput) proofUrlInput.value = '';
+        if (proofPreviewImg) proofPreviewImg.src = '';
+        if (proofPreviewBox) proofPreviewBox.style.display = 'none';
+    }
 
     if (modal) modal.classList.add('active');
 };
@@ -7079,6 +7833,22 @@ function setupAdminSupportTicketsModule() {
                     id,
                     `Responded to support ticket #${id} and updated status to '${status}'. Response: ${resolution.slice(0, 80)}...`
                 );
+
+                // Send real-time notification to user (dual-guarantee alongside trigger)
+                const cachedTicket = adminSupportCache.find(x => x.id === parseInt(id));
+                if (cachedTicket && cachedTicket.user_id) {
+                    const title = `Support Ticket ${status.toUpperCase()}: #${cachedTicket.ticket_number || id} 💬`;
+                    const msg = `Staff response: "${resolution.slice(0, 140)}${resolution.length > 140 ? '...' : ''}"`;
+                    sendDirectNotification(
+                        cachedTicket.user_id,
+                        title,
+                        msg,
+                        'support',
+                        status === 'resolved' ? 'success' : 'info',
+                        'support',
+                        String(id)
+                    );
+                }
 
                 closeModal();
                 await loadAdminSupportTicketsTable();
@@ -8137,6 +8907,420 @@ function exportPlotHistoryPdf() {
     } catch (err) {
         console.error('PDF export error:', err);
         alert('Failed to generate PDF: ' + err.message);
+    }
+}
+
+// ==============================================================================
+// STAFF & ADMINISTRATOR PROFILE MODULE (Photo Upload, Details & Security)
+// ==============================================================================
+
+async function loadAdminProfileView() {
+    if (typeof supabaseClient === 'undefined') return;
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('id, role, full_name, username, phone, avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const dbRole = String(profile?.role || '').toLowerCase();
+        const metaRole = String(user.user_metadata?.role || '').toLowerCase();
+        const emailLower = String(user.email || '').toLowerCase();
+        const isAdmin = dbRole === 'admin' || (dbRole !== 'staff' && (metaRole === 'admin' || emailLower.startsWith('admin')));
+
+        const roleLabel = isAdmin ? 'Administrator' : 'Staff Member';
+        const roleBadge = isAdmin ? 'ADMINISTRATOR' : 'STAFF MEMBER';
+        const displayName = profile?.full_name || user.user_metadata?.full_name || profile?.username || user.email?.split('@')[0] || roleLabel;
+
+        // Populate Left Column
+        const cardNameEl = document.getElementById('adminProfileCardName');
+        if (cardNameEl) cardNameEl.textContent = displayName;
+
+        const cardEmailEl = document.getElementById('adminProfileCardEmail');
+        if (cardEmailEl) cardEmailEl.textContent = user.email || '';
+
+        const cardRoleEl = document.getElementById('adminProfileCardRole');
+        if (cardRoleEl) cardRoleEl.textContent = roleLabel;
+
+        const roleBadgeTopEl = document.getElementById('adminProfileRoleBadgeTop');
+        if (roleBadgeTopEl) roleBadgeTopEl.textContent = roleBadge;
+
+        const avatarImgEl = document.getElementById('adminProfileAvatarImg');
+        if (avatarImgEl) {
+            avatarImgEl.src = profile?.avatar_url || 'assets/images/default-avatar.png';
+        }
+
+        // Populate Right Column: Personal Information Form
+        const fullNameInput = document.getElementById('adminProfileFullNameInput');
+        if (fullNameInput) fullNameInput.value = profile?.full_name || '';
+
+        const usernameInput = document.getElementById('adminProfileUsernameInput');
+        if (usernameInput) usernameInput.value = profile?.username || '';
+
+        const emailInput = document.getElementById('adminProfileEmailInput');
+        if (emailInput) emailInput.value = user.email || '';
+
+        const phoneInput = document.getElementById('adminProfilePhoneInput');
+        if (phoneInput) phoneInput.value = profile?.phone || '';
+
+    } catch (err) {
+        console.error('Error loading admin profile:', err);
+    }
+}
+
+function setupAdminProfileModule() {
+    // 1. Avatar upload button trigger
+    const uploadBtn = document.getElementById('adminUploadAvatarBtn');
+    const fileInput = document.getElementById('adminProfileAvatarFileInput');
+    const avatarImgEl = document.getElementById('adminProfileAvatarImg');
+
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+    }
+
+    // 2. Avatar file selection, canvas compression, and Supabase upload
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file (JPG, PNG, WEBP).');
+                fileInput.value = '';
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Selected image exceeds 5MB. Please choose a smaller image.');
+                fileInput.value = '';
+                return;
+            }
+
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Processing & Uploading...';
+            }
+
+            try {
+                const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+                if (userErr || !user) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Compress using canvas (max 400x400)
+                const compressedBlob = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxDim = 400;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > h) {
+                                if (w > maxDim) {
+                                    h = Math.round((h * maxDim) / w);
+                                    w = maxDim;
+                                }
+                            } else {
+                                if (h > maxDim) {
+                                    w = Math.round((w * maxDim) / h);
+                                    h = maxDim;
+                                }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            canvas.toBlob((blob) => {
+                                if (blob) resolve(blob);
+                                else reject(new Error('Canvas compression failed'));
+                            }, 'image/jpeg', 0.9);
+                        };
+                        img.onerror = () => reject(new Error('Image failed to load'));
+                        img.src = event.target.result;
+                    };
+                    reader.onerror = () => reject(new Error('FileReader failed'));
+                    reader.readAsDataURL(file);
+                });
+
+                // Storage path matches RLS policy: folder name = auth.uid()
+                const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('profiles')
+                    .upload(filePath, compressedBlob, {
+                        cacheControl: '3600',
+                        upsert: true,
+                        contentType: 'image/jpeg'
+                    });
+
+                if (uploadError) {
+                    throw new Error('Supabase Storage upload error: ' + uploadError.message);
+                }
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('profiles')
+                    .getPublicUrl(filePath);
+
+                const publicUrl = urlData?.publicUrl;
+                if (!publicUrl) throw new Error('Could not retrieve public avatar URL.');
+
+                // Update profiles table
+                const { error: dbErr } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        avatar_url: publicUrl,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id);
+
+                if (dbErr) throw dbErr;
+
+                // Update UI previews immediately
+                if (avatarImgEl) avatarImgEl.src = publicUrl;
+                const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+                if (sidebarAvatar) {
+                    sidebarAvatar.innerHTML = `<img src="${publicUrl}" alt="Avatar">`;
+                }
+
+                if (typeof logAdminAction === 'function') {
+                    logAdminAction('PROFILE_PHOTO_UPDATED', 'Admin Profile', user.id, 'Uploaded new profile photo.');
+                }
+                alert('Profile picture updated successfully!');
+            } catch (err) {
+                console.error('Error uploading avatar:', err);
+                alert('Failed to upload profile picture: ' + err.message);
+            } finally {
+                fileInput.value = '';
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📷 Upload New Photo';
+                }
+            }
+        });
+    }
+
+    // 3. Remove avatar photo
+    const removeBtn = document.getElementById('adminRemoveAvatarBtn');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to remove your profile photo and reset to default?')) return;
+
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) return;
+
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        avatar_url: null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id);
+
+                if (error) throw error;
+
+                if (avatarImgEl) avatarImgEl.src = 'assets/images/default-avatar.png';
+                const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+                if (sidebarAvatar) {
+                    const name = document.getElementById('sidebarUserName')?.textContent || 'A';
+                    sidebarAvatar.textContent = (name[0] || 'A').toUpperCase();
+                }
+
+                alert('Profile picture removed.');
+            } catch (err) {
+                console.error('Error removing avatar:', err);
+                alert('Failed to remove profile picture: ' + err.message);
+            }
+        });
+    }
+
+    // 4. Save Personal Information Details
+    const detailsForm = document.getElementById('adminProfileDetailsForm');
+    if (detailsForm) {
+        detailsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('adminSaveDetailsBtn');
+            const fullName = (document.getElementById('adminProfileFullNameInput')?.value || '').trim();
+            const username = (document.getElementById('adminProfileUsernameInput')?.value || '').trim();
+            const phone = (document.getElementById('adminProfilePhoneInput')?.value || '').trim();
+
+            if (!fullName || !username) {
+                alert('Please enter both your Full Name and Username.');
+                return;
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving Changes...';
+            }
+
+            try {
+                const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+                if (userErr || !user) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const { error: updateErr } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        full_name: fullName,
+                        username: username,
+                        phone: phone || null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id);
+
+                if (updateErr) throw updateErr;
+
+                // Update UI labels
+                setText('sidebarUserName', fullName);
+                setText('adminProfileCardName', fullName);
+
+                if (typeof logAdminAction === 'function') {
+                    logAdminAction('PROFILE_DETAILS_UPDATED', 'Admin Profile', user.id, `Updated profile details: ${fullName} (@${username}).`);
+                }
+                alert('Profile details saved successfully!');
+            } catch (err) {
+                console.error('Error updating profile details:', err);
+                alert('Failed to save profile details: ' + err.message);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 Save Profile Changes';
+                }
+            }
+        });
+    }
+
+    // 5. Password Show/Hide Toggle Buttons
+    document.querySelectorAll('.admin-pwd-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                btn.textContent = 'Show';
+            }
+        });
+    });
+
+    // 6. Security & Change Password Form
+    const pwdForm = document.getElementById('adminProfilePasswordForm');
+    if (pwdForm) {
+        pwdForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsgEl = document.getElementById('adminPasswordErrorMsg');
+            const updateBtn = document.getElementById('adminUpdatePasswordBtn');
+
+            const showError = (msg) => {
+                if (errorMsgEl) {
+                    errorMsgEl.textContent = msg;
+                    errorMsgEl.style.display = 'block';
+                } else {
+                    alert(msg);
+                }
+            };
+
+            const clearError = () => {
+                if (errorMsgEl) {
+                    errorMsgEl.textContent = '';
+                    errorMsgEl.style.display = 'none';
+                }
+            };
+
+            clearError();
+
+            const currentPassword = document.getElementById('adminCurrentPasswordInput')?.value || '';
+            const newPassword = document.getElementById('adminNewPasswordInput')?.value || '';
+            const confirmPassword = document.getElementById('adminConfirmPasswordInput')?.value || '';
+
+            if (!currentPassword) {
+                showError('Please enter your current password.');
+                return;
+            }
+
+            if (!newPassword || newPassword.length < 6) {
+                showError('New password must be at least 6 characters long.');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showError('New password and confirmation do not match.');
+                return;
+            }
+
+            if (newPassword === currentPassword) {
+                showError('New password must be different from your current password.');
+                return;
+            }
+
+            if (updateBtn) {
+                updateBtn.disabled = true;
+                updateBtn.textContent = 'Verifying & Updating...';
+            }
+
+            try {
+                const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+                if (userErr || !user || !user.email) {
+                    throw new Error('Your session has expired. Please log in again.');
+                }
+
+                // Verify past password by re-authenticating
+                const { error: verifyErr } = await supabaseClient.auth.signInWithPassword({
+                    email: user.email,
+                    password: currentPassword
+                });
+
+                if (verifyErr) {
+                    throw new Error('Incorrect current password. Please verify and try again.');
+                }
+
+                // Update to new password
+                const { error: updateErr } = await supabaseClient.auth.updateUser({
+                    password: newPassword
+                });
+
+                if (updateErr) throw updateErr;
+
+                pwdForm.reset();
+                clearError();
+                document.querySelectorAll('.admin-pwd-toggle-btn').forEach(btn => btn.textContent = 'Show');
+                const currInp = document.getElementById('adminCurrentPasswordInput');
+                const newInp = document.getElementById('adminNewPasswordInput');
+                const confInp = document.getElementById('adminConfirmPasswordInput');
+                if (currInp) currInp.type = 'password';
+                if (newInp) newInp.type = 'password';
+                if (confInp) confInp.type = 'password';
+
+                if (typeof logAdminAction === 'function') {
+                    logAdminAction('PASSWORD_CHANGED', 'Auth Security', user.id, 'Staff/Admin password updated.');
+                }
+                alert('Password changed successfully! You can now use your new password next time you sign in.');
+            } catch (err) {
+                console.error('Password change error:', err);
+                showError(err.message || 'Failed to update password.');
+            } finally {
+                if (updateBtn) {
+                    updateBtn.disabled = false;
+                    updateBtn.textContent = '🔑 Update Password';
+                }
+            }
+        });
     }
 }
 

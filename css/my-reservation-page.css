@@ -711,3 +711,151 @@
         justify-content: center;
     }
 }
+
+/* Helper class added right before window.print() to guarantee button hiding across all browsers */
+body.is-printing-receipt button,
+body.is-printing-receipt .close-details-btn,
+body.is-printing-receipt #closeReservationDetailsBtn,
+body.is-printing-receipt .details-footer,
+body.is-printing-receipt #printReceiptBtn,
+body.is-printing-receipt #dismissReservationDetailsBtn,
+body.is-printing-receipt .btn-action-details,
+body.is-printing-receipt #detailAddDeceasedBtn {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* =========================================================================
+   PRINT / PDF STYLESHEET
+   Hides interactive UI buttons and ensures clean document printing
+   ========================================================================= */
+@media print {
+    /* 1. Reset root elements */
+    html, body {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 2. Hide ALL dashboard UI and background elements */
+    #sidebar-component,
+    #sidebarMenu,
+    .sidebar-menu,
+    #header-component,
+    #content-component,
+    #profile-modal-component,
+    #reservation-modal-component,
+    #edit-profile-page-component,
+    #change-password-modal-component,
+    #deceased-family-page-component,
+    #maintenance-page-component,
+    #support-tickets-page-component,
+    #featured-spaces-page-component,
+    .my-reservation-page-header,
+    .my-reservation-box,
+    .my-reservation-header,
+    .subpage-tabs-bar,
+    .my-reservation-pane-container,
+    .notif-bell-btn,
+    .notif-modal-backdrop,
+    #notificationModal,
+    #clientManageDeceasedModal,
+    .overlay,
+    #overlay,
+    #zmgPaymentsFullPage {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* 3. Strip overlay and fix container so reservation details prints as a clean standalone card */
+    .my-reservation-page-overlay {
+        position: static !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .main.my-reservation-content,
+    main.my-reservation-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    .reservation-details-modal-overlay,
+    .reservation-details-modal-overlay.active,
+    #reservationDetailsModal {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .reservation-details-card {
+        box-shadow: none !important;
+        border: 1.5px solid #2d4a36 !important;
+        border-radius: 6px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        animation: none !important;
+        page-break-inside: avoid !important;
+    }
+
+    .details-body {
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 20px 24px !important;
+    }
+
+    .details-header {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 4. ABSOLUTELY HIDE ALL BUTTONS & INTERACTIVE ELEMENTS IN PDF / PRINT */
+    button,
+    .btn,
+    .close-details-btn,
+    #closeReservationDetailsBtn,
+    .details-footer,
+    #printReceiptBtn,
+    #dismissReservationDetailsBtn,
+    .btn-print-receipt,
+    .btn-close-details,
+    .btn-action-details,
+    .btn-action-delete,
+    #detailAddDeceasedBtn,
+    .res-actions-wrapper {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+}
