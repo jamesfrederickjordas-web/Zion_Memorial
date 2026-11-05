@@ -228,7 +228,7 @@ function setupTabNavigation() {
     const viewLovedOnes = document.getElementById('viewLovedOnesLocator');
     if (tabLovedOnes && viewLovedOnes) {
         tabLovedOnes.addEventListener('click', () => {
-            activateTab(tabLovedOnes, viewLovedOnes, '📍 Locate Loved Ones & Grave Finder');
+            activateTab(tabLovedOnes, viewLovedOnes, 'Locate Loved Ones & Grave Finder');
             loadLovedOnesLocatorView();
         });
     }
@@ -620,15 +620,7 @@ function renderDonutChart(spaces, mode = 'category') {
         cumulativeOffset += pct;
 
         svgHtml += `
-            <path class="circle-segment" 
-                  id="donutSegment-${idx}"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                  fill="none" 
-                  stroke="${item.color}" 
-                  stroke-width="4.5" 
-                  stroke-dasharray="${dashArray}" 
-                  stroke-dashoffset="${dashOffset}"
-                  data-idx="${idx}">
+            <path class="circle-segment"id="donutSegment-${idx}"d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"fill="none"stroke="${item.color}"stroke-width="4.5"stroke-dasharray="${dashArray}"stroke-dashoffset="${dashOffset}"data-idx="${idx}">
             </path>
         `;
     });
@@ -1437,33 +1429,64 @@ window.deleteDeceasedRecordAdmin = async function(recordId, name) {
         adminDeceasedCache = (adminDeceasedCache || []).filter(x => String(x.id) !== String(recordId));
 
         // 4. If no more deceased records remain for this space, update space status to 'reserved' or 'available'
-        if (targetSpaceId) {
-            const { count: decCount } = await supabaseClient
-                .from('memorial_records')
-                .select('id', { count: 'exact', head: true })
-                .eq('space_id', targetSpaceId);
-
-            if ((decCount || 0) === 0) {
-                // Check if active reservation exists for this plot
-                const { data: resRows } = await supabaseClient
-                    .from('reservations')
-                    .select('id, status')
+        if (targetSpaceId || targetPlotIdentifier) {
+            let decCount = 0;
+            if (targetSpaceId) {
+                const { count } = await supabaseClient
+                    .from('memorial_records')
+                    .select('id', { count: 'exact', head: true })
                     .eq('space_id', targetSpaceId);
+                decCount = count || 0;
+            }
 
-                const hasActiveRes = (resRows || []).some(r => {
-                    const st = String(r.status || '').toUpperCase();
-                    return !['CANCELLED', 'REJECTED'].includes(st);
-                });
+            if (decCount === 0) {
+                // Check if active reservation exists for this plot
+                let hasActiveRes = false;
+                if (targetSpaceId) {
+                    const { data: resRows } = await supabaseClient
+                        .from('reservations')
+                        .select('id, status')
+                        .eq('space_id', targetSpaceId);
+
+                    hasActiveRes = (resRows || []).some(r => {
+                        const st = String(r.status || '').toUpperCase();
+                        return !['CANCELLED', 'REJECTED'].includes(st);
+                    });
+                }
 
                 const newStatus = hasActiveRes ? 'reserved' : 'available';
-                await supabaseClient
-                    .from('memorial_spaces')
-                    .update({ status: newStatus, updated_at: new Date().toISOString() })
-                    .eq('id', targetSpaceId);
+                
+                // Update Supabase space status by space ID and plot code
+                if (targetSpaceId) {
+                    await supabaseClient
+                        .from('memorial_spaces')
+                        .update({ status: newStatus, updated_at: new Date().toISOString() })
+                        .eq('id', targetSpaceId);
+                }
+                if (targetPlotIdentifier) {
+                    await supabaseClient
+                        .from('memorial_spaces')
+                        .update({ status: newStatus, updated_at: new Date().toISOString() })
+                        .eq('plot_identifier', targetPlotIdentifier);
+                }
 
                 // Update in-memory spaces cache
-                const spCache = (adminSpacesCache || []).find(s => String(s.id) === String(targetSpaceId));
-                if (spCache) spCache.status = newStatus;
+                (adminSpacesCache || []).forEach(s => {
+                    if ((targetSpaceId && String(s.id) === String(targetSpaceId)) ||
+                        (targetPlotIdentifier && String(s.plot_identifier).toUpperCase() === String(targetPlotIdentifier).toUpperCase())) {
+                        s.status = newStatus;
+                    }
+                });
+
+                // Update in-memory locator map plots immediately
+                if (targetPlotIdentifier) {
+                    const cleanCode = String(targetPlotIdentifier).toUpperCase();
+                    if (adminLocPlotsByCode && adminLocPlotsByCode[cleanCode]) {
+                        adminLocPlotsByCode[cleanCode].status = newStatus;
+                    }
+                    const locPlot = (adminLocPlotsList || []).find(p => String(p.plot_identifier).toUpperCase() === cleanCode);
+                    if (locPlot) locPlot.status = newStatus;
+                }
             }
         }
 
@@ -1738,12 +1761,17 @@ async function loadAdminLocMapData() {
             // Dynamically reconcile plot statuses based on real database records
             sectionPlots.forEach(p => {
                 const codeUpper = String(p.plot_identifier).toUpperCase().trim();
+                const wasOccupiedInDb = String(p.status || '').toLowerCase() === 'occupied';
                 if (occupiedPlotCodes.has(codeUpper)) {
                     p.status = 'occupied';
                 } else if (reservedPlotCodes.has(codeUpper)) {
                     p.status = 'reserved';
                 } else {
                     p.status = 'available';
+                    if (wasOccupiedInDb && p.id) {
+                        // Background self-heal orphaned occupied plot in Supabase
+                        supabaseClient.from('memorial_spaces').update({ status: 'available', updated_at: new Date().toISOString() }).eq('id', p.id).then();
+                    }
                 }
                 adminLocPlotsList.push(p);
                 adminLocPlotsByCode[codeUpper] = p;
@@ -1891,7 +1919,7 @@ function attachPinToAdminLocSlot(slotEl, labelText, areaRotate = 0) {
     pin.innerHTML = `
         <div class="admin-loc-pin-badge">
             <span class="admin-loc-beacon-dot"></span>
-            <span>📍 ${escapeHtml(labelText)}</span>
+            <span> ${escapeHtml(labelText)}</span>
         </div>
         <div class="admin-loc-pin-stem"></div>
         <div class="admin-loc-pin-ripple"></div>
@@ -2033,7 +2061,7 @@ function renderAdminLocSelectedDetailCard(plot, primaryDeceased, allMatchingDece
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
                 <div>
-                    <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; display: block;">📍 Pinpointed Deceased Record</span>
+                    <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #166534; display: block;">Pinpointed Deceased Record</span>
                     <h4 style="margin: 2px 0 0 0; font-size: 1.02rem; font-weight: 800; color: #0f172a;">${escapeHtml(primaryDeceased.deceased_name)}</h4>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -2050,11 +2078,9 @@ function renderAdminLocSelectedDetailCard(plot, primaryDeceased, allMatchingDece
                 ${epitaph ? `<div style="grid-column: 1 / -1; font-style: italic; color: #475569; border-top: 1px dashed #e2e8f0; padding-top: 4px;">&ldquo;${escapeHtml(epitaph)}&rdquo;</div>` : ''}
             </div>
             <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${escapeHtml(plotCode).replace(/'/g, "\\'")}', '${primaryDeceased.id}', { smoothCenter: true })" style="flex: 1; height: 28px; font-size: 0.74rem; background: #2d4a36;">
-                    Center Pin on Map
+                <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${escapeHtml(plotCode).replace(/'/g, "\\'")}', '${primaryDeceased.id}', { smoothCenter: true })" style="flex: 1; height: 28px; font-size: 0.74rem; background: #2d4a36;"> Center Pin on Map
                 </button>
-                <button type="button" class="btn-admin-add" onclick="copyLovedOnePlotInfo('${escapeHtml(primaryDeceased.deceased_name).replace(/'/g, "\\'")}', '${escapeHtml(plotCode).replace(/'/g, "\\'")}', '${escapeHtml(secName).replace(/'/g, "\\'")}')" style="height: 28px; font-size: 0.74rem; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1;">
-                    Copy Details
+                <button type="button" class="btn-admin-add" onclick="copyLovedOnePlotInfo('${escapeHtml(primaryDeceased.deceased_name).replace(/'/g, "\\'")}', '${escapeHtml(plotCode).replace(/'/g, "\\'")}', '${escapeHtml(secName).replace(/'/g, "\\'")}')" style="height: 28px; font-size: 0.74rem; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1;"> Copy Details
                 </button>
             </div>
         `;
@@ -2306,8 +2332,7 @@ function renderLovedOnesLocatorGrid() {
 
         if (query) {
             const tokens = query.split(/\s+/).filter(Boolean);
-            const matchesAll = tokens.every(tok =>
-                decName.includes(tok) ||
+            const matchesAll = tokens.every(tok => decName.includes(tok) ||
                 plotCode.includes(tok) ||
                 secName.includes(tok) ||
                 familyName.includes(tok) ||
@@ -2326,14 +2351,13 @@ function renderLovedOnesLocatorGrid() {
         const exactPlotMatch = query ? adminLocPlotsByCode[query.toUpperCase()] : null;
         grid.innerHTML = `
             <div style="text-align: center; padding: 32px 16px; background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
-                <div style="font-size: 1.8rem; margin-bottom: 8px;">🕊️🔍</div>
+                <div style="font-size: 1.8rem; margin-bottom: 8px;"></div>
                 <h4 style="margin: 0 0 4px 0; color: #1e293b; font-size: 0.95rem;">No Matching Interred Record</h4>
                 <p style="margin: 0; color: #64748b; font-size: 0.8rem;">
                     ${query ? `No deceased record matches "${escapeHtml(query)}".` : 'No deceased records currently registered.'}
                 </p>
                 ${exactPlotMatch ? `
-                    <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${escapeHtml(exactPlotMatch.plot_identifier)}', null, { smoothCenter: true })" style="margin-top: 10px; background: #2d4a36;">
-                        📍 Locate Plot ${escapeHtml(exactPlotMatch.plot_identifier)} on Map
+                    <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${escapeHtml(exactPlotMatch.plot_identifier)}', null, { smoothCenter: true })" style="margin-top: 10px; background: #2d4a36;"> Locate Plot ${escapeHtml(exactPlotMatch.plot_identifier)} on Map
                     </button>
                 ` : ''}
             </div>
@@ -2366,7 +2390,7 @@ function renderLovedOnesLocatorGrid() {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 9px;">
                         <div style="width: 32px; height: 32px; border-radius: 50%; background: #f0fdf4; border: 1.5px solid #bbf7d0; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0;">
-                            🕊️
+                            
                         </div>
                         <div>
                             <h4 style="margin: 0; color: #0f172a; font-size: 0.94rem; font-weight: 800;">${escapeHtml(fullName)}</h4>
@@ -2398,11 +2422,9 @@ function renderLovedOnesLocatorGrid() {
                 ` : ''}
 
                 <div style="display: flex; gap: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0;" onclick="event.stopPropagation();">
-                    <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${safePlotCode}', '${r.id}', { smoothCenter: true })" style="flex: 1; height: 27px; font-size: 0.73rem; font-weight: 700; background: #2d4a36; color: #ffffff; border-radius: 4px;">
-                        📍 Pinpoint on Map
+                    <button type="button" class="btn-admin-add" onclick="locatePlotOnAdminMap('${safePlotCode}', '${r.id}', { smoothCenter: true })" style="flex: 1; height: 27px; font-size: 0.73rem; font-weight: 700; background: #2d4a36; color: #ffffff; border-radius: 4px;"> Pinpoint on Map
                     </button>
-                    <button type="button" class="btn-admin-add" onclick="copyLovedOnePlotInfo('${safeFullName}', '${safePlotCode}', '${safeSecName}')" style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 700; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 4px;" title="Copy plot details">
-                        📋 Copy
+                    <button type="button" class="btn-admin-add" onclick="copyLovedOnePlotInfo('${safeFullName}', '${safePlotCode}', '${safeSecName}')" style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 700; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 4px;" title="Copy plot details"> Copy
                     </button>
                 </div>
             </div>
@@ -2753,7 +2775,7 @@ function setupAddDeceasedModal() {
                         .eq('id', sp.id);
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction('DECEASED_CLEARED_ALL', 'memorial_records', 'ALL', 'Cleared all deceased records and reset occupied plots to available/reserved');
 
                 alert("All deceased records cleared successfully and plots reset.");
                 await Promise.all([
@@ -2766,7 +2788,7 @@ function setupAddDeceasedModal() {
                 alert("Failed to clear deceased records: " + err.message);
             } finally {
                 clearAllBtn.disabled = false;
-                clearAllBtn.textContent = '🗑 Clear All Deceased';
+                clearAllBtn.textContent = 'Clear All Deceased';
             }
         });
     }
@@ -2939,7 +2961,6 @@ let adminPaymentsCache = [];
 let adminSchedulesCache = [];
 let expandedAccountIds = new Set();
 let activeDrawerTabs = {}; // [itemId]: 'payments' | 'dues'
-
 function setupAccountsSubnav() {
     const btnOnline = document.getElementById('userSubtabOnlineClients');
     const btnWalkin = document.getElementById('userSubtabWalkInCounter');
@@ -3175,8 +3196,7 @@ function renderAccountsTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align: center; padding: 36px; color: #64748b;">
-                    No records found in this category matching your search.
+                <td colspan="8" style="text-align: center; padding: 36px; color: #64748b;"> No records found in this category matching your search.
                     ${currentAccountsSubtab === 'walkin' ? '<br><button type="button" class="btn-admin-add" onclick="openReceiveCounterPaymentModal()" style="margin-top: 10px; background: #166534;">+ Record First Counter Cash Payment</button>' : ''}
                 </td>
             </tr>
@@ -3260,11 +3280,9 @@ function renderAccountsTable() {
                             <button type="button" class="btn-expand-ledger ${isExpanded ? 'expanded' : ''}" onclick="toggleAccountDrawer('${item.id}')">
                                 ${isExpanded ? 'Close Ledger' : 'Payments &amp; Dues'}
                             </button>
-                            <button type="button" class="btn-action-text btn-action-success" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openAddDeceasedModalForReservation('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.space_id || ''}', '${escapeHtml(item.plot_identifier || '')}')">
-                                Add Deceased
+                            <button type="button" class="btn-action-text btn-action-success" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openAddDeceasedModalForReservation('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.space_id || ''}', '${escapeHtml(item.plot_identifier || '')}')"> Add Deceased
                             </button>
-                            <button type="button" class="btn-admin-add" style="padding: 4px 8px; font-size: 0.75rem; background: #2d4a36;" onclick="openReceiveCounterPaymentModal('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.monthly_amortization || 1191.44}')">
-                                Receive Cash
+                            <button type="button" class="btn-admin-add" style="padding: 4px 8px; font-size: 0.75rem; background: #2d4a36;" onclick="openReceiveCounterPaymentModal('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.monthly_amortization || 1191.44}')"> Receive Cash
                             </button>
                         </div>
                     </td>
@@ -3435,19 +3453,15 @@ function renderAccountLedgerDrawerHtml(item) {
                     <!-- Drawer Subtabs Header -->
                     <div class="drawer-tabs-header">
                         <div class="drawer-tabs-group">
-                            <button type="button" class="drawer-tab-btn ${activeTab === 'payments' ? 'active' : ''}" onclick="switchDrawerTab('${item.id}', 'payments')">
-                                Payment History (${userPayments.length})
+                            <button type="button" class="drawer-tab-btn ${activeTab === 'payments' ? 'active' : ''}" onclick="switchDrawerTab('${item.id}', 'payments')"> Payment History (${userPayments.length})
                             </button>
-                            <button type="button" class="drawer-tab-btn ${activeTab === 'dues' ? 'active' : ''}" onclick="switchDrawerTab('${item.id}', 'dues')">
-                                Upcoming Dues (${userSchedules.length})
+                            <button type="button" class="drawer-tab-btn ${activeTab === 'dues' ? 'active' : ''}" onclick="switchDrawerTab('${item.id}', 'dues')"> Upcoming Dues (${userSchedules.length})
                             </button>
                         </div>
                         ${targetResId ? `
-                            <button type="button" class="drawer-tab-action" onclick="openReceiveCounterPaymentModal('${targetResId}', '${escapeHtml(clientDisplayName)}', '${nextDueAmount}', '${nextDue?.id || ''}', '${nextDue?.installment_no || 1}')">
-                                Receive Cash Payment at Counter
+                            <button type="button" class="drawer-tab-action" onclick="openReceiveCounterPaymentModal('${targetResId}', '${escapeHtml(clientDisplayName)}', '${nextDueAmount}', '${nextDue?.id || ''}', '${nextDue?.installment_no || 1}')"> Receive Cash Payment at Counter
                             </button>
-                            <button type="button" class="drawer-tab-action" style="background: #1e3a29; margin-left: 6px;" onclick="openAddDeceasedModalForReservation('${targetResId}', '${escapeHtml(clientDisplayName)}')">
-                                Add Deceased for Plot
+                            <button type="button" class="drawer-tab-action" style="background: #1e3a29; margin-left: 6px;" onclick="openAddDeceasedModalForReservation('${targetResId}', '${escapeHtml(clientDisplayName)}')"> Add Deceased for Plot
                             </button>
                         ` : ''}
                     </div>
@@ -3455,8 +3469,7 @@ function renderAccountLedgerDrawerHtml(item) {
                     <!-- Drawer Subtab 1: Payment History -->
                     <div class="drawer-tab-content ${activeTab === 'payments' ? 'active' : ''}" id="tab-content-payments-${item.id}">
                         ${userPayments.length === 0 ? `
-                            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 0.85rem;">
-                                No formal payment transactions logged yet for this account. Click "Receive Cash Payment at Counter" above to record a counter payment.
+                            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 0.85rem;"> No formal payment transactions logged yet for this account. Click "Receive Cash Payment at Counter" above to record a counter payment.
                             </div>
                         ` : `
                             <table class="drawer-mini-table">
@@ -3485,8 +3498,7 @@ function renderAccountLedgerDrawerHtml(item) {
                                             <td>${p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</td>
                                             <td><span class="admin-badge paid" style="font-size: 0.68rem;">${escapeHtml(p.status || 'COMPLETED')}</span></td>
                                             <td style="text-align: center;">
-                                                <button type="button" class="btn-expand-ledger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="alert('Official Counter Receipt:\\nReceipt Ref: ${p.payment_reference || p.id}\\nPayer: ${escapeHtml(clientDisplayName)}\\nAmount: P ${Number(p.amount).toLocaleString()}\\nStatus: PAID / COMPLETED\\nCertified by Zion Memorial Garden Counter.')">
-                                                    View Receipt
+                                                <button type="button" class="btn-expand-ledger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="alert('Official Counter Receipt:\\nReceipt Ref: ${p.payment_reference || p.id}\\nPayer: ${escapeHtml(clientDisplayName)}\\nAmount: P ${Number(p.amount).toLocaleString()}\\nStatus: PAID / COMPLETED\\nCertified by Zion Memorial Garden Counter.')"> View Receipt
                                                 </button>
                                             </td>
                                         </tr>
@@ -3499,8 +3511,7 @@ function renderAccountLedgerDrawerHtml(item) {
                     <!-- Drawer Subtab 2: Upcoming Dues & Amortization Schedules -->
                     <div class="drawer-tab-content ${activeTab === 'dues' ? 'active' : ''}" id="tab-content-dues-${item.id}">
                         ${userSchedules.length === 0 ? `
-                            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 0.85rem;">
-                                No active installment schedule generated for this client.
+                            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 0.85rem;"> No active installment schedule generated for this client.
                             </div>
                         ` : `
                             <table class="drawer-mini-table">
@@ -3535,8 +3546,7 @@ function renderAccountLedgerDrawerHtml(item) {
                                                     ${isPaid ? `
                                                         <span style="color: #16a34a; font-weight: 700; font-size: 0.75rem;">Settled</span>
                                                     ` : `
-                                                        <button type="button" class="btn-admin-add" style="padding: 3px 8px; font-size: 0.72rem; background: #2d4a36;" onclick="openReceiveCounterPaymentModal('${s.reservation_id || targetResId}', '${escapeHtml(clientDisplayName)}', '${s.amount}', '${s.id}', '${s.installment_no}')">
-                                                            Receive Cash
+                                                        <button type="button" class="btn-admin-add" style="padding: 3px 8px; font-size: 0.72rem; background: #2d4a36;" onclick="openReceiveCounterPaymentModal('${s.reservation_id || targetResId}', '${escapeHtml(clientDisplayName)}', '${s.amount}', '${s.id}', '${s.installment_no}')"> Receive Cash
                                                         </button>
                                                     `}
                                                 </td>
@@ -3634,7 +3644,7 @@ function setupReceiveCounterPaymentModal() {
                         .eq('id', sp.id);
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction('DECEASED_CLEARED_ALL', 'memorial_records', 'ALL', 'Cleared all deceased records and reset occupied plots to available/reserved');
 
                 alert("All deceased records cleared successfully and plots reset.");
                 await Promise.all([
@@ -3647,7 +3657,7 @@ function setupReceiveCounterPaymentModal() {
                 alert("Failed to clear deceased records: " + err.message);
             } finally {
                 clearAllBtn.disabled = false;
-                clearAllBtn.textContent = '🗑 Clear All Deceased';
+                clearAllBtn.textContent = 'Clear All Deceased';
             }
         });
     }
@@ -3777,7 +3787,7 @@ function setupReceiveCounterPaymentModal() {
                         .eq('id', parseInt(resId));
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction('DECEASED_CLEARED_ALL', 'memorial_records', 'ALL', 'Cleared all deceased records and reset occupied plots to available/reserved');
 
                 alert(
                     `SUCCESS: Cash payment received over the counter!\n\n` +
@@ -4037,7 +4047,7 @@ function setupEditUserRoleModal() {
                         .eq('id', sp.id);
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction('DECEASED_CLEARED_ALL', 'memorial_records', 'ALL', 'Cleared all deceased records and reset occupied plots to available/reserved');
 
                 alert("All deceased records cleared successfully and plots reset.");
                 await Promise.all([
@@ -4050,7 +4060,7 @@ function setupEditUserRoleModal() {
                 alert("Failed to clear deceased records: " + err.message);
             } finally {
                 clearAllBtn.disabled = false;
-                clearAllBtn.textContent = '🗑 Clear All Deceased';
+                clearAllBtn.textContent = 'Clear All Deceased';
             }
         });
     }
@@ -4657,8 +4667,16 @@ function setupReportsModule() {
     const tabs = document.querySelectorAll('.report-subnav-btn');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
+            tabs.forEach(t => {
+                t.classList.remove('active');
+                t.style.background = '#f1f5f9';
+                t.style.color = '#334155';
+                t.style.border = '1px solid #cbd5e1';
+            });
             btn.classList.add('active');
+            btn.style.background = '#2d4a36';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
             activeAdminReportTab = btn.getAttribute('data-report') || 'inventory';
             document.querySelectorAll('.report-content-panel').forEach(p => p.style.display = 'none');
             const targetPanel = document.getElementById(`reportPanel_${activeAdminReportTab}`);
@@ -4889,8 +4907,7 @@ function renderReportGraphs(catBreakdown, paymentsList) {
                     </div>
                 `;
             }).join('') + `
-                <div style="margin-top: 6px; font-size: 0.74rem; color: #475569; font-weight: 700; text-align: right;">
-                    Total Verified Revenue: ₱ ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <div style="margin-top: 6px; font-size: 0.74rem; color: #475569; font-weight: 700; text-align: right;"> Total Verified Revenue: ₱ ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             `;
         }
@@ -5798,7 +5815,7 @@ function setupAddPlotModal() {
                         .eq('id', sp.id);
                 }
 
-                await logAdminAction('PAYMENT_RECORDED', 'payments', paymentRef, `Recorded counter cash payment of ₱${dueAmount.toLocaleString()} for reservation #${resId} (${clientName})`);
+                await logAdminAction('DECEASED_CLEARED_ALL', 'memorial_records', 'ALL', 'Cleared all deceased records and reset occupied plots to available/reserved');
 
                 alert("All deceased records cleared successfully and plots reset.");
                 await Promise.all([
@@ -5811,7 +5828,7 @@ function setupAddPlotModal() {
                 alert("Failed to clear deceased records: " + err.message);
             } finally {
                 clearAllBtn.disabled = false;
-                clearAllBtn.textContent = '🗑 Clear All Deceased';
+                clearAllBtn.textContent = 'Clear All Deceased';
             }
         });
     }
@@ -6209,7 +6226,7 @@ function setupAdminGcashQrManager() {
 
         if (statusBadge) {
             if (cfg.isCustom) {
-                statusBadge.textContent = '✓ Custom Active QR';
+                statusBadge.textContent = ' Custom Active QR';
                 statusBadge.className = 'admin-badge paid';
                 statusBadge.style.background = '#dcfce7';
                 statusBadge.style.color = '#15803d';
@@ -6345,7 +6362,7 @@ function setupAdminGcashQrManager() {
                 saveAlert.style.background = '#dcfce7';
                 saveAlert.style.border = '1px solid #86efac';
                 saveAlert.style.color = '#15803d';
-                saveAlert.innerHTML = '<strong>✓ Saved Successfully!</strong> Your GCash QR Code and Merchant Information are now active across all client booking forms, plot locators, and payment collections.';
+                saveAlert.innerHTML = '<strong> Saved Successfully!</strong> Your GCash QR Code and Merchant Information are now active across all client booking forms, plot locators, and payment collections.';
                 setTimeout(() => {
                     if (saveAlert) saveAlert.style.display = 'none';
                 }, 6000);
@@ -7503,7 +7520,7 @@ function setupAdminMaintenanceModule() {
                 }
 
                 if (proofStatus) {
-                    proofStatus.textContent = '✓ Proof photo attached successfully';
+                    proofStatus.textContent = ' Proof photo attached successfully';
                     proofStatus.style.color = '#16a34a';
                 }
             } catch (procErr) {
@@ -7571,8 +7588,8 @@ function setupAdminMaintenanceModule() {
                 if (cachedVisit && cachedVisit.requested_by) {
                     const plotName = cachedVisit.memorial_spaces?.plot_identifier || 'Memorial Lot';
                     const title = status === 'completed' 
-                        ? `Maintenance Completed: ${cachedVisit.visit_type || 'Task'} ✅` 
-                        : (status === 'in-progress' ? `Maintenance In-Progress: ${cachedVisit.visit_type || 'Task'} 🛠️` : `Maintenance Request ${status.toUpperCase()}`);
+                        ? `Maintenance Completed: ${cachedVisit.visit_type || 'Task'} ` 
+                        : (status === 'in-progress' ? `Maintenance In-Progress: ${cachedVisit.visit_type || 'Task'} ` : `Maintenance Request ${status.toUpperCase()}`);
                     const msg = `Cemetery staff updated your request for plot ${plotName} to '${status}'.` + 
                         (notes ? ` Staff note: "${notes}"` : '') + 
                         (proofUrl ? ` Completion proof photo attached.` : '');
@@ -7708,7 +7725,7 @@ function renderAdminMaintenanceTable() {
         else if (status === 'cancelled') badgeClass = 'overdue';
 
         const proofBadge = v.proof_image_url ? `
-            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; margin-left: 6px;" title="Proof photo uploaded">📷 Proof</span>
+            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; margin-left: 6px;" title="Proof photo uploaded"> Proof</span>
         ` : '';
 
         return `
@@ -7834,7 +7851,7 @@ function setupAdminSupportTicketsModule() {
                 // Send real-time notification to user (dual-guarantee alongside trigger)
                 const cachedTicket = adminSupportCache.find(x => x.id === parseInt(id));
                 if (cachedTicket && cachedTicket.user_id) {
-                    const title = `Support Ticket ${status.toUpperCase()}: #${cachedTicket.ticket_number || id} 💬`;
+                    const title = `Support Ticket ${status.toUpperCase()}: #${cachedTicket.ticket_number || id} `;
                     const msg = `Staff response: "${resolution.slice(0, 140)}${resolution.length > 140 ? '...' : ''}"`;
                     sendDirectNotification(
                         cachedTicket.user_id,
@@ -9099,7 +9116,7 @@ function setupAdminProfileModule() {
                 fileInput.value = '';
                 if (uploadBtn) {
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = '📷 Upload New Photo';
+                    uploadBtn.textContent = 'Upload New Photo';
                 }
             }
         });
@@ -9194,7 +9211,7 @@ function setupAdminProfileModule() {
             } finally {
                 if (saveBtn) {
                     saveBtn.disabled = false;
-                    saveBtn.textContent = '💾 Save Profile Changes';
+                    saveBtn.textContent = 'Save Profile Changes';
                 }
             }
         });
@@ -9314,7 +9331,7 @@ function setupAdminProfileModule() {
             } finally {
                 if (updateBtn) {
                     updateBtn.disabled = false;
-                    updateBtn.textContent = '🔑 Update Password';
+                    updateBtn.textContent = 'Update Password';
                 }
             }
         });

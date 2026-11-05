@@ -207,9 +207,9 @@ function switchEditorMode(mode) {
         if (bpWrap) bpWrap.style.display = 'flex';
         if (quickDragBtn) quickDragBtn.style.display = 'inline-flex';
 
-        if (badge) badge.textContent = '🗺️ Map Vector Editor';
+        if (badge) badge.textContent = ' Map Vector Editor';
         if (detail) detail.textContent = `${vectorLayers.length} Vectors Loaded · Boundless Canvas`;
-        if (hint) hint.innerHTML = '💡 <strong>Boundless Canvas:</strong> Drag empty space to pan · Drag vectors anywhere · Scroll to zoom';
+        if (hint) hint.innerHTML = ' <strong>Boundless Canvas:</strong> Drag empty space to pan · Drag vectors anywhere · Scroll to zoom';
 
         renderVectorMap();
         renderLayerSidebar();
@@ -230,9 +230,9 @@ function switchEditorMode(mode) {
         if (bpWrap) bpWrap.style.display = 'none';
         if (quickDragBtn) quickDragBtn.style.display = 'none';
 
-        if (badge) badge.textContent = '🔲 Plot Grid Editor';
+        if (badge) badge.textContent = ' Plot Grid Editor';
         if (detail) detail.textContent = 'Interactive Grid · Click cell to toggle status or inspect';
-        if (hint) hint.innerHTML = '💡 <strong>Shortcuts:</strong> Drag to Paint Multiple · <strong>[Del]</strong> Delete · <strong>[Ctrl+Z]</strong> Undo · <strong>[Ctrl+Y]</strong> Redo · <strong>[1]</strong> Select <strong>[2]</strong> Place <strong>[3]</strong> Erase · <strong>Arrows</strong> Nudge · <strong>[Ctrl+S]</strong> Save';
+        if (hint) hint.innerHTML = ' <strong>Shortcuts:</strong> Drag to Paint Multiple · <strong>[Del]</strong> Delete · <strong>[Ctrl+Z]</strong> Undo · <strong>[Ctrl+Y]</strong> Redo · <strong>[1]</strong> Select <strong>[2]</strong> Place <strong>[3]</strong> Erase · <strong>Arrows</strong> Nudge · <strong>[Ctrl+S]</strong> Save';
 
         loadPlotSectionData();
     }
@@ -341,19 +341,19 @@ function applyBlueprintConfig() {
     const quickDragBtn = document.getElementById('btnQuickDragBp');
     if (quickDragBtn) {
         quickDragBtn.classList.toggle('active', !!blueprintConfig.unlocked);
-        quickDragBtn.innerHTML = blueprintConfig.unlocked ? '🔓 Ref Movable' : '🔒 Ref Locked';
+        quickDragBtn.innerHTML = blueprintConfig.unlocked ? ' Ref Movable' : ' Ref Locked';
         quickDragBtn.title = blueprintConfig.unlocked ? 'Reference image is movable (Click to lock)' : 'Reference image is locked (Click to unlock)';
     }
 
     const sidebarLockBtn = document.getElementById('sidebarBpLockBtn');
     if (sidebarLockBtn) {
-        sidebarLockBtn.textContent = blueprintConfig.unlocked ? '🔓' : '🔒';
+        sidebarLockBtn.textContent = blueprintConfig.unlocked ? '' : '';
         sidebarLockBtn.title = blueprintConfig.unlocked ? 'Movable: Click to lock' : 'Locked: Click to unlock';
     }
 
     const sidebarVisBtn = document.getElementById('sidebarBpVisBtn');
     if (sidebarVisBtn) {
-        sidebarVisBtn.textContent = blueprintConfig.visible ? '👁️' : '👁️‍🗨️';
+        sidebarVisBtn.textContent = blueprintConfig.visible ? '' : '‍';
         sidebarVisBtn.title = blueprintConfig.visible ? 'Hide Blueprint' : 'Show Blueprint';
     }
 
@@ -670,7 +670,7 @@ function syncBgInspector() {
 
     const lockBtn = document.getElementById('btnBgLockToggle');
     if (lockBtn) {
-        lockBtn.textContent = bgConfig.unlocked ? '🔓 BG Movable' : '🔒 BG Locked';
+        lockBtn.textContent = bgConfig.unlocked ? ' BG Movable' : ' BG Locked';
         lockBtn.classList.toggle('active', bgConfig.unlocked);
     }
 }
@@ -700,7 +700,7 @@ function updateSidebarBgMeta() {
 
     const visBtn = document.getElementById('sidebarBgVisBtn');
     if (visBtn) {
-        visBtn.textContent = bgConfig.visible ? '👁️' : '👁️‍🗨️';
+        visBtn.textContent = bgConfig.visible ? '' : '‍';
         visBtn.title = bgConfig.visible ? 'Hide Background' : 'Show Background';
     }
 }
@@ -1072,7 +1072,7 @@ async function saveVectorLayout() {
             btnSave.classList.add('me-btn-saved');
             btnSave.innerHTML = `
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                <span>✓ Saved to DB!</span>
+                <span> Saved to DB!</span>
             `;
             setTimeout(() => {
                 btnSave.classList.remove('me-btn-saved');
@@ -1196,10 +1196,10 @@ function renderLayerSidebar() {
             </div>
             <div class="me-layer-actions">
                 <button type="button" class="me-action-icon-btn btn-vis" title="${v.visible ? 'Hide Layer' : 'Show Layer'}">
-                    ${v.visible ? '👁️' : '👁️‍🗨️'}
+                    ${v.visible ? '' : '‍'}
                 </button>
                 <button type="button" class="me-action-icon-btn btn-trash" title="Delete Vector Layer">
-                    🗑️
+                    
                 </button>
             </div>
         `;
@@ -2039,8 +2039,7 @@ const CATEGORY_DEFAULT_SPECS = {
 };
 
 let BUILDER_STATE = {
-    activeTool: 'select', // 'select' or 'place'
-    selectedCategory: 'Single Teired',
+    activeTool: 'select', // 'select' or 'place'selectedCategory: 'Single Teired',
     plotWidth: 1,
     plotHeight: 2,
     plotStatus: 'available'
@@ -2476,11 +2475,10 @@ function updateBoxMarqueeDisplay() {
 
             const label = isValid
                 ? `${BUILDER_STATE.selectedCategory} (${w}×${h})`
-                : (overlappingPlot ? `⚠️ ${overlappingPlot.plot_identifier}` : `⚠️ Outside`);
+                : (overlappingPlot ? ` ${overlappingPlot.plot_identifier}` : ` Outside`);
 
             tilesHTML += `
-                <div class="marquee-ghost-tile ${isValid ? 'valid' : 'invalid'}"
-                     style="left: ${tileLeft}px; top: ${tileTop}px; width: ${tileW}px; height: ${tileH}px;">
+                <div class="marquee-ghost-tile ${isValid ? 'valid' : 'invalid'}"style="left: ${tileLeft}px; top: ${tileTop}px; width: ${tileW}px; height: ${tileH}px;">
                     <span>${label}</span>
                 </div>
             `;
@@ -2492,10 +2490,10 @@ function updateBoxMarqueeDisplay() {
     const spanCols = maxCol - minCol + 1;
     const spanRows = maxRow - minRow + 1;
     marqueeBadge.innerHTML = `
-        <span>📦 Box: ${spanCols}×${spanRows} cells</span>
+        <span> Box: ${spanCols}×${spanRows} cells</span>
         &nbsp;|&nbsp;
-        <strong style="color: #4ade80;">✨ ${validCount} Plots</strong>
-        ${invalidCount > 0 ? `&nbsp;|&nbsp;<span style="color: #f87171;">⚠️ ${invalidCount} Blocked</span>` : ''}
+        <strong style="color: #4ade80;"> ${validCount} Plots</strong>
+        ${invalidCount > 0 ? `&nbsp;|&nbsp;<span style="color: #f87171;"> ${invalidCount} Blocked</span>` : ''}
         &nbsp;|&nbsp;
         <span style="opacity: 0.85;">Starting Top-Left (${minCol}, ${minRow})</span>
     `;
@@ -2587,11 +2585,11 @@ function setupAreaGridInteractions() {
         ghost.className = `area-placement-ghost ${isColliding ? 'invalid' : 'valid'}`;
 
         if (!insideLawn) {
-            ghost.textContent = `⚠️ Outside Lawn Contour`;
+            ghost.textContent = ` Outside Lawn Contour`;
         } else if (overlappingPlot) {
-            ghost.textContent = `⚠️ Overlaps ${overlappingPlot.plot_identifier}`;
+            ghost.textContent = ` Overlaps ${overlappingPlot.plot_identifier}`;
         } else {
-            ghost.textContent = `✨ Drag Box to Fill (${BUILDER_STATE.selectedCategory} ${w}×${h})`;
+            ghost.textContent = ` Drag Box to Fill (${BUILDER_STATE.selectedCategory} ${w}×${h})`;
         }
 
         ghost.dataset.targetCol = col;
@@ -2917,7 +2915,7 @@ async function saveCurrentPlotLayoutToDatabase() {
         const btnSave = document.getElementById('btnSavePlotsDb');
         if (btnSave) {
             const orig = btnSave.innerHTML;
-            btnSave.innerHTML = `✓ Saved ${payload.length} Plots!`;
+            btnSave.innerHTML = ` Saved ${payload.length} Plots!`;
             setTimeout(() => { btnSave.innerHTML = orig; }, 1800);
         }
 

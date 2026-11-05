@@ -328,15 +328,15 @@
     position: absolute;
     
     /* POSITION: Move the vector on the map */
-    top: 35%;        /* ⬆️⬇️ Move up/down (0-100%) */
-    left: 45%;       /* ⬅️➡️ Move left/right (0-100%) */
+    top: 35%;        /* ⬆⬇ Move up/down (0-100%) */
+    left: 45%;       /* ⬅ Move left/right (0-100%) */
     
     /* SIZE: Make vector bigger/smaller */
-    width: 15%;      /* 📏 Increase = bigger, decrease = smaller (5-30%) */
+    width: 15%;      /*  Increase = bigger, decrease = smaller (5-30%) */
     height: auto;
     
     /* ROTATION: Rotate the vector */
-    transform: rotate(30deg);  /* 🔄 Change angle (0-360 degrees) */
+    transform: rotate(30deg);  /*  Change angle (0-360 degrees) */
     
     cursor: pointer;
     transition: all 0.3s ease;
@@ -350,25 +350,25 @@
     
     /* ORIGINAL COLOR & EFFECTS */
     filter: 
-        hue-rotate(0deg)           /* 🎨 Color shift: 0=original, 60=yellow, 120=green, 180=cyan, 240=blue, 300=magenta */
-        brightness(1)              /* 💡 Brightness: 0.5=dark, 1=normal, 1.5=bright */
-        saturate(1)                /* 🌈 Color intensity: 0=grayscale, 1=normal, 2=vivid */
-        drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));  /* ✨ Glow: change rgba(R,G,B,opacity) */
+        hue-rotate(0deg)           /*  Color shift: 0=original, 60=yellow, 120=green, 180=cyan, 240=blue, 300=magenta */
+        brightness(1)              /*  Brightness: 0.5=dark, 1=normal, 1.5=bright */
+        saturate(1)                /*  Color intensity: 0=grayscale, 1=normal, 2=vivid */
+        drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));  /*  Glow: change rgba(R,G,B,opacity) */
 }
 
 .shape-10-overlay:hover {
     /* HOVER: Rotation & Scale */
-    transform: rotate(30deg) scale(1.1);  /* 🔍 scale(1.1) = 10% bigger on hover */
+    transform: rotate(30deg) scale(1.1);  /*  scale(1.1) = 10% bigger on hover */
     filter: brightness(1.2);
 }
 
 .shape-10-overlay:hover img {
     /* HOVER COLOR & EFFECTS */
     filter: 
-        hue-rotate(0deg)           /* 🎨 Hover color shift */
-        brightness(1.3)            /* 💡 Hover brightness */
-        saturate(1.5)              /* 🌈 Hover color intensity */
-        drop-shadow(0 0 15px rgba(255, 215, 0, 1));  /* ✨ Hover glow: gold color */
+        hue-rotate(0deg)           /*  Hover color shift */
+        brightness(1.3)            /*  Hover brightness */
+        saturate(1.5)              /*  Hover color intensity */
+        drop-shadow(0 0 15px rgba(255, 215, 0, 1));  /*  Hover glow: gold color */
         /* Change rgba values for different glow colors:
            Gold: rgba(255, 215, 0, 1)
            Blue: rgba(0, 150, 255, 1)

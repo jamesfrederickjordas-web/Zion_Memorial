@@ -46,7 +46,7 @@
 
         <!-- Center: Quick Status / Section Indicator -->
         <div class="me-toolbar-center" id="toolbarCenterInfo">
-            <span class="me-status-pill" id="activeModeBadge">🗺️ Map Vector Editor</span>
+            <span class="me-status-pill" id="activeModeBadge"> Map Vector Editor</span>
             <span class="me-status-detail" id="activeModeDetail">13 Vectors Loaded · Click &amp; Drag Canvas</span>
         </div>
 
@@ -107,7 +107,7 @@
                         </button>
                     </div>
                 </div>
-                <p class="me-panel-hint">Select a layer to adjust position, size, or rotate. Click 🗑️ to delete.</p>
+                <p class="me-panel-hint">Select a layer to adjust position, size, or rotate. Click  to delete.</p>
                 <div class="me-layers-list" id="layersList">
                     <!-- Rendered by JS -->
                 </div>
@@ -118,14 +118,14 @@
                     <div class="me-layer-item me-layer-bg" id="sidebarBgItem" title="Click to open Background settings in Inspector">
                         <div class="me-layer-thumb">
                             <img id="sidebarBgThumb" src="" alt="BG" style="display:none; width:100%; height:100%; object-fit:cover;">
-                            <span id="sidebarBgNoImg" style="font-size:18px; line-height:1;">🖼️</span>
+                            <span id="sidebarBgNoImg" style="font-size:18px; line-height:1;"></span>
                         </div>
                         <div class="me-layer-meta">
-                            <span class="me-layer-name">🏞️ Background Image</span>
+                            <span class="me-layer-name"> Background Image</span>
                             <span class="me-layer-sub" id="sidebarBgSub">No image — click Upload</span>
                         </div>
                         <div class="me-layer-actions">
-                            <button type="button" class="me-action-icon-btn" id="sidebarBgVisBtn" title="Toggle Background Visibility">👁️</button>
+                            <button type="button" class="me-action-icon-btn" id="sidebarBgVisBtn" title="Toggle Background Visibility"></button>
                         </div>
                     </div>
                 </div>
@@ -138,15 +138,15 @@
                             <img src="assets/images/backgrounds/mapping basomuch.png" alt="Blueprint Guide">
                         </div>
                         <div class="me-layer-meta">
-                            <span class="me-layer-name">🗺️ Blueprint Reference</span>
+                            <span class="me-layer-name"> Blueprint Reference</span>
                             <span class="me-layer-sub" id="sidebarBpSub">X: 0px, Y: 0px · 30° Tilt</span>
                         </div>
                         <div class="me-layer-actions">
                             <button type="button" class="me-action-icon-btn" id="sidebarBpVisBtn" title="Toggle Blueprint Visibility">
-                                👁️
+                                
                             </button>
                             <button type="button" class="me-action-icon-btn btn-lock-toggle" id="sidebarBpLockBtn" title="Lock / Unlock Blueprint">
-                                🔓
+                                
                             </button>
                         </div>
                     </div>
@@ -252,40 +252,30 @@
                     <!-- Builder Toolbar / Tool Palette -->
                     <div class="me-plot-builder-toolbar">
                         <div class="plot-builder-tool-group">
-                            <button type="button" class="btn-builder-tool active" id="toolSelectPlot" title="Select & Inspect Existing Plot">
-                                👆 Select
+                            <button type="button" class="btn-builder-tool active" id="toolSelectPlot" title="Select & Inspect Existing Plot"> Select
                             </button>
-                            <button type="button" class="btn-builder-tool" id="toolAddPlot" title="Place New Plot on Grid">
-                                ✏️ Place Plot
+                            <button type="button" class="btn-builder-tool" id="toolAddPlot" title="Place New Plot on Grid"> Place Plot
                             </button>
-                            <button type="button" class="btn-builder-tool" id="toolErasePlot" title="Erase / Delete Plot (Click Plot to Remove)">
-                                🗑️ Erase
+                            <button type="button" class="btn-builder-tool" id="toolErasePlot" title="Erase / Delete Plot (Click Plot to Remove)"> Erase
                             </button>
                         </div>
 
                         <div class="plot-builder-cat-selector">
                             <span class="builder-cat-label">Category &amp; Size:</span>
                             <div class="builder-cat-pills" id="builderCatPills">
-                                <button type="button" class="cat-pill active" data-cat="Single Teired" data-w="1" data-h="2">
-                                    Single Tiered <small>(1×2)</small>
+                                <button type="button" class="cat-pill active" data-cat="Single Teired" data-w="1" data-h="2"> Single Tiered <small>(1×2)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Supreme" data-w="2" data-h="2">
-                                    Supreme <small>(2×2)</small>
+                                <button type="button" class="cat-pill" data-cat="Supreme" data-w="2" data-h="2"> Supreme <small>(2×2)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Special Supreme" data-w="2" data-h="3">
-                                    Special Supreme <small>(2×3)</small>
+                                <button type="button" class="cat-pill" data-cat="Special Supreme" data-w="2" data-h="3"> Special Supreme <small>(2×3)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Family Estate Jr." data-w="6" data-h="6">
-                                    Family Estate <small>(6×6)</small>
+                                <button type="button" class="cat-pill" data-cat="Family Estate Jr." data-w="6" data-h="6"> Family Estate <small>(6×6)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Condominium" data-w="1" data-h="1">
-                                    Condo Niche <small>(1×1)</small>
+                                <button type="button" class="cat-pill" data-cat="Condominium" data-w="1" data-h="1"> Condo Niche <small>(1×1)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Mausoleum" data-w="3" data-h="3">
-                                    Mausoleum <small>(3×3)</small>
+                                <button type="button" class="cat-pill" data-cat="Mausoleum" data-w="3" data-h="3"> Mausoleum <small>(3×3)</small>
                                 </button>
-                                <button type="button" class="cat-pill" data-cat="Custom" data-w="1" data-h="1">
-                                    Custom W×H
+                                <button type="button" class="cat-pill" data-cat="Custom" data-w="1" data-h="1"> Custom W×H
                                 </button>
                             </div>
                         </div>
@@ -298,9 +288,9 @@
                             
                             <label style="margin-left:8px;">Status:</label>
                             <select id="builderPlotStatus" class="builder-select-status">
-                                <option value="available">🟢 Available</option>
-                                <option value="reserved">🟡 Reserved</option>
-                                <option value="occupied">🔴 Occupied</option>
+                                <option value="available"> Available</option>
+                                <option value="reserved"> Reserved</option>
+                                <option value="occupied"> Occupied</option>
                             </select>
 
                             <label style="margin-left:8px;" title="Adjust Area Shape Background Opacity">Backdrop:</label>
@@ -309,16 +299,14 @@
 
                         <div class="plot-builder-actions">
                             <button type="button" class="btn-builder-action btn-undo-plot" id="btnUndoPlot" title="Undo (Ctrl+Z)">
-                                ↩️ Undo
+                                ↩ Undo
                             </button>
                             <button type="button" class="btn-builder-action btn-redo-plot" id="btnRedoPlot" title="Redo (Ctrl+Y)">
-                                ↪️ Redo
+                                ↪ Redo
                             </button>
-                            <button type="button" class="btn-builder-action btn-save-plots-db" id="btnSavePlotsDb" title="Save plots in this section to Supabase">
-                                💾 Save to DB
+                            <button type="button" class="btn-builder-action btn-save-plots-db" id="btnSavePlotsDb" title="Save plots in this section to Supabase"> Save to DB
                             </button>
-                            <button type="button" class="btn-builder-action btn-clear-plots" id="btnClearPlotsSection" title="Clear all plots in this section">
-                                🧹 Clear
+                            <button type="button" class="btn-builder-action btn-clear-plots" id="btnClearPlotsSection" title="Clear all plots in this section"> Clear
                             </button>
                         </div>
                     </div>
@@ -359,7 +347,7 @@
             <footer class="me-statusbar">
                 <!-- Left Status Hints -->
                 <div class="me-status-left">
-                    <span id="canvasHint">💡 <strong>Shortcuts:</strong> Shift+Click Multi-Select · <strong>[+]</strong> / <strong>[−]</strong> Size · <strong>[K]</strong> / <strong>[L]</strong> Rotate · Arrows Nudge · Space Pan</span>
+                    <span id="canvasHint"> <strong>Shortcuts:</strong> Shift+Click Multi-Select · <strong>[+]</strong> / <strong>[−]</strong> Size · <strong>[K]</strong> / <strong>[L]</strong> Rotate · Arrows Nudge · Space Pan</span>
                 </div>
 
                 <!-- Right Zoom Controls -->
@@ -375,7 +363,7 @@
                         <input type="checkbox" id="chkBlueprint" checked>
                         <span>Blueprint</span>
                     </label>
-                    <button type="button" class="me-zbtn me-zbtn-reposition" id="btnQuickDragBp" title="Unlock blueprint to drag and position freely on canvas">📍 Move Ref</button>
+                    <button type="button" class="me-zbtn me-zbtn-reposition" id="btnQuickDragBp" title="Unlock blueprint to drag and position freely on canvas"> Move Ref</button>
                     <span class="me-status-sep"></span>
                     <div class="me-ref-tilt-bar">
                         <span class="ref-tilt-label">Tilt:</span>
@@ -508,7 +496,7 @@
                 <!-- Blueprint Reference Tilt & Alignment Card -->
                 <div class="me-ref-guide-card" id="blueprintRefCard">
                     <div class="me-ref-guide-header">
-                        <h4>📐 Blueprint Reference Tilt</h4>
+                        <h4> Blueprint Reference Tilt</h4>
                         <span style="font-size: 10px; color: var(--me-text-muted);">Guide Layer</span>
                     </div>
 
@@ -546,7 +534,7 @@
 
                     <!-- Direct Drag On Canvas Button -->
                     <button type="button" class="me-btn me-btn-ghost" id="btnToggleDragBp" style="width: 100%; justify-content: center; font-size: 11px; margin-bottom: 12px;">
-                        🖐️ <span id="lblToggleDragBp">Unlock to Drag on Canvas</span>
+                         <span id="lblToggleDragBp">Unlock to Drag on Canvas</span>
                     </button>
 
                     <!-- Opacity -->
@@ -587,15 +575,14 @@
                         </div>
                     </div>
 
-                    <button type="button" class="me-btn me-btn-ghost" id="btnResetBpRef" style="width: 100%; justify-content: center; font-size: 11px;">
-                        🔄 Reset Reference Size, Tilt &amp; Position
+                    <button type="button" class="me-btn me-btn-ghost" id="btnResetBpRef" style="width: 100%; justify-content: center; font-size: 11px;"> Reset Reference Size, Tilt &amp; Position
                     </button>
                 </div>
 
                 <!-- Background Image Card -->
                 <div class="me-bg-ref-card" id="bgRefCard">
                     <div class="me-bg-ref-header">
-                        <h4>🏞️ Background Image</h4>
+                        <h4> Background Image</h4>
                         <span style="font-size: 10px; color: var(--me-text-muted);">Base Layer</span>
                     </div>
 
@@ -604,14 +591,12 @@
 
                     <!-- Upload button -->
                     <button type="button" class="me-btn-upload-bg" id="btnUploadBg">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Upload Background Image
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload Background Image
                     </button>
                     <input type="file" id="bgFileInput" accept="image/*" style="display:none;">
 
                     <!-- Lock / Unlock -->
-                    <button type="button" class="me-btn me-btn-ghost" id="btnBgLockToggle" style="width:100%; justify-content:center; font-size:11px; margin-bottom:10px;">
-                        🔓 BG Movable
+                    <button type="button" class="me-btn me-btn-ghost" id="btnBgLockToggle" style="width:100%; justify-content:center; font-size:11px; margin-bottom:10px;"> BG Movable
                     </button>
 
                     <!-- Scale -->
@@ -685,12 +670,10 @@
                     </div>
 
                     <!-- Reset & Remove -->
-                    <button type="button" class="me-btn me-btn-ghost" id="btnResetBg" style="width:100%; justify-content:center; font-size:11px; margin-bottom:6px;">
-                        🔄 Reset BG Transform
+                    <button type="button" class="me-btn me-btn-ghost" id="btnResetBg" style="width:100%; justify-content:center; font-size:11px; margin-bottom:6px;"> Reset BG Transform
                     </button>
                     <button type="button" class="me-btn-remove-bg" id="btnRemoveBg">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        Remove Background
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remove Background
                     </button>
                 </div>
             </div>
@@ -752,9 +735,9 @@
                     <div class="me-field-group">
                         <label class="me-field-label">Quick Status</label>
                         <div style="display: flex; gap: 6px;">
-                            <button type="button" class="btn-quick-status btn-status-avail" id="btnQuickStatusAvail">🟢 Avail</button>
-                            <button type="button" class="btn-quick-status btn-status-res" id="btnQuickStatusRes">🟡 Res</button>
-                            <button type="button" class="btn-quick-status btn-status-occ" id="btnQuickStatusOcc">🔴 Occ</button>
+                            <button type="button" class="btn-quick-status btn-status-avail" id="btnQuickStatusAvail"> Avail</button>
+                            <button type="button" class="btn-quick-status btn-status-res" id="btnQuickStatusRes"> Res</button>
+                            <button type="button" class="btn-quick-status btn-status-occ" id="btnQuickStatusOcc"> Occ</button>
                         </div>
                     </div>
 
@@ -780,8 +763,7 @@
                     </div>
 
                     <div class="me-field-group">
-                        <button type="button" class="me-btn me-btn-gold" id="btnUpdatePlotLive" style="width: 100%; justify-content: center; margin-top: 8px;">
-                            💾 Save Plot Changes
+                        <button type="button" class="me-btn me-btn-gold" id="btnUpdatePlotLive" style="width: 100%; justify-content: center; margin-top: 8px;"> Save Plot Changes
                         </button>
                     </div>
 
@@ -805,7 +787,7 @@
                     <h3>Add Map Vector Asset</h3>
                     <p class="me-modal-sub">Select a cemetery lawn vector to insert onto the canvas, or upload your own file.</p>
                 </div>
-                <button type="button" class="me-modal-close-btn" id="btnCloseVectorModal">✕</button>
+                <button type="button" class="me-modal-close-btn" id="btnCloseVectorModal"></button>
             </div>
 
             <!-- Asset Grid -->
@@ -832,7 +814,7 @@
                     <h3>Add New Plot Slot</h3>
                     <p class="me-modal-sub">Create a new burial or niche plot in the active section.</p>
                 </div>
-                <button type="button" class="me-modal-close-btn" id="btnClosePlotModal">✕</button>
+                <button type="button" class="me-modal-close-btn" id="btnClosePlotModal"></button>
             </div>
 
             <form id="addNewPlotForm">

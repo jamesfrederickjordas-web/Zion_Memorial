@@ -447,7 +447,7 @@
                         <div id="globalProofModalDesc" style="background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.82rem; color: #334155; line-height: 1.4;"></div>
                     </div>
                     <div style="padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                        <a id="globalProofDownloadLink" href="#" target="_blank" download="maintenance-proof.jpg" style="color: #1e3a29; font-size: 0.78rem; font-weight: 700; text-decoration: none;">⬇ Download Full Image</a>
+                        <a id="globalProofDownloadLink" href="#" target="_blank" download="maintenance-proof.jpg" style="color: #1e3a29; font-size: 0.78rem; font-weight: 700; text-decoration: none;">Download Full Image</a>
                         <button type="button" id="dismissGlobalProofBtn" style="background: #2d4a36; color: #fff; border: none; border-radius: 4px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Close</button>
                     </div>
                 </div>
@@ -499,8 +499,7 @@
                 <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: #475569; line-height: 1.35;">${escapeHtml(notif.desc || notif.message)}</p>
                 ${notif.proof_image_url ? `
                     <div style="margin-top: 8px;">
-                        <button type="button" class="btn-toast-proof" style="background: #166534; color: white; border: none; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                            📷 View Proof Photo
+                        <button type="button" class="btn-toast-proof" style="background: #166534; color: white; border: none; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"> View Proof Photo
                         </button>
                     </div>
                 ` : ''}
@@ -873,6 +872,13 @@
     /**
      * Query notifications table with seamless fallback
      */
+        function withTimeout(promise, ms = 2500, fallbackVal = null) {
+        return Promise.race([
+            promise,
+            new Promise(resolve => setTimeout(() => resolve(fallbackVal), ms))
+        ]);
+    }
+
     async function fetchAndRenderNotifications() {
         const client = getSupabaseClient();
         if (!client) return;
@@ -900,12 +906,13 @@
         try {
             // 1. Try querying the dedicated 'notifications' table first
             try {
-                const { data: dbNotifs, error: dbErr } = await client
-                    .from('notifications')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('created_at', { ascending: false })
-                    .limit(50);
+                const dbRes = await withTimeout(
+                    client.from('notifications').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(50),
+                    2500,
+                    { data: [], error: null }
+                );
+                const dbNotifs = dbRes?.data;
+                const dbErr = dbRes?.error;
 
                 if (!dbErr && Array.isArray(dbNotifs) && dbNotifs.length > 0) {
                     usedDbTable = true;
@@ -974,7 +981,7 @@
                                 id: `res_conf_${res.id}_${status}`,
                                 category: 'reservation',
                                 iconType: 'reservation',
-                                title: 'Reservation Approved & Confirmed 🎉',
+                                title: 'Reservation Approved & Confirmed',
                                 desc: `Plot ${plotCode} (${section}) has been officially reserved and confirmed.`,
                                 time: res.updated_at || res.created_at,
                                 unread: !readIds.includes(`res_conf_${res.id}_${status}`),
@@ -1101,10 +1108,10 @@
                         let desc = `Scheduled service for plot ${plotCode} on ${mv.scheduled_date || 'designated date'}.`;
 
                         if (mStatus === 'completed') {
-                            title = `Work Completed: ${visitTitle} ✅`;
+                            title = `Work Completed: ${visitTitle}`;
                             desc = `Grounds team has completed work on plot ${plotCode}. ${mv.notes || ''}` + (mv.proof_image_url ? ' Proof photo attached.' : '');
                         } else if (mStatus === 'in-progress') {
-                            title = `In Progress: ${visitTitle} 🛠️`;
+                            title = `In Progress: ${visitTitle}`;
                             desc = `Cemetery staff is currently servicing plot ${plotCode}.`;
                         }
 
@@ -1224,8 +1231,7 @@
 
             const proofBtn = notif.proof_image_url ? `
                 <div style="margin-top: 6px;">
-                    <button type="button" class="btn-notif-proof" data-proof-url="${escapeHtml(notif.proof_image_url)}" data-proof-title="${escapeHtml(notif.title)}" data-proof-desc="${escapeHtml(notif.desc)}" style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                        📷 View Proof Photo
+                    <button type="button" class="btn-notif-proof" data-proof-url="${escapeHtml(notif.proof_image_url)}" data-proof-title="${escapeHtml(notif.title)}" data-proof-desc="${escapeHtml(notif.desc)}" style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"> View Proof Photo
                     </button>
                 </div>
             ` : '';

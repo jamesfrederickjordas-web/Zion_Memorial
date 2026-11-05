@@ -690,7 +690,7 @@ body::-webkit-scrollbar {
 }
 
 .plot-cell.admin-mode::after {
-    content: "✏️";
+    content: "";
     position: absolute;
     top: 2px;
     right: 2px;

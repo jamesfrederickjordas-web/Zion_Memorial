@@ -772,7 +772,7 @@ function updatePlanTypeUi(type) {
     const reqLast = document.getElementById('reqDeceasedLast');
 
     if (type === 'AT-NEED') {
-        if (subLabel) subLabel.innerHTML = '<span style="color: #dc2626; font-weight: 700;">⚠ Required for At-Need Interment</span>';
+        if (subLabel) subLabel.innerHTML = '<span style="color: #dc2626; font-weight: 700;"> Required for At-Need Interment</span>';
         if (helpText) {
             helpText.textContent = "Immediate interment requirement: Please enter your loved one's full details below to assign this plot and create the interment record.";
             helpText.style.color = '#b91c1c';
@@ -877,7 +877,7 @@ function openBookingModalForPlot(plot) {
     if (!modal || !plot) return;
 
     const price = Number(plot.price || 0);
-    const dp = Number(plot.down_payment || Math.round(price * 0.15));
+    const dp = 100.00;
 
     document.getElementById('bookSpaceId').value = plot.id;
     document.getElementById('bookPlotIdentifier').value = plot.plot_identifier;
@@ -885,7 +885,10 @@ function openBookingModalForPlot(plot) {
     document.getElementById('bookPlotDownPayment').value = dp;
 
     const customDpInput = document.getElementById('customDownPayment');
-    if (customDpInput) customDpInput.value = dp.toFixed(2);
+    if (customDpInput) {
+        customDpInput.value = dp.toFixed(2);
+        customDpInput.min = "100";
+    }
 
     setText('bookDisplayPlotCode', plot.plot_identifier);
     setText('bookDisplaySection', `${plot.section_name || currentSectionName} | ${plot.category || 'Memorial Space'}`);
@@ -917,8 +920,8 @@ function openBookingModalForPlot(plot) {
 function recalculateAmortization() {
     const price = parseFloat(document.getElementById('bookPlotPrice')?.value) || 0;
     const customDpInput = document.getElementById('customDownPayment');
-    let dp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : (parseFloat(document.getElementById('bookPlotDownPayment')?.value) || Math.round(price * 0.15));
-    if (isNaN(dp) || dp < 0) dp = Math.round(price * 0.15);
+    const rawDp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : 100;
+    const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
 
     const termSelect = document.getElementById('installmentTerm');
     const term = parseInt(termSelect?.value) || 60;

@@ -302,7 +302,7 @@ function updateRoleTogglePillUI() {
         btn.style.display = 'inline-flex';
         btn.style.background = '#0f172a';
         btn.style.color = '#f8fafc';
-        btn.innerHTML = '&#128737;&#65039; Staff / Admin Counter';
+        btn.innerHTML = '&#65039; Staff / Admin Counter';
     } else {
         btn.style.display = 'none';
     }
@@ -1149,14 +1149,13 @@ function injectPaymentAndReceiptUI() {
                     </table>
 
                     <div class="zmg-counter-callout">
-                        <h4>&#128203; Counter Verification Instructions</h4>
-                        <p id="zmgRecCounterInstructions">
-                            Please present this receipt (digital PDF or printed copy) once your name or queue number is called onto the counter at Zion Memorial Garden.
+                        <h4> Counter Verification Instructions</h4>
+                        <p id="zmgRecCounterInstructions"> Please present this receipt (digital PDF or printed copy) once your name or queue number is called onto the counter at Zion Memorial Garden.
                         </p>
                     </div>
                 </div>
                 <div class="zmg-receipt-footer">
-                    <button type="button" class="zmg-btn-receipt secondary" id="zmgDownloadPdfAgainBtn">&#128196; Download PDF Receipt</button>
+                    <button type="button" class="zmg-btn-receipt secondary" id="zmgDownloadPdfAgainBtn"> Download PDF Receipt</button>
                     <button type="button" class="zmg-btn-receipt primary" id="zmgDoneReceiptBtn">Done</button>
                 </div>
             </div>
@@ -1177,8 +1176,7 @@ function injectPaymentAndReceiptUI() {
             <div class="zmg-receipt-card" style="max-width: 540px;" role="dialog" aria-modal="true">
                 <div class="zmg-receipt-header" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%);">
                     <div>
-                        <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;">
-                            &#127974; Bank Payment Simulator <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius:999px;">TEST MODE</span>
+                        <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Bank Payment Simulator <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius:999px;">TEST MODE</span>
                         </h3>
                         <span style="font-size:0.84rem; opacity:0.9;">Direct Online Banking &amp; Bank Transfer</span>
                     </div>
@@ -1206,7 +1204,7 @@ function injectPaymentAndReceiptUI() {
                     <div id="zmgBpmAccountBox" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 0.86rem; color: #334155;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                             <span style="font-weight:700; color:#0f172a;">Beneficiary: ${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</span>
-                            <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;">&#128203; Copy Acc</button>
+                            <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;"> Copy Acc</button>
                         </div>
                         <div>Account No: <strong id="zmgBpmAccNum" style="font-family:monospace; color:#0369a1; font-size:0.95rem;">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].accountNo}</strong></div>
                         <div style="font-size:0.8rem; color:#64748b;" id="zmgBpmBranch">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].branch} &bull; ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].type}</div>
@@ -1267,8 +1265,7 @@ function injectPaymentAndReceiptUI() {
             <div class="zmg-receipt-card" style="max-width: 440px;" role="dialog" aria-modal="true">
                 <div class="zmg-receipt-header" style="background: linear-gradient(135deg, #0057ff 0%, #003bb5 100%);">
                     <div>
-                        <h3 id="zmgGcashZoomModalTitle" style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px;">
-                            📱 Official GCash QR Code
+                        <h3 id="zmgGcashZoomModalTitle" style="margin:0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Official GCash QR Code
                         </h3>
                         <span id="zmgGcashZoomModalSub" style="font-size:0.84rem; opacity:0.9;">Scan to Pay</span>
                     </div>
@@ -1278,8 +1275,7 @@ function injectPaymentAndReceiptUI() {
                     <div style="background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; display: inline-block; box-shadow: 0 4px 20px rgba(0,87,255,0.12); margin-bottom: 14px;">
                         <img id="zmgGcashZoomModalImg" src="assets/images/gcash-qr-default.svg" alt="GCash QR Code" style="max-width: 280px; width: 100%; height: auto; border-radius: 8px;">
                     </div>
-                    <p style="margin: 0; font-size: 0.88rem; color: #475569; font-weight: 500;">
-                        Open your GCash app &rarr; Tap <strong>Scan QR</strong> &rarr; Point camera at this screen.
+                    <p style="margin: 0; font-size: 0.88rem; color: #475569; font-weight: 500;"> Open your GCash app &rarr; Tap <strong>Scan QR</strong> &rarr; Point camera at this screen.
                     </p>
                 </div>
                 <div class="zmg-receipt-footer" style="display:flex; justify-content:space-between; align-items:center;">
@@ -1314,8 +1310,7 @@ function injectPaymentAndReceiptUI() {
             <div class="zmg-receipt-card" style="max-width: 520px;" role="dialog" aria-modal="true">
                 <div class="zmg-receipt-header" style="background: linear-gradient(135deg, #0057ff 0%, #003bb5 100%);">
                     <div>
-                        <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;">
-                            📱 Pay via GCash QR Code
+                        <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Pay via GCash QR Code
                         </h3>
                         <span style="font-size:0.84rem; opacity:0.9;">Instant E-Wallet Settlement</span>
                     </div>
@@ -1335,33 +1330,30 @@ function injectPaymentAndReceiptUI() {
                     <div style="display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; margin-bottom: 14px;">
                         <div style="text-align: center;">
                             <img id="zmgQpmQrImg" src="assets/images/gcash-qr-default.svg" alt="GCash QR" style="width: 110px; height: 135px; object-fit: contain; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; cursor: pointer;" title="Click to enlarge">
-                            <span style="display: block; font-size: 0.68rem; color: #0057ff; font-weight: 700; margin-top: 2px;">🔍 Tap to Enlarge</span>
+                            <span style="display: block; font-size: 0.68rem; color: #0057ff; font-weight: 700; margin-top: 2px;"> Tap to Enlarge</span>
                         </div>
                         <div>
                             <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #0057ff;">Official GCash Merchant</div>
                             <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a;" id="zmgQpmMerchantName">Zion Memorial Garden Inc.</div>
                             <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0 6px 0;">
                                 <span style="font-family: monospace; font-size: 0.92rem; font-weight: 700; color: #0057ff;" id="zmgQpmAccNum">0945 187 6774</span>
-                                <button type="button" id="zmgQpmCopyBtn" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;">📋 Copy</button>
+                                <button type="button" id="zmgQpmCopyBtn" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;"> Copy</button>
                             </div>
-                            <div style="font-size: 0.78rem; color: #475569; line-height: 1.4;">
-                                Scan QR code with your GCash app and send exact amount.
+                            <div style="font-size: 0.78rem; color: #475569; line-height: 1.4;"> Scan QR code with your GCash app and send exact amount.
                             </div>
                         </div>
                     </div>
 
                     <!-- Reference Number Input -->
                     <div class="zmg-setup-field" style="margin-bottom: 12px;">
-                        <label for="zmgQpmRefNumber" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            GCash Transaction Reference Number <span style="color: #dc2626;">*</span>
+                        <label for="zmgQpmRefNumber" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;"> GCash Transaction Reference Number <span style="color: #dc2626;">*</span>
                         </label>
                         <input type="text" id="zmgQpmRefNumber" placeholder="e.g. 1002 9845 2819" style="width: 100%; font-family: monospace; font-weight: 700; color: #0057ff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; background: #fff;">
                     </div>
 
                     <!-- Proof Screenshot Upload -->
                     <div class="zmg-setup-field" style="margin-bottom: 12px;">
-                        <label for="zmgQpmProofInput" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;">
-                            Attach GCash Payment Screenshot (Optional)
+                        <label for="zmgQpmProofInput" style="font-weight: 700; color: #0f172a; font-size: 0.85rem;"> Attach GCash Payment Screenshot (Optional)
                         </label>
                         <input type="file" id="zmgQpmProofInput" accept="image/*" class="form-input" style="width: 100%; font-size: 0.82rem; padding: 6px 8px; background: #fff;">
                         <div id="zmgQpmProofPreviewBox" style="display: none; margin-top: 6px; align-items: center; gap: 8px;">
@@ -1393,8 +1385,8 @@ function injectPaymentAndReceiptUI() {
                 .then(() => {
                     const btn = document.getElementById('zmgQpmCopyBtn');
                     if (btn) {
-                        btn.textContent = '✓ Copied!';
-                        setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+                        btn.textContent = ' Copied!';
+                        setTimeout(() => { btn.textContent = ' Copy'; }, 2000);
                     }
                 })
                 .catch(() => alert('GCash Mobile: ' + num));
@@ -1628,10 +1620,10 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
         <!-- SEPARATE TABS HEADER -->
         <div class="zmg-payments-tab-nav" style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; padding-bottom: 2px;">
             <button type="button" id="zmgTabBtnPayments" class="zmg-sub-tab-btn ${!isHistory ? 'active' : ''}" style="padding: 11px 22px; font-size: 0.96rem; font-weight: 800; border: none; border-bottom: 3.5px solid ${!isHistory ? '#2d4a36' : 'transparent'}; background: transparent; color: ${!isHistory ? '#2d4a36' : '#64748b'}; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                <span>💳</span> Payments &amp; Auto-Debit
+                <span></span> Payments &amp; Auto-Debit
             </button>
             <button type="button" id="zmgTabBtnHistory" class="zmg-sub-tab-btn ${isHistory ? 'active' : ''}" style="padding: 11px 22px; font-size: 0.96rem; font-weight: 800; border: none; border-bottom: 3.5px solid ${isHistory ? '#2d4a36' : 'transparent'}; background: transparent; color: ${isHistory ? '#2d4a36' : '#64748b'}; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                <span>🕒</span> Payment History &amp; Receipts
+                <span></span> Payment History &amp; Receipts
             </button>
         </div>
 
@@ -1649,15 +1641,14 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                     <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                         <div style="position: relative; width: 110px; height: 140px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; overflow: hidden; cursor: pointer; text-align: center; box-shadow: 0 4px 12px rgba(15,23,42,0.08);" id="zmgMainPageQrWrapper" title="Click to enlarge GCash QR Code">
                             <img src="${qrConfig.qrImageUrl || 'assets/images/gcash-qr-default.svg'}" alt="Official GCash QR" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;">
-                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,87,255,0.9); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 0;">🔍 Enlarge</div>
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,87,255,0.9); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 0;">Enlarge</div>
                         </div>
                         <div>
                             <span style="font-size: 0.74rem; text-transform: uppercase; font-weight: 800; color: #0057ff; letter-spacing: 0.5px;">Direct QR Settlement</span>
                             <h3 style="margin: 3px 0 4px 0; font-size: 1.32rem; font-weight: 800; color: #0f172a;">Official GCash QR Code (Scan to Pay)</h3>
-                            <div style="font-size: 0.92rem; color: #334155; margin-bottom: 4px;">
-                                Receiver: <strong>${qrConfig.merchantName || 'Zion Memorial Garden Inc.'}</strong> &bull;
+                            <div style="font-size: 0.92rem; color: #334155; margin-bottom: 4px;"> Receiver: <strong>${qrConfig.merchantName || 'Zion Memorial Garden Inc.'}</strong> &bull;
                                 GCash Number: <strong style="font-family: monospace; color: #0057ff;">${qrConfig.accountNumber || '0945 187 6774'}</strong>
-                                <button type="button" id="zmgMainPageCopyGcashBtn" style="margin-left: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;">📋 Copy</button>
+                                <button type="button" id="zmgMainPageCopyGcashBtn" style="margin-left: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;"> Copy</button>
                             </div>
                             <p style="margin: 0; font-size: 0.86rem; color: #64748b; line-height: 1.45;">
                                 ${qrConfig.instructions || 'Scan with your GCash mobile app to pay plot reservation or installment dues.'}
@@ -1665,8 +1656,8 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                         </div>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <button type="button" id="zmgMainPageEnlargeQrBtn" style="padding: 9px 16px; background: #eff6ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.86rem; font-weight: 700; cursor: pointer;">🔍 Enlarge QR</button>
-                        <button type="button" id="zmgMainPageDownloadQrBtn" style="padding: 9px 16px; background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; font-weight: 700; cursor: pointer;">⬇️ Download QR</button>
+                        <button type="button" id="zmgMainPageEnlargeQrBtn" style="padding: 9px 16px; background: #eff6ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.86rem; font-weight: 700; cursor: pointer;">Enlarge QR</button>
+                        <button type="button" id="zmgMainPageDownloadQrBtn" style="padding: 9px 16px; background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; font-weight: 700; cursor: pointer;">Download QR</button>
                     </div>
                 </div>
             </div>
@@ -1676,8 +1667,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                 <div>
                     <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.6px; opacity: 0.9;">GCash Auto-Debit (Secured by Xendit)</span>
                     <h3 style="margin: 4px 0 4px 0; font-size: 1.45rem; font-weight: 800;">${acct ? 'Your GCash is Linked' : 'Link Your GCash Account'}</h3>
-                    <p style="margin: 0; font-size: 0.92rem; opacity: 0.92;">
-                        We never see or store your MPIN. You approve the link inside GCash itself.
+                    <p style="margin: 0; font-size: 0.92rem; opacity: 0.92;"> We never see or store your MPIN. You approve the link inside GCash itself.
                     </p>
                 </div>
                 <div>
@@ -1701,8 +1691,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                                 </div>
                             </label>
                         </div>
-                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 18px;">
-                            Linked since: <strong>${acct && zmgGcashState.method?.linked_at ? new Date(zmgGcashState.method.linked_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—'}</strong>
+                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 18px;"> Linked since: <strong>${acct && zmgGcashState.method?.linked_at ? new Date(zmgGcashState.method.linked_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—'}</strong>
                         </div>
                         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                             <button type="button" id="zmgRefreshGcashBtn" style="flex: 1; padding: 13px 18px; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.92rem; font-weight: 700; cursor: pointer;">&#8635; Refresh</button>
@@ -1724,7 +1713,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                             </label>
                         </div>
                         <button type="button" id="zmgStartGcashLinkBtn" style="width: 100%; padding: 15px 24px; background: #0057ff; color: #fff; border: none; border-radius: 10px; font-size: 1.02rem; font-weight: 800; cursor: pointer;">
-                            &#128279; ${pendingLink ? 'Retry GCash Linking' : 'Link GCash'}
+                             ${pendingLink ? 'Retry GCash Linking' : 'Link GCash'}
                         </button>
                         ${pendingLink ? `<button type="button" id="zmgRefreshGcashBtn" style="width: 100%; margin-top: 10px; padding: 12px 18px; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.92rem; font-weight: 700; cursor: pointer;">&#8635; I already approved — refresh status</button>` : ''}
                     `}
@@ -1734,13 +1723,12 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                     <h4 style="margin: 0 0 12px 0; font-size: 1.1rem; color: #0f172a; font-weight: 800;">How auto-debit works</h4>
                     <div style="font-size: 0.9rem; color: #334155; line-height: 1.65;">
                         &#9989; <strong>Reservation:</strong> your down payment (installment) or full price is charged right away.<br>
-                        &#128197; <strong>3 days before</strong> each due date you get an email reminder.<br>
+                         <strong>3 days before</strong> each due date you get an email reminder.<br>
                         &#9889; <strong>On the due date</strong> the monthly due is deducted automatically (retried up to 3 days if your balance is low).<br>
                         &#129534; A <strong>PAID</strong> receipt is emailed after every successful deduction.
                     </div>
                     <div style="margin-top: 16px; padding: 14px 16px; background: #f8fafc; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; color: #334155; line-height: 1.5;">
-                        <strong>Where does the money go?</strong><br>
-                        Payments go to <strong>${ZMG_PAYMENT_CONFIG.gcash.MERCHANT_NAME}</strong>'s merchant account via Xendit (a BSP-licensed payment gateway), then are settled to the company's bank account. Every payment is recorded in your ledger.
+                        <strong>Where does the money go?</strong><br> Payments go to <strong>${ZMG_PAYMENT_CONFIG.gcash.MERCHANT_NAME}</strong>'s merchant account via Xendit (a BSP-licensed payment gateway), then are settled to the company's bank account. Every payment is recorded in your ledger.
                     </div>
                 </div>
             </div>
@@ -1749,7 +1737,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
             <div style="margin-top: 24px; background: #ffffff; border: 1.5px solid #7dd3fc; border-radius: 16px; padding: 24px 28px; box-shadow: 0 8px 24px rgba(15,23,42,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;">&#127974;</div>
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;"></div>
                         <div>
                             <h4 style="margin: 0; font-size: 1.22rem; color: #0f172a; font-weight: 800;">Bank Transfer &amp; Online Banking</h4>
                             <span style="font-size: 0.88rem; color: #475569;">Official corporate bank accounts with instant test mode simulation</span>
@@ -1765,7 +1753,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                         <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                 <strong style="color: #0f172a; font-size: 0.92rem;">${b.name}</strong>
-                                <button type="button" class="zmg-copy-bank-card-btn" data-acc="${b.accountNo}" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; cursor: pointer;">&#128203; Copy</button>
+                                <button type="button" class="zmg-copy-bank-card-btn" data-acc="${b.accountNo}" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; cursor: pointer;"> Copy</button>
                             </div>
                             <div style="font-family: monospace; font-size: 0.95rem; font-weight: 700; color: #0369a1;">${b.accountNo}</div>
                             <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">${b.branch} &bull; ${b.type}</div>
@@ -1774,7 +1762,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
                 </div>
 
                 <div style="padding: 12px 16px; background: #eff6ff; border-radius: 10px; border: 1px solid #bfdbfe; font-size: 0.86rem; color: #1e40af; line-height: 1.5;">
-                    &#128161; <strong>How Test Bank Payments Work:</strong> Select any reservation in <strong>Dues &amp; Payment Center</strong> below or in <strong>My Reservations</strong> and click <strong>Bank Pay (Test)</strong>. You can simulate direct online banking or bank deposits with valid sandbox reference codes, immediate PAID ledger logging, and official PDF &amp; EmailJS receipt generation.
+                     <strong>How Test Bank Payments Work:</strong> Select any reservation in <strong>Dues &amp; Payment Center</strong> below or in <strong>My Reservations</strong> and click <strong>Bank Pay (Test)</strong>. You can simulate direct online banking or bank deposits with valid sandbox reference codes, immediate PAID ledger logging, and official PDF &amp; EmailJS receipt generation.
                 </div>
             </div>
 
@@ -1892,8 +1880,8 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
             .then(() => {
                 const btn = document.getElementById('zmgMainPageCopyGcashBtn');
                 if (btn) {
-                    btn.textContent = '✓ Copied!';
-                    setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+                    btn.textContent = ' Copied!';
+                    setTimeout(() => { btn.textContent = ' Copy'; }, 2000);
                 }
             })
             .catch(() => alert('GCash Mobile: ' + num));
@@ -1914,7 +1902,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
             navigator.clipboard?.writeText(acc.replace(/[^0-9]/g, ''))
                 .then(() => {
                     const original = btn.textContent;
-                    btn.textContent = '✓ Copied!';
+                    btn.textContent = ' Copied!';
                     setTimeout(() => { btn.textContent = original; }, 2000);
                 })
                 .catch(() => alert('Account: ' + acc));
@@ -1937,7 +1925,7 @@ function renderGcashSetupTabContent(showRedirectNotice = false, targetTab = null
         } catch (err) {
             alert('Could not start GCash linking: ' + err.message);
             btn.disabled = false;
-            btn.innerHTML = '&#128279; Link GCash';
+            btn.innerHTML = ' Link GCash';
         }
     });
 
@@ -1985,8 +1973,7 @@ async function loadPaymentHistoryIntoTab() {
     if (!container || typeof supabaseClient === 'undefined') return;
 
     container.innerHTML = `
-        <div style="padding: 40px 20px; text-align: center; color: #64748b; font-size: 1rem;">
-            Loading transaction ledger and receipts...
+        <div style="padding: 40px 20px; text-align: center; color: #64748b; font-size: 1rem;"> Loading transaction ledger and receipts...
         </div>
     `;
 
@@ -2029,13 +2016,11 @@ async function loadPaymentHistoryIntoTab() {
         if (payments.length === 0) {
             container.innerHTML = `
                 <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 48px 24px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
-                    <div style="font-size: 2.8rem; margin-bottom: 12px;">🧾</div>
+                    <div style="font-size: 2.8rem; margin-bottom: 12px;"></div>
                     <h3 style="margin: 0 0 6px 0; font-size: 1.25rem; color: #0f172a; font-weight: 800;">No Payment Records Found</h3>
-                    <p style="margin: 0 0 18px 0; color: #64748b; font-size: 0.94rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                        You have not made any payments yet. When you settle an initial down payment, full contract price, or monthly installment, all official payment receipts will be recorded here.
+                    <p style="margin: 0 0 18px 0; color: #64748b; font-size: 0.94rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;"> You have not made any payments yet. When you settle an initial down payment, full contract price, or monthly installment, all official payment receipts will be recorded here.
                     </p>
-                    <button type="button" id="zmgEmptySwitchToPaymentsBtn" style="padding: 10px 20px; background: #2d4a36; color: #ffffff; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
-                        Make a Payment or Setup GCash &rarr;
+                    <button type="button" id="zmgEmptySwitchToPaymentsBtn" style="padding: 10px 20px; background: #2d4a36; color: #ffffff; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer;"> Make a Payment or Setup GCash &rarr;
                     </button>
                 </div>
             `;
@@ -2141,12 +2126,11 @@ async function loadPaymentHistoryIntoTab() {
                                         </td>
                                         <td style="padding: 14px 18px; text-align: center;">
                                             <span style="display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; background: ${isPaid ? '#dcfce7' : (isPending ? '#fef9c3' : '#fee2e2')}; color: ${isPaid ? '#15803d' : (isPending ? '#a16207' : '#b91c1c')};">
-                                                ${isPaid ? '✓ Paid' : (isPending ? '⏳ Pending' : '✕ Failed')}
+                                                ${isPaid ? ' Paid' : (isPending ? '⏳ Pending' : ' Failed')}
                                             </span>
                                         </td>
                                         <td style="padding: 14px 18px; text-align: right;">
-                                            <button type="button" class="zmg-view-receipt-row-btn" data-pay-id="${p.id}" style="padding: 6px 13px; background: #ffffff; color: #2d4a36; border: 1.5px solid #2d4a36; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
-                                                📄 Receipt
+                                            <button type="button" class="zmg-view-receipt-row-btn" data-pay-id="${p.id}" style="padding: 6px 13px; background: #ffffff; color: #2d4a36; border: 1.5px solid #2d4a36; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"> Receipt
                                             </button>
                                         </td>
                                     </tr>
@@ -2238,11 +2222,11 @@ function renderReservationChecksPanel() {
                 <div style="display: flex; gap: 8px; margin-bottom: 14px; background: #f1f5f9; padding: 4px; border-radius: 10px;">
                     <label id="zmgGcashTabQrBtn" class="zmg-sub-pill" style="flex: 1; text-align: center; padding: 8px 12px; font-weight: 700; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #0057ff; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 6px;">
                         <input type="radio" name="zmgGcashSubMethod" id="zmgGcashSubMethodQr" value="QR" checked style="display: none;">
-                        <span>📱 Scan GCash QR (Instant Pay)</span>
+                        <span> Scan GCash QR (Instant Pay)</span>
                     </label>
                     <label id="zmgGcashTabAutoBtn" class="zmg-sub-pill" style="flex: 1; text-align: center; padding: 8px 12px; font-weight: 700; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: transparent; color: #475569; display: flex; align-items: center; justify-content: center; gap: 6px;">
                         <input type="radio" name="zmgGcashSubMethod" id="zmgGcashSubMethodAutoDebit" value="AUTODEBIT" style="display: none;">
-                        <span>💳 GCash Auto-Debit (${linkedAcct ? 'Linked' : 'Setup'})</span>
+                        <span> GCash Auto-Debit (${linkedAcct ? 'Linked' : 'Setup'})</span>
                     </label>
                 </div>
 
@@ -2252,7 +2236,7 @@ function renderReservationChecksPanel() {
                         <div style="text-align: center;">
                             <div style="position: relative; width: 120px; height: 155px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; margin: 0 auto; cursor: pointer;" id="zmgBookingQrThumbWrapper" title="Click to enlarge GCash QR Code">
                                 <img src="${qrConfig.qrImageUrl || 'assets/images/gcash-qr-default.svg'}" alt="Official GCash QR" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;" id="zmgBookingQrImg">
-                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,87,255,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 2px 0;">🔍 Tap to Enlarge</div>
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,87,255,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 2px 0;"> Tap to Enlarge</div>
                             </div>
                         </div>
                         <div>
@@ -2260,25 +2244,22 @@ function renderReservationChecksPanel() {
                             <div style="font-size: 0.98rem; font-weight: 800; color: #0f172a;" id="zmgBookingMerchantName">${qrConfig.merchantName || 'Zion Memorial Garden Inc.'}</div>
                             <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0 6px 0;">
                                 <span style="font-family: monospace; font-size: 0.92rem; font-weight: 700; color: #0057ff;" id="zmgBookingMerchantNumber">${qrConfig.accountNumber || '0945 187 6774'}</span>
-                                <button type="button" id="zmgCopyBookingGcashBtn" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;">📋 Copy</button>
+                                <button type="button" id="zmgCopyBookingGcashBtn" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 700; background: #e0e7ff; color: #0057ff; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;"> Copy</button>
                             </div>
-                            <div style="padding: 5px 10px; background: #eff6ff; border-radius: 6px; font-size: 0.8rem; color: #1e40af; line-height: 1.4;">
-                                Amount to Pay: <strong style="font-size: 0.92rem; color: #0057ff;">${formattedAmt}</strong>
+                            <div style="padding: 5px 10px; background: #eff6ff; border-radius: 6px; font-size: 0.8rem; color: #1e40af; line-height: 1.4;"> Amount to Pay: <strong style="font-size: 0.92rem; color: #0057ff;">${formattedAmt}</strong>
                             </div>
                         </div>
                     </div>
 
                     <div style="margin-bottom: 10px;">
-                        <label for="zmgGcashQrRefNumber" style="display: block; font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
-                            GCash Transaction Reference Number <span style="color: #dc2626;">*</span>
+                        <label for="zmgGcashQrRefNumber" style="display: block; font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;"> GCash Transaction Reference Number <span style="color: #dc2626;">*</span>
                         </label>
                         <input type="text" id="zmgGcashQrRefNumber" class="form-input" placeholder="e.g. 1002 9845 2819 (from GCash SMS/Receipt)" style="width: 100%; font-family: monospace; font-size: 0.9rem; font-weight: 700; color: #0057ff; background: #ffffff;">
                         <span style="display: block; font-size: 0.74rem; color: #64748b; margin-top: 2px;">Enter reference number from GCash to verify payment and issue your official PAID receipt.</span>
                     </div>
 
                     <div style="margin-bottom: 10px;">
-                        <label for="zmgGcashReceiptUpload" style="display: block; font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
-                            Attach GCash Payment Screenshot <span style="color: #64748b; font-weight: 500;">(Optional)</span>
+                        <label for="zmgGcashReceiptUpload" style="display: block; font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;"> Attach GCash Payment Screenshot <span style="color: #64748b; font-weight: 500;">(Optional)</span>
                         </label>
                         <input type="file" id="zmgGcashReceiptUpload" accept="image/*" class="form-input" style="width: 100%; font-size: 0.8rem; padding: 6px 8px; background: #ffffff;">
                         <div id="zmgGcashReceiptThumbBox" style="display: none; margin-top: 6px; align-items: center; gap: 8px;">
@@ -2307,7 +2288,7 @@ function renderReservationChecksPanel() {
                             }
                         </div>
                         <button type="button" class="zmg-btn-goto-setup" id="zmgQuickGotoSetupBtn">
-                            ${linkedAcct ? '&#128179; Manage GCash Auto-Debit' : '&#128279; Link GCash Now &rarr;'}
+                            ${linkedAcct ? ' Manage GCash Auto-Debit' : ' Link GCash Now &rarr;'}
                         </button>
                     </div>
 
@@ -2383,8 +2364,8 @@ function renderReservationChecksPanel() {
                 .then(() => {
                     const btn = document.getElementById('zmgCopyBookingGcashBtn');
                     if (btn) {
-                        btn.textContent = '✓ Copied!';
-                        setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+                        btn.textContent = ' Copied!';
+                        setTimeout(() => { btn.textContent = ' Copy'; }, 2000);
                     }
                 })
                 .catch(() => alert('GCash Mobile: ' + num));
@@ -2426,7 +2407,7 @@ function renderReservationChecksPanel() {
         panelContainer.innerHTML = `
             <div class="zmg-checks-only-box">
                 <div style="padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-bottom: 12px; font-size: 0.9rem; color: #166534;">
-                    <strong>&#128179; Maya (E-Wallet Payment):</strong> Pay <strong>${formattedAmt}</strong> to Zion Memorial Garden Maya Merchant (<strong>${ZMG_PAYMENT_CONFIG.gcash.MERCHANT_NUMBER}</strong>) or via Maya POS terminal at the counter.
+                    <strong> Maya (E-Wallet Payment):</strong> Pay <strong>${formattedAmt}</strong> to Zion Memorial Garden Maya Merchant (<strong>${ZMG_PAYMENT_CONFIG.gcash.MERCHANT_NUMBER}</strong>) or via Maya POS terminal at the counter.
                 </div>
                 <div class="zmg-setup-field" style="margin-bottom: 12px;">
                     <label for="zmgMayaReferenceNumber">Maya Transaction Reference / Mobile No. (Optional)</label>
@@ -2450,7 +2431,7 @@ function renderReservationChecksPanel() {
             <div class="zmg-checks-only-box" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border-color: #38bdf8;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1.5px solid #bae6fd;">
                     <div>
-                        <strong style="color: #0369a1; font-size: 1.05rem; display: block;">&#127974; Online Banking &amp; Bank Transfer</strong>
+                        <strong style="color: #0369a1; font-size: 1.05rem; display: block;"> Online Banking &amp; Bank Transfer</strong>
                         <span style="color: #0284c7; font-size: 0.84rem;">Pay via Philippine Partner Banks</span>
                     </div>
                     <span style="background: #0284c7; color: #ffffff; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.5px;">
@@ -2478,12 +2459,11 @@ function renderReservationChecksPanel() {
                 <div id="zmgBankAccountInfoBox" style="padding: 12px 14px; background: #ffffff; border: 1.5px solid #7dd3fc; border-radius: 10px; margin-bottom: 14px; font-size: 0.88rem; color: #0f172a;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                         <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 800; color: #0284c7;">Beneficiary Account Details</span>
-                        <button type="button" id="zmgCopyBankAccBtn" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; cursor: pointer;">&#128203; Copy Acc No.</button>
+                        <button type="button" id="zmgCopyBankAccBtn" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; cursor: pointer;"> Copy Acc No.</button>
                     </div>
                     <div>Account Name: <strong>${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</strong></div>
                     <div>Account Number: <strong id="zmgBankAccNumberDisplay" style="letter-spacing: 0.5px; font-family: monospace; font-size: 0.95rem; color: #0369a1;">${initialBank.accountNo}</strong></div>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                        Branch: <span id="zmgBankBranchDisplay">${initialBank.branch}</span> &bull; <span id="zmgBankTypeDisplay">${initialBank.type}</span>
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;"> Branch: <span id="zmgBankBranchDisplay">${initialBank.branch}</span> &bull; <span id="zmgBankTypeDisplay">${initialBank.type}</span>
                     </div>
                 </div>
 
@@ -2542,8 +2522,8 @@ function renderReservationChecksPanel() {
             const accText = accDisplay?.textContent || '';
             navigator.clipboard?.writeText(accText.replace(/[^0-9]/g, ''))
                 .then(() => {
-                    copyBtn.textContent = '✓ Copied!';
-                    setTimeout(() => { copyBtn.textContent = '📋 Copy Acc No.'; }, 2000);
+                    copyBtn.textContent = ' Copied!';
+                    setTimeout(() => { copyBtn.textContent = ' Copy Acc No.'; }, 2000);
                 })
                 .catch(() => alert('Account number: ' + accText));
         });
@@ -2551,7 +2531,7 @@ function renderReservationChecksPanel() {
         panelContainer.innerHTML = `
             <div class="zmg-checks-only-box">
                 <div style="padding: 12px 14px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; margin-bottom: 12px; font-size: 0.9rem; color: #1e40af;">
-                    <strong>&#128179; Credit / Debit Card (Visa / Mastercard):</strong> Settle <strong>${formattedAmt}</strong> via the Zion Memorial Garden counter POS terminal upon contract signing.
+                    <strong> Credit / Debit Card (Visa / Mastercard):</strong> Settle <strong>${formattedAmt}</strong> via the Zion Memorial Garden counter POS terminal upon contract signing.
                 </div>
                 <div class="zmg-setup-field" style="margin-bottom: 12px;">
                     <label for="zmgCardLast4Digits">Cardholder Name / Last 4 Digits (Optional)</label>
@@ -2573,7 +2553,7 @@ function renderReservationChecksPanel() {
                 <div class="zmg-checks-only-box" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-color: #22c55e;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-bottom: 10px; border-bottom: 1.5px solid #bbf7d0;">
                         <div>
-                            <strong style="font-size: 1.04rem; color: #14532d; display: block;">&#128737;&#65039; Staff / Admin In-Office Counter Payment</strong>
+                            <strong style="font-size: 1.04rem; color: #14532d; display: block;">&#65039; Staff / Admin In-Office Counter Payment</strong>
                             <span style="font-size: 0.86rem; color: #166534;">Client is paying cash in the office. Enter payment received &amp; client's Gmail to issue an official <strong>PAID</strong> receipt.</span>
                         </div>
                         <span class="zmg-tag-badge zmg-tag-paid">Receipt Tag: PAID</span>
@@ -2646,7 +2626,7 @@ function setupDynamicPaymentChannelPanel() {
         const roleBtn = document.createElement('span');
         roleBtn.id = 'zmgAccountRoleToggleBtn';
         roleBtn.style.cssText = 'display: none; margin-left: auto; margin-right: 14px; align-self: center; padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; font-size: 0.78rem; font-weight: 800;';
-        roleBtn.innerHTML = '&#128737;&#65039; Staff / Admin Counter';
+        roleBtn.innerHTML = '&#65039; Staff / Admin Counter';
 
         const closeBtn = headerEl.querySelector('.booking-close-btn');
         if (closeBtn) {
@@ -3652,8 +3632,7 @@ async function loadMonthlyDuesIntoGcashTab() {
         const active = (reservations || []).filter(r => Number(r.balance ?? r.total_price ?? 0) > 0);
         if (active.length === 0) {
             listContainer.innerHTML = `
-                <div style="padding: 18px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; text-align: center; color: #475569; font-size: 0.94rem;">
-                    You have no outstanding dues. Reserved plots with a remaining balance will appear here.
+                <div style="padding: 18px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; text-align: center; color: #475569; font-size: 0.94rem;"> You have no outstanding dues. Reserved plots with a remaining balance will appear here.
                 </div>`;
             return;
         }
@@ -3712,8 +3691,7 @@ async function loadMonthlyDuesIntoGcashTab() {
                                 <span style="font-size: 0.78rem; padding: 2px 8px; border-radius: 6px; background: #dbeafe; color: #1e40af; font-weight: 700;">${esc(res.reservation_number)}</span>
                                 <span style="font-size: 0.78rem; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #334155; font-weight: 700;">${res.payment_method === 'INSTALLMENT' ? `Installment • ${paidCount}/${res.installment_term_months} paid` : 'Full Payment'}</span>
                             </div>
-                            <div style="font-size: 0.9rem; color: #475569;">
-                                Paid: <strong>${peso(res.total_paid)}</strong> &bull;
+                            <div style="font-size: 0.9rem; color: #475569;"> Paid: <strong>${peso(res.total_paid)}</strong> &bull;
                                 Remaining Balance: <strong style="color: #b45309;">${peso(res.balance)}</strong>
                                 ${next ? ` &bull; Next due: <strong style="color: #0f172a;">${esc(next.due_date)}</strong> (${peso(next.amount)})` : ''}
                             </div>
@@ -3721,43 +3699,27 @@ async function loadMonthlyDuesIntoGcashTab() {
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             ${!initialPaid ? `
-                                <button type="button" class="zmg-qr-pay-btn" data-action="charge_initial" data-res-id="${res.id}" data-amount="${initialAmount}"
-                                    style="padding: 10px 14px; background: #0284c7; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    📱 GCash QR (${peso(initialAmount)})
+                                <button type="button" class="zmg-qr-pay-btn" data-action="charge_initial" data-res-id="${res.id}" data-amount="${initialAmount}"style="padding: 10px 14px; background: #0284c7; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;"> GCash QR (${peso(initialAmount)})
                                 </button>
                                 <button type="button" class="zmg-gcash-action-btn" data-action="charge_initial" data-res-id="${res.id}" ${initialProcessing ? 'disabled' : ''}
                                     style="padding: 10px 14px; background: #0057ff; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    ${initialProcessing ? 'Processing...' : `💳 Auto-Debit (${peso(initialAmount)})`}
+                                    ${initialProcessing ? 'Processing...' : ` Auto-Debit (${peso(initialAmount)})`}
                                 </button>
-                                <button type="button" class="zmg-bank-pay-btn" data-action="charge_initial" data-res-id="${res.id}" data-amount="${initialAmount}"
-                                    style="padding: 10px 14px; background: #047857; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    &#127974; Bank Pay (Test) (${peso(initialAmount)})
+                                <button type="button" class="zmg-bank-pay-btn" data-action="charge_initial" data-res-id="${res.id}" data-amount="${initialAmount}"style="padding: 10px 14px; background: #047857; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;"> Bank Pay (Test) (${peso(initialAmount)})
                                 </button>` : ''}
                             ${initialPaid && next && next.status !== 'PROCESSING' ? `
-                                <button type="button" class="zmg-qr-pay-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}" data-amount="${next.amount}"
-                                    style="padding: 10px 14px; background: #0284c7; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    📱 GCash QR (${peso(next.amount)})
+                                <button type="button" class="zmg-qr-pay-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}" data-amount="${next.amount}"style="padding: 10px 14px; background: #0284c7; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;"> GCash QR (${peso(next.amount)})
                                 </button>
-                                <button type="button" class="zmg-gcash-action-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}"
-                                    style="padding: 10px 14px; background: #0057ff; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    💳 Auto-Debit (${peso(next.amount)})
+                                <button type="button" class="zmg-gcash-action-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}"style="padding: 10px 14px; background: #0057ff; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;"> Auto-Debit (${peso(next.amount)})
                                 </button>
-                                <button type="button" class="zmg-bank-pay-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}" data-amount="${next.amount}"
-                                    style="padding: 10px 14px; background: #047857; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;">
-                                    &#127974; Bank Pay (Test) (${peso(next.amount)})
+                                <button type="button" class="zmg-bank-pay-btn" data-action="pay_schedule" data-schedule-id="${next.id}" data-res-id="${res.id}" data-amount="${next.amount}"style="padding: 10px 14px; background: #047857; color: #fff; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 800; cursor: pointer;"> Bank Pay (Test) (${peso(next.amount)})
                                 </button>` : ''}
                             ${initialPaid ? `
-                                <button type="button" class="zmg-qr-pay-btn" data-action="pay_balance" data-res-id="${res.id}" data-amount="${res.balance}"
-                                    style="padding: 10px 14px; background: #f0fdf4; color: #0284c7; border: 1.5px solid #0284c7; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;">
-                                    📱 GCash QR Full (${peso(res.balance)})
+                                <button type="button" class="zmg-qr-pay-btn" data-action="pay_balance" data-res-id="${res.id}" data-amount="${res.balance}"style="padding: 10px 14px; background: #f0fdf4; color: #0284c7; border: 1.5px solid #0284c7; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;"> GCash QR Full (${peso(res.balance)})
                                 </button>
-                                <button type="button" class="zmg-gcash-action-btn" data-action="pay_balance" data-res-id="${res.id}"
-                                    style="padding: 10px 14px; background: #ffffff; color: #0f172a; border: 1.5px solid #0f172a; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;">
-                                    Pay Full (GCash) (${peso(res.balance)})
+                                <button type="button" class="zmg-gcash-action-btn" data-action="pay_balance" data-res-id="${res.id}"style="padding: 10px 14px; background: #ffffff; color: #0f172a; border: 1.5px solid #0f172a; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;"> Pay Full (GCash) (${peso(res.balance)})
                                 </button>
-                                <button type="button" class="zmg-bank-pay-btn" data-action="pay_balance" data-res-id="${res.id}" data-amount="${res.balance}"
-                                    style="padding: 10px 14px; background: #ffffff; color: #047857; border: 1.5px solid #047857; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;">
-                                    &#127974; Bank Pay Full (Test) (${peso(res.balance)})
+                                <button type="button" class="zmg-bank-pay-btn" data-action="pay_balance" data-res-id="${res.id}" data-amount="${res.balance}"style="padding: 10px 14px; background: #ffffff; color: #047857; border: 1.5px solid #047857; border-radius: 9px; font-size: 0.86rem; font-weight: 800; cursor: pointer;"> Bank Pay Full (Test) (${peso(res.balance)})
                                 </button>` : ''}
                         </div>
                     </div>

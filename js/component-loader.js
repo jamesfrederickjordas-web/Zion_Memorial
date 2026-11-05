@@ -319,7 +319,7 @@ function filterAndRenderGraves() {
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 12px;">
                 <div style="flex: 1; min-width: 240px;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-size: 1.1rem; color: #2d4a36;">&#127807;</span>
+                        <span style="font-size: 1.1rem; color: #2d4a36;"></span>
                         <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e3a29;">${escapePublicHtml(r.deceased_name)}</h4>
                         <span style="background: #e8f5e9; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">${escapePublicHtml(plotCode)}</span>
                     </div>
@@ -447,7 +447,7 @@ function filterAndRenderObituaries() {
                 <div>
                     <div style="text-align: center; margin-bottom: 14px;">
                         <div style="width: 64px; height: 64px; margin: 0 auto 10px auto; border-radius: 50%; background: #e8f5e9; border: 2px solid #bbf7d0; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
-                            &#127807;
+                            
                         </div>
                         <h3 style="margin: 0; color: #1e3a29; font-size: 1.25rem; font-weight: 700;">${escapePublicHtml(r.deceased_name)}</h3>
                         <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px; font-weight: 600;">${lifespan}</div>

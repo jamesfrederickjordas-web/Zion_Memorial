@@ -331,8 +331,7 @@ function renderMaintenanceTable(records = maintenanceVisitsCache, isFiltered = f
             if (tableContainerEl) tableContainerEl.style.display = 'block';
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">
-                        No maintenance requests match the current search or status filter.
+                    <td colspan="8" style="text-align: center; padding: 24px; color: #64748b;"> No maintenance requests match the current search or status filter.
                     </td>
                 </tr>
             `;
@@ -387,8 +386,7 @@ function renderMaintenanceTable(records = maintenanceVisitsCache, isFiltered = f
                 <td style="text-align: center; white-space: nowrap;">
                     <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: center;">
                         ${v.proof_image_url ? `
-                            <button type="button" class="btn-subpage-outline" style="font-size: 0.74rem; padding: 3px 8px; border-color: #16a34a; color: #166534; font-weight: 700; background: #f0fdf4; cursor: pointer;" onclick="openMaintenanceProofModal(${v.id})" title="View completion proof photo">
-                                📷 View Proof
+                            <button type="button" class="btn-subpage-outline" style="font-size: 0.74rem; padding: 3px 8px; border-color: #16a34a; color: #166534; font-weight: 700; background: #f0fdf4; cursor: pointer;" onclick="openMaintenanceProofModal(${v.id})" title="View completion proof photo"> View Proof
                             </button>
                         ` : ''}
                         ${status === 'scheduled' ? `

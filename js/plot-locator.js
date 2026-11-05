@@ -551,7 +551,7 @@ function attachPinToSlot(slotEl, plotCode, areaRotate = 0) {
     pin.innerHTML = `
         <div class="pd-pin-badge">
             <span class="pd-pin-beacon-dot"></span>
-            <span>📍 ${plotCode}</span>
+            <span> ${plotCode}</span>
         </div>
         <div class="pd-pin-stem"></div>
         <div class="pd-pin-base-ripple"></div>
