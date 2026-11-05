@@ -5,12 +5,12 @@
 
 // Deceased capacity per plot category (e.g. Condominium columbarium vault holds up to 4 urns, Mausoleum holds up to 8, Family Estate holds up to 8, Supreme holds up to 2).
 const CATEGORY_CAPACITY = {
-    'Condominium': 4,
+    'Condominium': 1,
     'Mausoleum': 8,
     'Family Estate Jr.': 8,
     'Family Estate': 8,
-    'Special Supreme': 2,
-    'Supreme': 2,
+    'Special Supreme': 1,
+    'Supreme': 1,
     'Single Teired': 1,
     'Single Tiered': 1
 };
@@ -20,10 +20,7 @@ function getCategoryCapacity(category) {
     const trimmed = String(category).trim();
     if (CATEGORY_CAPACITY[trimmed]) return CATEGORY_CAPACITY[trimmed];
     const cat = trimmed.toLowerCase();
-    if (cat.includes('family estate') || cat.includes('estate')) return 8;
-    if (cat.includes('mausoleum')) return 8;
-    if (cat.includes('condominium') || cat.includes('columbarium') || cat.includes('condo')) return 4;
-    if (cat.includes('supreme')) return 2;
+    if (cat.includes('family estate') || cat.includes('estate') || cat.includes('mausoleum')) return 8;
     return 1;
 }
 
