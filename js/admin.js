@@ -21,14 +21,14 @@ let decPageSize = 8;
 let accCurrentPage = 1;
 let accPageSize = 8;
 
-// Deceased capacity per plot category (e.g. Condominium columbarium vaults hold up to 4 urns, Mausoleum up to 8, Family Estate up to 8, Supreme up to 2).
+// Deceased capacity per plot category (Family Estate plots hold up to 8 deceased; Supreme, Special Supreme, Condominium, and Single Tiered hold 1 deceased).
 const ADMIN_CATEGORY_CAPACITY = {
-    'Condominium': 4,
+    'Condominium': 1,
     'Mausoleum': 8,
     'Family Estate Jr.': 8,
     'Family Estate': 8,
-    'Special Supreme': 2,
-    'Supreme': 2,
+    'Special Supreme': 1,
+    'Supreme': 1,
     'Single Teired': 1,
     'Single Tiered': 1
 };
@@ -38,10 +38,7 @@ function getAdminCategoryCapacity(category) {
     const trimmed = String(category).trim();
     if (ADMIN_CATEGORY_CAPACITY[trimmed]) return ADMIN_CATEGORY_CAPACITY[trimmed];
     const cat = trimmed.toLowerCase();
-    if (cat.includes('family estate') || cat.includes('estate')) return 8;
-    if (cat.includes('mausoleum')) return 8;
-    if (cat.includes('condominium') || cat.includes('columbarium') || cat.includes('condo')) return 4;
-    if (cat.includes('supreme')) return 2;
+    if (cat.includes('family estate') || cat.includes('estate') || cat.includes('mausoleum')) return 8;
     return 1;
 }
 

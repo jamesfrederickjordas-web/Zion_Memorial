@@ -1349,8 +1349,8 @@ function setupBookingModalAndAmortization(user) {
             const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'GCash';
             const notes = document.getElementById('reservationNotes').value.trim();
 
-            const isGcash = paymentChannel === 'GCash';
-            const isBank = paymentChannel === 'Bank';
+            const isGcash = paymentChannel.toLowerCase() === 'gcash';
+            const isBank = paymentChannel.toLowerCase() === 'bank';
             const isStaffCashPaid = !isGcash && !isBank && typeof window.isCurrentUserStaffOrAdmin === 'function' && window.isCurrentUserStaffOrAdmin();
 
             if (isGcash && typeof window.validateGcashSetupOrRedirect === 'function') {
@@ -1388,8 +1388,8 @@ function setupBookingModalAndAmortization(user) {
 
             const linkedAcct = typeof window.getLinkedGcashAccount === 'function' ? window.getLinkedGcashAccount() : null;
             let paymentTag = (isStaffCashPaid || isBankTestPaid || isGcashQr) ? 'PAID' : 'UNPAID';
-            const gcashSender = isGcashQr ? (gcashQrRef || 'GCash QR') : (linkedAcct?.mobileNumber || document.getElementById('zmgGcashSenderNumber')?.value?.trim() || '');
-            let gcashRef = isBank ? (bankRefInput || `BNK-TEST-${Date.now().toString(36).toUpperCase()}`) : (isGcashQr ? (gcashQrRef || `GCASH-QR-${Date.now().toString(36).toUpperCase()}`) : '');
+            const gcashSender = isGcash ? (isGcashQr ? (gcashQrRef || 'GCash QR') : (linkedAcct?.mobileNumber || document.getElementById('zmgGcashSenderNumber')?.value?.trim() || '')) : '';
+            let gcashRef = isGcash ? (isGcashQr ? (gcashQrRef || `GCASH-QR-${Date.now().toString(36).toUpperCase()}`) : '') : '';
 
             let termMonths = 60;
             let downPayment = 0;
@@ -1399,6 +1399,11 @@ function setupBookingModalAndAmortization(user) {
             if (paymentOption === 'INSTALLMENT') {
                 termMonths = Number(document.getElementById('installmentTerm')?.value || 60);
                 downPayment = Number(document.getElementById('customDownPayment')?.value || 0);
+                if (downPayment < 100) {
+                    alert('Minimum down payment is ₱100.00.');
+                    if (submitBtn) submitBtn.disabled = false;
+                    return;
+                }
                 const remaining = Math.max(0, totalPrice - downPayment);
                 monthlyAmortization = termMonths > 0 ? (remaining / termMonths) : 0;
                 balance = remaining;
@@ -1698,7 +1703,7 @@ function setupBookingModalAndAmortization(user) {
                     paymentChannel: isGcash
                         ? 'GCash Auto-Debit'
                         : (isBank ? `Bank Transfer (${bankName} - Test Mode)` : (isStaffCashPaid ? 'Cash (In-Office Staff Counter)' : 'Cash (Over the Counter)')),
-                    gcashReference: isBank ? paymentReference : gcashRef,
+                    gcashReference: isGcash ? gcashRef : '',
                     skipClientEmail,
                     dateIssued: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
                     clientName,
@@ -1745,17 +1750,18 @@ function openBookingModalForPlot(plot) {
     document.getElementById('bookSpaceId').value = plot.id;
     document.getElementById('bookPlotIdentifier').value = plot.plot_identifier;
     document.getElementById('bookPlotPrice').value = plot.price;
-    document.getElementById('bookPlotDownPayment').value = plot.down_payment || 10200.00;
+    document.getElementById('bookPlotDownPayment').value = 100.00;
 
     // Banner display
     document.getElementById('bookDisplayPlotCode').textContent = plot.plot_identifier;
     document.getElementById('bookDisplaySection').textContent = `${plot.section_name} • ${plot.category}`;
     document.getElementById('bookDisplayPrice').textContent = `₱ ${Number(plot.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
-    // Set default down payment input
+    // Set default down payment input (minimum 100)
     const downInput = document.getElementById('customDownPayment');
     if (downInput) {
-        downInput.value = (plot.down_payment || 10200.00).toFixed(2);
+        downInput.value = (100.00).toFixed(2);
+        downInput.min = "100";
     }
 
     // Clear optional deceased inputs
@@ -1777,7 +1783,8 @@ function recalculateAmortization() {
     const downInput = document.getElementById('customDownPayment');
     const termSelect = document.getElementById('installmentTerm');
 
-    const downPayment = Number(downInput?.value || 0);
+    const rawDp = downInput && downInput.value !== '' ? Number(downInput.value) : 100;
+    const downPayment = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
     const termMonths = Number(termSelect?.value || 60);
 
     const remainingBalance = Math.max(0, totalPrice - downPayment);

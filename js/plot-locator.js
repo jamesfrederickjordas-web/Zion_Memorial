@@ -1075,7 +1075,7 @@ function openBookingModalForPlot(plot) {
     setText('bookDisplaySection', `${plot.section_name} | ${plot.category || 'Memorial Space'}`);
 
     const price = Number(plot.price || 85000);
-    const dp = Number(plot.down_payment || (price * 0.15));
+    const dp = 100.00;
 
     setText('bookDisplayPrice', `₱ ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
 
@@ -1089,7 +1089,10 @@ function openBookingModalForPlot(plot) {
     if (elCode) elCode.value = plot.plot_identifier;
     if (elPrice) elPrice.value = price;
     if (elDp) elDp.value = dp;
-    if (dpInput) dpInput.value = dp;
+    if (dpInput) {
+        dpInput.value = dp.toFixed(2);
+        dpInput.min = "100";
+    }
 
     calculateAmortization();
     if (typeof window.setupDynamicPaymentChannelPanel === 'function') {
@@ -1100,7 +1103,9 @@ function openBookingModalForPlot(plot) {
 
 function calculateAmortization() {
     const price = Number(document.getElementById('bookPlotPrice')?.value || 85000);
-    const dp = Math.max(0, Number(document.getElementById('customDownPayment')?.value || (price * 0.15)));
+    const dpInput = document.getElementById('customDownPayment');
+    const rawDp = dpInput && dpInput.value !== '' ? Number(dpInput.value) : 100;
+    const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
     const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
 
     const balance = Math.max(0, price - dp);
@@ -1136,6 +1141,13 @@ async function submitPlotReservation(form) {
         const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
         const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
         const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
+        if (paymentOption === 'INSTALLMENT' && dp < 100) {
+            alert('Minimum down payment is ₱100.00.');
+            if (btnText) btnText.style.display = 'inline-block';
+            if (btnLoader) btnLoader.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+        }
         const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'GCash';
         const notes = document.getElementById('reservationNotes')?.value || '';
 

@@ -2814,8 +2814,10 @@ function generateAndDownloadReceiptPDF(receiptData) {
     doc.text(ZMG_PAYMENT_CONFIG.gcash.COUNTER_LOCATION, 40, 75);
 
     // Status Stamp Badge (PAID vs UNPAID)
-    const isCashChannel = String(receiptData.paymentChannel || '').toLowerCase().includes('cash');
-    const isBankChannel = String(receiptData.paymentChannel || '').toLowerCase().includes('bank');
+    const channelLower = String(receiptData.paymentChannel || '').toLowerCase();
+    const isGcashChannel = channelLower.includes('gcash');
+    const isCashChannel = !isGcashChannel && (channelLower.includes('cash') || channelLower.includes('counter'));
+    const isBankChannel = channelLower.includes('bank');
     if (isPaid) {
         doc.setFillColor(22, 163, 74);
         doc.roundedRect(425, 26, 130, 42, 6, 6, 'F');
@@ -2854,7 +2856,7 @@ function generateAndDownloadReceiptPDF(receiptData) {
         ['Payment Status Tag:', `${receiptData.paymentTag} (${receiptData.paymentChannel})`],
         ['Reservation Reference:', receiptData.reservationNumber],
         ['Payment Reference:', receiptData.paymentReference],
-        [isBankChannel ? 'Bank Reference No.:' : (isCashChannel ? 'Counter Reference No.:' : 'GCash Reference No.:'), receiptData.gcashReference || receiptData.paymentReference || 'N/A'],
+        [isBankChannel ? 'Bank Reference No.:' : (isCashChannel ? 'Counter Reference No.:' : 'GCash Reference No.:'), (isGcashChannel ? receiptData.gcashReference : receiptData.paymentReference) || 'N/A'],
         ['Date & Time Issued:', receiptData.dateIssued],
         ['Client Name:', receiptData.clientName],
         ['Client Email:', receiptData.clientEmail],
@@ -2921,12 +2923,17 @@ async function sendReceiptViaEmailJS(receiptData) {
     const formattedAmountNow = `₱ ${Number(receiptData.amountNow).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
     const formattedBalance = `₱ ${Number(receiptData.remainingBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+    const channelLower = String(receiptData.paymentChannel || '').toLowerCase();
+    const isGcashChannel = channelLower.includes('gcash');
+    const isCashChannel = !isGcashChannel && (channelLower.includes('cash') || channelLower.includes('counter'));
+    const isBankChannel = channelLower.includes('bank');
+
     const fullMessageSummary = [
         `RECEIPT STATUS TAG: ${receiptData.paymentTag}`,
         `Reservation Reference: ${receiptData.reservationNumber}`,
         `Payment Reference: ${receiptData.paymentReference}`,
         `Payment Method: ${receiptData.paymentChannel}`,
-        `GCash Reference No.: ${receiptData.gcashReference || 'N/A (Cash Over the Counter)'}`,
+        isGcashChannel ? `GCash Reference No.: ${receiptData.gcashReference || 'N/A'}` : (isBankChannel ? `Bank Reference No.: ${receiptData.paymentReference || 'N/A'}` : `Counter Receipt No.: ${receiptData.paymentReference || 'N/A'}`),
         `Date Issued: ${receiptData.dateIssued}`,
         `Memorial Space / Plot: ${receiptData.plotIdentifier} — ${receiptData.sectionName} (${receiptData.category})`,
         `Plan & Option: ${receiptData.planType} (${receiptData.paymentOption})`,
@@ -2954,7 +2961,7 @@ async function sendReceiptViaEmailJS(receiptData) {
         reservation_number: receiptData.reservationNumber,
         payment_reference: receiptData.paymentReference,
         payment_method: receiptData.paymentChannel,
-        gcash_reference: receiptData.gcashReference || 'N/A (Cash Over the Counter)',
+        gcash_reference: isGcashChannel ? (receiptData.gcashReference || 'N/A') : (isCashChannel ? 'N/A (Paid in Cash)' : (receiptData.paymentReference || 'N/A')),
         plot_code: receiptData.plotIdentifier,
         section_name: `${receiptData.sectionName} (${receiptData.category})`,
         plan_type: receiptData.planType,
@@ -2986,8 +2993,10 @@ function showOfficialReceiptModal(receiptData, emailResult) {
     if (!modal) return;
 
     const isPaid = receiptData.paymentTag === 'PAID';
-    const isCashChannel = String(receiptData.paymentChannel || '').toLowerCase().includes('cash');
-    const isBankChannel = String(receiptData.paymentChannel || '').toLowerCase().includes('bank');
+    const channelLower = String(receiptData.paymentChannel || '').toLowerCase();
+    const isGcashChannel = channelLower.includes('gcash');
+    const isCashChannel = !isGcashChannel && (channelLower.includes('cash') || channelLower.includes('counter'));
+    const isBankChannel = channelLower.includes('bank');
     const banner = document.getElementById('zmgReceiptStatusBanner');
     const statusTitle = document.getElementById('zmgReceiptStatusTitle');
     const tagBadge = document.getElementById('zmgReceiptTagBadge');
@@ -3017,7 +3026,7 @@ function showOfficialReceiptModal(receiptData, emailResult) {
     };
 
     setTxt('zmgRecResNum', receiptData.reservationNumber);
-    setTxt('zmgRecPayRef', receiptData.gcashReference
+    setTxt('zmgRecPayRef', (isGcashChannel && receiptData.gcashReference)
         ? `${receiptData.paymentReference} (GCash Ref: ${receiptData.gcashReference})`
         : receiptData.paymentReference);
     setTxt('zmgRecDate', receiptData.dateIssued);
@@ -3044,9 +3053,12 @@ function showOfficialReceiptModal(receiptData, emailResult) {
 // High-level orchestrator called after a reservation is recorded
 async function processReservationReceiptAndEmail(receiptData) {
     const linkCheckbox = document.getElementById('zmgLinkGcashAutoDebit');
-    const isAutoLinked = receiptData.paymentChannel.includes('GCash') && (!linkCheckbox || linkCheckbox.checked);
+    const isGcash = String(receiptData.paymentChannel || '').toLowerCase().includes('gcash');
+    const isAutoLinked = isGcash && (!linkCheckbox || linkCheckbox.checked);
     receiptData.gcashAutoDebitLinked = isAutoLinked;
-    saveGcashInstallmentSubscription(receiptData);
+    if (isAutoLinked) {
+        saveGcashInstallmentSubscription(receiptData);
+    }
 
     // 1. Generate and auto-save PDF Receipt with PAID / UNPAID tag
     generateAndDownloadReceiptPDF(receiptData);
