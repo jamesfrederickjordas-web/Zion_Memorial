@@ -315,34 +315,7 @@ function filterAndRenderGraves() {
             ? `${new Date(r.birth_date).getFullYear()} &ndash; ${new Date(r.death_date).getFullYear()}`
             : (r.death_date ? `Passed ${new Date(r.death_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}` : 'In Blessed Memory');
 
-        return `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 12px;">
-                <div style="flex: 1; min-width: 240px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-size: 1.1rem; color: #2d4a36;"></span>
-                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e3a29;">${escapePublicHtml(r.deceased_name)}</h4>
-                        <span style="background: #e8f5e9; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">${escapePublicHtml(plotCode)}</span>
-                    </div>
-                    <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 4px;">
-                        <span>Lifespan: <strong>${lifespan}</strong></span>
-                        ${r.burial_date ? ` &bull; <span>Burial Date: ${new Date(r.burial_date).toLocaleDateString()}</span>` : ''}
-                    </div>
-                    <div style="font-size: 0.8rem; color: #475569;">
-                        <span><strong>Resting Place:</strong> ${escapePublicHtml(section)} &bull; ${escapePublicHtml(category)}</span>
-                    </div>
-                    ${r.epitaph ? `
-                        <div style="font-size: 0.78rem; font-style: italic; color: #475569; margin-top: 4px;">
-                            &ldquo;${escapePublicHtml(r.epitaph)}&rdquo;
-                        </div>
-                    ` : ''}
-                </div>
-                <div>
-                    <a href="plot-locator.html?plot=${encodeURIComponent(plotCode)}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #2d4a36; color: #ffffff; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <span>Locate on Map</span> &rarr;
-                    </a>
-                </div>
-            </div>
-        `;
+        return ` <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 12px;"> <div style="flex: 1; min-width: 240px;"> <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;"> <span style="font-size: 1.1rem; color: #2d4a36;"></span> <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e3a29;">${escapePublicHtml(r.deceased_name)}</h4> <span style="background: #e8f5e9; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">${escapePublicHtml(plotCode)}</span> </div> <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 4px;"> <span>Lifespan: <strong>${lifespan}</strong></span> ${r.burial_date ? ` &bull; <span>Burial Date: ${new Date(r.burial_date).toLocaleDateString()}</span>` : ''} </div> <div style="font-size: 0.8rem; color: #475569;"> <span><strong>Resting Place:</strong> ${escapePublicHtml(section)} &bull; ${escapePublicHtml(category)}</span> </div> ${r.epitaph ? ` <div style="font-size: 0.78rem; font-style: italic; color: #475569; margin-top: 4px;"> &ldquo;${escapePublicHtml(r.epitaph)}&rdquo; </div> ` : ''} </div> <div> <a href="plot-locator.html?plot=${encodeURIComponent(plotCode)}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #2d4a36; color: #ffffff; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"> <span>Locate on Map</span> </a> </div> </div> `;
     }).join('');
 }
 
@@ -442,46 +415,7 @@ function filterAndRenderObituaries() {
             ? `${new Date(r.birth_date).getFullYear()} &ndash; ${new Date(r.death_date).getFullYear()}`
             : (r.death_date ? `Passed: ${new Date(r.death_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : 'In Blessed Memory');
 
-        return `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="text-align: center; margin-bottom: 14px;">
-                        <div style="width: 64px; height: 64px; margin: 0 auto 10px auto; border-radius: 50%; background: #e8f5e9; border: 2px solid #bbf7d0; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
-                            
-                        </div>
-                        <h3 style="margin: 0; color: #1e3a29; font-size: 1.25rem; font-weight: 700;">${escapePublicHtml(r.deceased_name)}</h3>
-                        <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px; font-weight: 600;">${lifespan}</div>
-                    </div>
-
-                    <div style="background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.8rem; color: #334155;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span style="color: #64748b;">Plot Location:</span>
-                            <strong>${escapePublicHtml(plotCode)}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #64748b;">Section:</span>
-                            <span>${escapePublicHtml(section)}</span>
-                        </div>
-                        ${r.burial_date ? `
-                            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-                                <span style="color: #64748b;">Interment Date:</span>
-                                <span>${new Date(r.burial_date).toLocaleDateString()}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${r.epitaph ? `
-                        <div style="font-size: 0.82rem; font-style: italic; color: #2d4a36; background: #fdfdf9; border-left: 3px solid #2d4a36; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
-                            &ldquo;${escapePublicHtml(r.epitaph)}&rdquo;
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div style="border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; gap: 8px;">
-                    <a href="plot-locator.html?plot=${encodeURIComponent(plotCode)}" style="flex: 1; text-align: center; padding: 8px 14px; background: #2d4a36; color: white; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none;">Locate Plot &rarr;</a>
-                </div>
-            </div>
-        `;
+        return ` <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;"> <div> <div style="text-align: center; margin-bottom: 14px;"> <div style="width: 64px; height: 64px; margin: 0 auto 10px auto; border-radius: 50%; background: #e8f5e9; border: 2px solid #bbf7d0; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;"> </div> <h3 style="margin: 0; color: #1e3a29; font-size: 1.25rem; font-weight: 700;">${escapePublicHtml(r.deceased_name)}</h3> <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px; font-weight: 600;">${lifespan}</div> </div> <div style="background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.8rem; color: #334155;"> <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"> <span style="color: #64748b;">Plot Location:</span> <strong>${escapePublicHtml(plotCode)}</strong> </div> <div style="display: flex; justify-content: space-between;"> <span style="color: #64748b;">Section:</span> <span>${escapePublicHtml(section)}</span> </div> ${r.burial_date ? ` <div style="display: flex; justify-content: space-between; margin-top: 4px;"> <span style="color: #64748b;">Interment Date:</span> <span>${new Date(r.burial_date).toLocaleDateString()}</span> </div> ` : ''} </div> ${r.epitaph ? ` <div style="font-size: 0.82rem; font-style: italic; color: #2d4a36; background: #fdfdf9; border-left: 3px solid #2d4a36; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 16px;"> &ldquo;${escapePublicHtml(r.epitaph)}&rdquo; </div> ` : ''} </div> <div style="border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; gap: 8px;"> <a href="plot-locator.html?plot=${encodeURIComponent(plotCode)}" style="flex: 1; text-align: center; padding: 8px 14px; background: #2d4a36; color: white; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none;">Locate Plot</a> </div> </div> `;
     }).join('');
 }
 

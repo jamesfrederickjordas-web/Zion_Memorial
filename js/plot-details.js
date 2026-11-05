@@ -591,7 +591,7 @@ async function selectPlot(plot) {
     if (reserveBtn) {
         if (status === 'AVAILABLE') {
             reserveBtn.disabled = false;
-            reserveBtn.innerHTML = `Reserve ${plot.plot_identifier} &rarr;`;
+            reserveBtn.innerHTML = `Reserve ${plot.plot_identifier}`;
             reserveBtn.style.background = '#2d4a36';
             reserveBtn.style.cursor = 'pointer';
             reserveBtn.onclick = () => openBookingModalForPlot(plot);
@@ -988,7 +988,7 @@ async function handleReservationSubmit(e) {
         if (planType === 'AT-NEED' && !fullDeceasedName) {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Confirm & Place Reservation →';
+                submitBtn.textContent = 'Confirm & Place Reservation';
             }
             alert('Please enter at least the First Name and Last Name of the deceased for your At-Need reservation.');
             document.getElementById('bookDeceasedFirstName')?.focus();
@@ -1154,7 +1154,7 @@ async function handleReservationSubmit(e) {
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirm & Place Reservation →';
+            submitBtn.textContent = 'Confirm & Place Reservation';
         }
     }
 }

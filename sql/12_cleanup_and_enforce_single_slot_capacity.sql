@@ -214,3 +214,4 @@ FROM public.memorial_spaces s
 WHERE s.section_name NOT LIKE '%__SYSTEM%'
 GROUP BY s.category, s.status
 ORDER BY s.category, s.status;
+
