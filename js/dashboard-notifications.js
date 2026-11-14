@@ -76,7 +76,7 @@
                 border: 2px solid #ffffff;
                 box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
                 pointer-events: none;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-family: \"Plus Jakarta Sans\", sans-serif;
                 animation: zmgPulseBadge 0.3s ease-out;
             }
             @keyframes zmgPulseBadge {
@@ -98,7 +98,7 @@
                 display: none;
                 flex-direction: column;
                 overflow: hidden;
-                font-family: 'Georgia', serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
             }
             .notif-panel-header {
                 display: flex;
@@ -308,7 +308,7 @@
                 pointer-events: none;
                 max-width: 420px;
                 width: calc(100vw - 32px);
-                font-family: 'Georgia', serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
             }
             .zmg-notif-toast {
                 background: #ffffff;
@@ -430,7 +430,7 @@
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'globalProofViewerModal';
-            modal.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(4px); z-index: 9999999; align-items: center; justify-content: center; padding: 16px; font-family: Georgia, serif;';
+            modal.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(4px); z-index: 9999999; align-items: center; justify-content: center; padding: 16px; font-family: "Plus Jakarta Sans", sans-serif;';
             modal.innerHTML = `
                 <div style="background: #ffffff; border-radius: 8px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #cbd5e1; display: flex; flex-direction: column;">
                     <div style="background: #1e3a29; color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 7px; border-top-right-radius: 7px;">
@@ -499,8 +499,18 @@
                 <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: #475569; line-height: 1.35;">${escapeHtml(notif.desc || notif.message)}</p>
                 ${notif.proof_image_url ? `
                     <div style="margin-top: 8px;">
-                        <button type="button" class="btn-toast-proof" style="background: #166534; color: white; border: none; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"> View Proof Photo
-                        </button>
+                        <div class="toast-proof-thumb-box" style="position: relative; display: inline-block; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; background: #0f172a; max-width: 100%;">
+                            <img src="${escapeHtml(notif.proof_image_url)}" 
+                                 alt="Proof Photo" 
+                                 class="btn-toast-proof" 
+                                 style="max-height: 85px; width: 100%; max-width: 220px; object-fit: cover; display: block; cursor: pointer; transition: opacity 0.15s ease;"
+                                 onmouseover="this.style.opacity='0.9'" 
+                                 onmouseout="this.style.opacity='1'">
+                            <div class="btn-toast-proof" style="position: absolute; bottom: 4px; right: 4px; background: rgba(15,23,42,0.85); color: #ffffff; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 3px; border: 1px solid rgba(255,255,255,0.2);">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                View Photo
+                            </div>
+                        </div>
                     </div>
                 ` : ''}
                 <span style="font-size: 0.68rem; color: #94a3b8; display: block; margin-top: 4px;">Just now</span>
@@ -512,14 +522,13 @@
             setTimeout(() => toast.remove(), 260);
         };
 
-        const proofBtn = toast.querySelector('.btn-toast-proof');
-        if (proofBtn) {
-            proofBtn.onclick = (e) => {
+        toast.querySelectorAll('.btn-toast-proof').forEach(el => {
+            el.onclick = (e) => {
                 e.stopPropagation();
                 openGlobalProofViewer(notif.proof_image_url, notif.title, notif.desc || notif.message);
                 closeToast();
             };
-        }
+        });
 
         const closeBtn = toast.querySelector('.btn-toast-close');
         if (closeBtn) {
@@ -591,7 +600,7 @@
                     unread: true,
                     actionType: row.link_action || 'myreservation',
                     referenceId: row.reference_id,
-                    proof_image_url: row.proof_image_url || null
+                    proof_image_url: row.proof_image_url || row.image_url || row.proof_url || null
                 };
 
                 // Prepend to memory list if not already present
@@ -935,7 +944,7 @@
                             unread: !n.is_read && !readIds.includes(`db_${n.id}`),
                             actionType: n.link_action || 'myreservation',
                             referenceId: n.reference_id,
-                            proof_image_url: n.proof_image_url || null
+                            proof_image_url: n.proof_image_url || n.image_url || n.proof_url || null
                         };
                     });
                 }
@@ -1230,9 +1239,22 @@
             const unreadDot = notif.unread ? '<span class="notif-item-dot"></span>' : '';
 
             const proofBtn = notif.proof_image_url ? `
-                <div style="margin-top: 6px;">
-                    <button type="button" class="btn-notif-proof" data-proof-url="${escapeHtml(notif.proof_image_url)}" data-proof-title="${escapeHtml(notif.title)}" data-proof-desc="${escapeHtml(notif.desc)}" style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"> View Proof Photo
-                    </button>
+                <div class="notif-proof-thumb-wrap" style="margin-top: 8px; margin-bottom: 6px;">
+                    <div style="position: relative; display: inline-block; border-radius: 6px; overflow: hidden; border: 1px solid #cbd5e1; background: #0f172a; max-width: 100%;">
+                        <img src="${escapeHtml(notif.proof_image_url)}" 
+                             alt="Verified Task Proof Photo" 
+                             class="notif-proof-img-thumb" 
+                             data-proof-url="${escapeHtml(notif.proof_image_url)}" 
+                             data-proof-title="${escapeHtml(notif.title)}" 
+                             data-proof-desc="${escapeHtml(notif.desc)}" 
+                             style="display: block; max-height: 125px; width: 100%; max-width: 280px; object-fit: cover; cursor: pointer; transition: opacity 0.15s ease;"
+                             onmouseover="this.style.opacity='0.92'" 
+                             onmouseout="this.style.opacity='1'">
+                        <button type="button" class="btn-notif-proof" data-proof-url="${escapeHtml(notif.proof_image_url)}" data-proof-title="${escapeHtml(notif.title)}" data-proof-desc="${escapeHtml(notif.desc)}" style="position: absolute; bottom: 6px; right: 6px; background: rgba(15,23,42,0.85); color: #ffffff; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.25);">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            View Full Photo
+                        </button>
+                    </div>
                 </div>
             ` : '';
 
@@ -1254,8 +1276,8 @@
             `;
         }).join('');
 
-        // Wire proof buttons inside dropdown
-        listEl.querySelectorAll('.btn-notif-proof').forEach(btn => {
+        // Wire proof thumbnail and button clicks inside dropdown
+        listEl.querySelectorAll('.notif-proof-img-thumb, .btn-notif-proof').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const url = btn.getAttribute('data-proof-url');

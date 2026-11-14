@@ -17,7 +17,7 @@ html, body {
     padding: 0 !important;
     overflow: hidden !important;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     background-color: #f1f5f9;
     color: #0f172a;
     scrollbar-width: none !important;
@@ -176,18 +176,35 @@ body::-webkit-scrollbar {
 
 .legend-box {
     background: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     padding: 10px 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
 }
 
-.legend-box h3 {
-    font-size: 0.95rem;
-    font-weight: 700;
+.legend-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
+}
+
+.legend-header-row h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin: 0;
     color: #0f172a;
+}
+
+.legend-total-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .legend-items {
@@ -199,13 +216,25 @@ body::-webkit-scrollbar {
 .legend-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
+    padding: 3px 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+.legend-item-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
 .legend-color {
-    width: 20px;
+    width: 14px;
     height: 14px;
-    border-radius: 2px;
+    border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.25);
     display: inline-block;
     flex-shrink: 0;
@@ -224,13 +253,39 @@ body::-webkit-scrollbar {
 }
 
 .legend-color.maintenance {
-    background-color: #334155;
+    background-color: #475569;
 }
 
-.legend-item span:last-child {
-    font-size: 0.8rem;
+.legend-name {
+    font-size: 0.75rem;
     font-weight: 600;
     color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.legend-count {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    padding: 0 4px;
+    line-height: 1.4;
+    flex-shrink: 0;
+}
+
+.legend-data-summary {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #475569;
 }
 
 /* Map Section */
@@ -469,7 +524,7 @@ body::-webkit-scrollbar {
     background: #f0f4f0;
     color: #2e5a2e;
     padding: 6px 14px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 0.85rem;
     font-weight: 700;
     border: 1px solid #c8d8c8;
@@ -1002,7 +1057,7 @@ body::-webkit-scrollbar {
     padding: 10px 16px;
     margin-bottom: 14px;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .pd-area-select-wrap {
@@ -1083,8 +1138,8 @@ body::-webkit-scrollbar {
     position: relative;
     width: 560px;
     height: 700px;
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-    border-radius: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
     border: 2px solid #94a3b8;
     overflow: hidden;
     display: flex;
@@ -1123,11 +1178,10 @@ body::-webkit-scrollbar {
     grid-template-rows: repeat(var(--grid-rows, 28), 1fr);
     gap: 2px;
     background-image:
-        linear-gradient(to right, rgba(15, 23, 42, 0.14) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(15, 23, 42, 0.14) 1px, transparent 1px);
+        ;
     background-size: calc(100% / var(--grid-cols, 22)) calc(100% / var(--grid-rows, 28));
     border: 1.5px solid rgba(15, 23, 42, 0.25);
-    border-radius: 6px;
+    border-radius: 4px;
 }
 
 .area-plot-cell {
@@ -1137,13 +1191,13 @@ body::-webkit-scrollbar {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.62rem;
     font-weight: 800;
     color: #ffffff;
     cursor: pointer;
     user-select: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     border: 1.5px solid rgba(15, 23, 42, 0.65);
     transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
     overflow: hidden;
@@ -1156,44 +1210,44 @@ body::-webkit-scrollbar {
 .area-plot-cell.multi-cell-plot {
     border-width: 2px;
     border-color: #0f172a;
-    border-radius: 5px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .area-plot-cell:hover {
-    transform: scale(1.06);
+    transform: scale(1.04);
     z-index: 15;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border-color: #ffffff;
 }
 
 .area-plot-cell.selected {
-    outline: 3px solid #facc15;
+    outline: 2px solid #facc15;
     outline-offset: 1px;
     z-index: 20;
-    transform: scale(1.06);
-    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.35), 0 8px 18px rgba(0, 0, 0, 0.4);
+    transform: scale(1.04);
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.35);
 }
 
 .area-plot-cell.status-available,
 .area-plot-cell.available {
-    background: linear-gradient(145deg, #22c55e, #15803d);
+    background: #16a34a;
 }
 
 .area-plot-cell.status-reserved,
 .area-plot-cell.reserved {
-    background: linear-gradient(145deg, #facc15, #ca8a04);
+    background: #eab308;
     color: #0f172a;
 }
 
 .area-plot-cell.status-occupied,
 .area-plot-cell.occupied {
-    background: linear-gradient(145deg, #ef4444, #b91c1c);
+    background: #dc2626;
 }
 
 .area-plot-cell.status-maintenance,
 .area-plot-cell.maintenance {
-    background: linear-gradient(145deg, #64748b, #475569);
+    background: #475569;
 }
 
 .area-plot-code-text {
@@ -1251,35 +1305,47 @@ body::-webkit-scrollbar {
     background: #ffffff;
     width: 100%;
     max-width: 680px;
-    border-radius: 16px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
     overflow: hidden;
-    animation: modalBounceIn 0.25s ease-out;
+    animation: modalFadeIn 0.2s ease-out;
 }
 
-@keyframes modalBounceIn {
-    from { opacity: 0; transform: scale(0.94); }
-    to { opacity: 1; transform: scale(1); }
+.booking-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    margin: 0;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .booking-modal-header {
-    background: linear-gradient(135deg, #3f593f 0%, #293d29 100%);
+    background: #1e3a29;
     color: white;
-    padding: 20px 28px;
+    padding: 18px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .booking-modal-header h2 {
-    font-size: 1.45rem;
-    font-weight: 800;
+    font-size: 1.35rem;
+    font-weight: 700;
     margin: 0 0 4px 0;
 }
 
 .booking-subtitle {
-    font-size: 0.85rem;
-    opacity: 0.85;
+    font-size: 0.82rem;
+    opacity: 0.9;
     margin: 0;
 }
 
@@ -1287,31 +1353,31 @@ body::-webkit-scrollbar {
     background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
-    font-size: 1.8rem;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+    font-size: 1.6rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    transition: background 0.15s ease;
 }
 
 .booking-close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .booking-form-body {
     padding: 22px 28px;
-    max-height: 68vh;
     overflow-y: auto;
+    flex: 1;
 }
 
 .chosen-plot-banner {
-    background: linear-gradient(135deg, #f7f9f6 0%, #eef3ed 100%);
-    border: 1.5px solid #d4dfd2;
-    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     padding: 16px 20px;
     display: flex;
     justify-content: space-between;
@@ -1492,7 +1558,7 @@ body::-webkit-scrollbar {
     padding: 8px 16px;
     background: #f3f3f0;
     border: 1.5px solid #d1d1ca;
-    border-radius: 20px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
@@ -1515,18 +1581,19 @@ body::-webkit-scrollbar {
 
 .booking-modal-footer {
     background: #f7f7f3;
-    padding: 16px 28px;
+    padding: 14px 28px;
     border-top: 1px solid #e0dfd5;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .btn-cancel-booking {
     background: #ffffff;
     border: 1.5px solid #777;
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 700;
     color: #333;
     cursor: pointer;
@@ -1542,7 +1609,7 @@ body::-webkit-scrollbar {
     color: white;
     border: none;
     padding: 10px 26px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 700;
     font-size: 0.95rem;
     cursor: pointer;
@@ -1800,8 +1867,6 @@ body::-webkit-scrollbar {
     flex: 1;
     overflow: hidden;
     background-color: #f8fafc;
-    background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
-    background-size: 24px 24px;
     cursor: grab;
     user-select: none;
 }

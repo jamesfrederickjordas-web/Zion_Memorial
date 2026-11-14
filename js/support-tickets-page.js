@@ -89,7 +89,7 @@ function initSupportTicketsPage() {
             e.preventDefault();
             const subject = document.getElementById('ticketSubjectInput')?.value.trim();
             const category = document.getElementById('ticketCategorySelect')?.value;
-            const priority = document.getElementById('ticketPrioritySelect')?.value;
+            const priority = document.getElementById('ticketPrioritySelect')?.value || 'normal';
             const message = document.getElementById('ticketMessageInput')?.value.trim();
             const submitBtn = document.getElementById('btnSubmitTicketForm');
 
@@ -109,14 +109,26 @@ function initSupportTicketsPage() {
 
                 const ticketNo = `TCK-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
 
+                let clientName = 'Valued Client';
+                try {
+                    const { data: prof } = await supabaseClient
+                        .from('profiles')
+                        .select('full_name, username')
+                        .eq('id', user.id)
+                        .maybeSingle();
+                    clientName = prof?.full_name || prof?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Valued Client';
+                } catch (_) {}
+
                 const { error } = await supabaseClient
                     .from('support_tickets')
                     .insert([{
                         ticket_number: ticketNo,
                         user_id: user.id,
+                        contact_name: clientName,
+                        contact_email: user.email || '',
                         subject: subject,
                         category: category,
-                        priority: priority,
+                        priority: priority || 'normal',
                         message: message,
                         status: 'open'
                     }]);
@@ -316,11 +328,6 @@ function renderTicketsTable(records = supportTicketsCache, isFiltered = false) {
                 <td>
                     <strong style="color: #1e3a29;">${escapeHtml(t.subject)}</strong>
                 </td>
-                <td>
-                    <span style="text-transform: capitalize; font-size: 0.8rem; font-weight: 600; color: ${t.priority === 'urgent' || t.priority === 'high' ? '#b91c1c' : '#475569'};">
-                        ${escapeHtml(t.priority || 'Normal')}
-                    </span>
-                </td>
                 <td>${dateStr}</td>
                 <td>
                     <span class="subpage-badge ${badgeClass}">${badgeLabel}</span>
@@ -348,7 +355,8 @@ window.viewTicketDetails = function(ticketNumber) {
     document.getElementById('modalTicketNumber').textContent = ticket.ticket_number;
     document.getElementById('modalTicketSubject').textContent = ticket.subject;
     document.getElementById('modalTicketCategory').textContent = ticket.category;
-    document.getElementById('modalTicketPriority').textContent = ticket.priority || 'Normal';
+    const modalTicketPriority = document.getElementById('modalTicketPriority');
+    if (modalTicketPriority) modalTicketPriority.textContent = ticket.priority || 'Normal';
     document.getElementById('modalTicketDate').textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : '';
     document.getElementById('modalTicketMessage').textContent = ticket.message || '';
 

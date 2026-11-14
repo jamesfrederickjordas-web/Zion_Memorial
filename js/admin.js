@@ -307,6 +307,17 @@ function setupTabNavigation() {
         });
     }
 
+    const tabPricing = document.getElementById('tabAdminPricing');
+    const viewPricing = document.getElementById('viewPricing');
+    if (tabPricing && viewPricing) {
+        tabPricing.addEventListener('click', () => {
+            activateTab(tabPricing, viewPricing, 'Promos & Lot Price Management');
+            if (typeof loadPricingModuleView === 'function') {
+                loadPricingModuleView();
+            }
+        });
+    }
+
     const tabAccounts = document.getElementById('tabAdminAccounts');
     const viewAccounts = document.getElementById('viewAccounts');
     if (tabAccounts && viewAccounts) {
@@ -948,6 +959,16 @@ async function loadReservationsTable() {
                     full_name,
                     username,
                     phone
+                ),
+                payments (
+                    id,
+                    payment_reference,
+                    amount,
+                    payment_method,
+                    status,
+                    receipt_url,
+                    paid_at,
+                    created_at
                 )
             `)
             .order('created_at', { ascending: false });
@@ -955,12 +976,39 @@ async function loadReservationsTable() {
         if (error) throw error;
 
         adminReservationsCache = reservations || [];
+
+        // Ensure payments are attached even if foreign key nested select didn't populate
+        if (adminReservationsCache.length > 0) {
+            try {
+                const resIds = adminReservationsCache.map(r => r.id);
+                const { data: allPays } = await supabaseClient
+                    .from('payments')
+                    .select('id, reservation_id, payment_reference, amount, payment_method, status, receipt_url, paid_at, created_at')
+                    .in('reservation_id', resIds)
+                    .order('created_at', { ascending: false });
+                if (allPays && allPays.length > 0) {
+                    const payMap = {};
+                    allPays.forEach(p => {
+                        if (!payMap[p.reservation_id]) payMap[p.reservation_id] = [];
+                        payMap[p.reservation_id].push(p);
+                    });
+                    adminReservationsCache.forEach(r => {
+                        if (!r.payments || r.payments.length === 0) {
+                            r.payments = payMap[r.id] || [];
+                        }
+                    });
+                }
+            } catch (pErr) {
+                console.warn('Could not batch load payments for reservations:', pErr);
+            }
+        }
+
         renderReservationsTable(adminReservationsCache);
 
     } catch (e) {
         console.error('Failed to load admin reservations:', e);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #dc2626;">Failed to load reservations: ${e.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #dc2626;">Failed to load reservations: ${e.message}</td></tr>`;
         }
     }
 }
@@ -970,10 +1018,12 @@ function renderReservationsTable(reservations) {
     if (!tbody) return;
 
     const statusFilter = document.getElementById('adminFilterResStatus')?.value || 'ALL';
+    const priorityFilter = document.getElementById('adminFilterResPriority')?.value || 'ALL';
     const query = (document.getElementById('adminSearchResInput')?.value || '').toLowerCase().trim();
 
     const filtered = reservations.filter(r => {
         if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+        if (priorityFilter !== 'ALL' && (r.plan_type || '').toUpperCase() !== priorityFilter) return false;
         if (query) {
             const client = (r.profiles?.full_name || r.profiles?.username || '').toLowerCase();
             const plot = (r.memorial_spaces?.plot_identifier || '').toLowerCase();
@@ -1005,14 +1055,20 @@ function renderReservationsTable(reservations) {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">No reservations match the filter criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: #64748b;">No reservations match the filter criteria.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = pagedRows.map(r => {
         const space = r.memorial_spaces || {};
         const clientName = r.profiles?.full_name || r.profiles?.username || 'Client';
-        const badgeClass = r.status === 'APPROVED' ? 'paid' : (r.status === 'CANCELLED' || r.status === 'REJECTED') ? 'overdue' : 'reserve';
+        const badgeClass = (r.status === 'APPROVED' || r.status === 'COMPLETED') ? 'paid' : (r.status === 'CANCELLED' || r.status === 'REJECTED') ? 'overdue' : 'reserve';
+
+        // Check payment record and payment proof screenshot
+        const resPays = r.payments || [];
+        const latestPayment = resPays.find(p => Boolean(p.receipt_url)) || resPays[0];
+        const hasProof = Boolean(latestPayment?.receipt_url);
+        const paymentId = latestPayment?.id;
 
         // Check deceased records for this space (from joined relation or cache)
         const maxCapacity = getAdminCategoryCapacity(space.category);
@@ -1035,17 +1091,39 @@ function renderReservationsTable(reservations) {
                 <td>${escapeHtml(clientName)}</td>
                 <td>${escapeHtml(space.plot_identifier || 'N/A')}</td>
                 <td>${escapeHtml(space.category || '-')}</td>
+                <td>${(r.plan_type || '').toUpperCase() === 'AT-NEED'
+                    ? '<span class="admin-badge" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; font-weight: 700; border-radius: 4px;">URGENT AT-NEED</span>'
+                    : '<span class="admin-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px;">Pre-Need</span>'}</td>
                 <td><span class="admin-badge ${badgeClass}">${escapeHtml(r.status)}</span></td>
-                <td>${escapeHtml(r.payment_method || r.plan_type)}</td>
+                <td>
+                    <div style="font-weight: 600; color: #1e293b;">${escapeHtml(r.payment_method || r.plan_type)}</div>
+                    ${hasProof ? `
+                        <div style="margin-top: 4px;">
+                            <button type="button" class="btn-action-text" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #0284c7; color: #ffffff; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; text-decoration: none;" onclick="window.viewAdminPaymentProof(${paymentId})" title="Click to view GCash payment screenshot">View Screenshot</button>
+                        </div>
+                    ` : (latestPayment?.payment_reference ? `
+                        <small style="color: #64748b; font-size: 0.72rem; display: block; margin-top: 2px;">Ref: ${escapeHtml(latestPayment.payment_reference)}</small>
+                    ` : (r.payment_method === 'Cash' || (r.notes || '').includes('Cash') ? `
+                        <small style="color: #166534; font-size: 0.72rem; display: block; margin-top: 2px;">Cash at Counter</small>
+                    ` : ''))}
+                </td>
                 <td>${escapeHtml(space.section_name || '-')}</td>
                 <td style="text-align: center;">
                     <div class="admin-actions">
+                        ${hasProof ? `
+                            <button type="button" class="btn-action-text" style="color: #0284c7; font-weight: 700;" title="View payment screenshot" onclick="window.viewAdminPaymentProof(${paymentId})">Screenshot</button>
+                        ` : ''}
                         ${r.status === 'PENDING' ? `
                             <button type="button" class="btn-action-text btn-action-success" title="Approve Reservation" onclick="approveReservationAdmin(${r.id})">Approve</button>
-                            <button type="button" class="btn-action-text btn-action-danger" title="Reject / Cancel" onclick="cancelReservationAdmin(${r.id})">Cancel</button>
-                        ` : r.status === 'APPROVED' ? `
-                            <button type="button" class="btn-action-text btn-action-danger" title="Cancel Reservation" onclick="cancelReservationAdmin(${r.id})">Cancel</button>
+                            <button type="button" class="btn-action-text btn-action-danger" title="Reject Reservation" onclick="cancelReservationAdmin(${r.id})">Reject</button>
                         ` : ''}
+                        ${(r.status !== 'CANCELLED' && r.status !== 'REJECTED') ? `
+                            <button type="button" class="btn-action-text btn-action-transfer" style="color: #2d4a36; font-weight: 600;" title="Transfer Rights or Relocate Plot" onclick="transferReservationAdmin(${r.id})">Transfer</button>
+                        ` : ''}
+                        ${deceasedTag}
+                        <button type="button" class="btn-action-text" title="View Details" onclick="viewReservationDetailsAdmin(${r.id})">View</button>
+                    </div>
+                </td>
                         ${deceasedTag}
                         <button type="button" class="btn-action-text" title="View Details" onclick="viewReservationDetailsAdmin(${r.id})">View</button>
                     </div>
@@ -1115,7 +1193,215 @@ function setupReservationModals() {
         else if (viewModal?.classList.contains('active')) viewModal.classList.remove('active');
     });
 
-    document.getElementById('viewResCancelReservationBtn')?.addEventListener('click', (e) => {
+    
+    const transferModal = document.getElementById('adminTransferReservationModal');
+    document.getElementById('closeAdminTransferModalBtn')?.addEventListener('click', () => {
+        if (transferModal) { transferModal.style.display = 'none'; transferModal.classList.remove('active'); }
+    });
+    document.getElementById('cancelAdminTransferBtn')?.addEventListener('click', () => {
+        if (transferModal) { transferModal.style.display = 'none'; transferModal.classList.remove('active'); }
+    });
+    transferModal?.addEventListener('click', (e) => {
+        if (e.target === transferModal) { transferModal.style.display = 'none'; transferModal.classList.remove('active'); }
+    });
+
+    // Transfer Source Toggle (Existing Account vs Manual Input)
+    const sourceExistingRadio = document.getElementById('adminTransferSourceExisting');
+    const sourceManualRadio = document.getElementById('adminTransferSourceManual');
+    const existingGroup = document.getElementById('adminTransferExistingUserGroup');
+    const userSelect = document.getElementById('adminTransferUserSelect');
+    const nameInput = document.getElementById('adminTransferNewName');
+    const phoneInput = document.getElementById('adminTransferNewPhone');
+
+    function syncTransferSourceUI() {
+        const isExisting = sourceExistingRadio ? sourceExistingRadio.checked : true;
+        if (existingGroup) existingGroup.style.display = isExisting ? 'block' : 'none';
+        if (isExisting) {
+            const selectedOpt = userSelect?.options[userSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                if (nameInput) nameInput.value = selectedOpt.dataset.name || '';
+                if (phoneInput) phoneInput.value = selectedOpt.dataset.phone || '';
+            }
+        } else {
+            if (userSelect) userSelect.value = '';
+        }
+    }
+
+    sourceExistingRadio?.addEventListener('change', syncTransferSourceUI);
+    sourceManualRadio?.addEventListener('change', syncTransferSourceUI);
+
+    userSelect?.addEventListener('change', () => {
+        const selectedOpt = userSelect?.options[userSelect.selectedIndex];
+        if (selectedOpt && selectedOpt.value) {
+            if (nameInput) nameInput.value = selectedOpt.dataset.name || '';
+            if (phoneInput) phoneInput.value = selectedOpt.dataset.phone || '';
+        } else {
+            if (nameInput) nameInput.value = '';
+            if (phoneInput) phoneInput.value = '';
+        }
+    });
+
+    document.getElementById('adminTransferTypeSelect')?.addEventListener('change', (e) => {
+        toggleAdminTransferFields(e.target.value);
+    });
+
+    document.getElementById('viewResTransferBtn')?.addEventListener('click', (e) => {
+        const id = Number(e.currentTarget.dataset.reservationId);
+        closeAdminModal('viewReservationModal');
+        if (id) window.transferReservationAdmin(id);
+    });
+
+    document.getElementById('adminTransferReservationForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const resId = Number(document.getElementById('adminTransferResId')?.value);
+        const oldSpaceId = Number(document.getElementById('adminTransferOldSpaceId')?.value);
+        const oldPlotCode = document.getElementById('adminTransferOldPlotCode')?.value || '';
+        const transferType = document.getElementById('adminTransferTypeSelect')?.value;
+        const notes = (document.getElementById('adminTransferNotes')?.value || '').trim();
+        const submitBtn = document.getElementById('submitAdminTransferBtn');
+        const errBox = document.getElementById('adminTransferError');
+
+        if (!resId) return;
+        if (errBox) errBox.style.display = 'none';
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing Transfer...'; }
+
+        try {
+            const nowIso = new Date().toISOString();
+            const r = adminReservationsCache.find(x => x.id === resId) || {};
+            const clientName = r.profiles?.full_name || r.profiles?.username || 'Client';
+
+            if (transferType === 'BENEFICIARY') {
+                const isExisting = Boolean(document.getElementById('adminTransferSourceExisting')?.checked);
+                const userSelectEl = document.getElementById('adminTransferUserSelect');
+                const selectedUserId = isExisting ? (userSelectEl?.value || '') : '';
+
+                if (isExisting && !selectedUserId) {
+                    throw new Error('Please select an existing registered client account from the list, or switch to "Manual / Walk-In Details".');
+                }
+
+                const newName = (document.getElementById('adminTransferNewName')?.value || '').trim();
+                const newPhone = (document.getElementById('adminTransferNewPhone')?.value || '').trim();
+                const rel = (document.getElementById('adminTransferRelationship')?.value || '').trim();
+                if (!newName) throw new Error('Please enter the name of the new beneficiary / holder.');
+
+                let targetUserId = selectedUserId || null;
+
+                // If manual was chosen, attempt to find a matching registered profile by phone
+                if (!targetUserId && newPhone) {
+                    try {
+                        const { data: matchedProf } = await supabaseClient
+                            .from('profiles')
+                            .select('id')
+                            .eq('phone', newPhone)
+                            .maybeSingle();
+                        if (matchedProf?.id) targetUserId = matchedProf.id;
+                    } catch (e) {
+                        console.warn('Phone match check notice:', e);
+                    }
+                }
+
+                const sourceLabel = isExisting ? 'Registered Account' : 'Manual / Walk-In';
+                const transferNote = `[Transfer of Rights: Transferred from ${clientName} to ${newName}${newPhone ? ' (' + newPhone + ')' : ''} [${sourceLabel}]${rel ? ' | Relationship: ' + rel : ''} on ${new Date().toLocaleDateString('en-US')}]. Reason: ${notes}`;
+                const combinedNotes = r.notes ? (r.notes + ' \n' + transferNote) : transferNote;
+
+                const updatePayload = {
+                    notes: combinedNotes,
+                    updated_at: nowIso
+                };
+
+                // Link new holder to reservation
+                if (isExisting && selectedUserId) {
+                    updatePayload.user_id = selectedUserId;
+                } else if (!isExisting) {
+                    // Manual walk-in transfer: if phone matched an existing profile, assign it; otherwise null
+                    updatePayload.user_id = targetUserId;
+                }
+
+                const { error: updErr } = await supabaseClient
+                    .from('reservations')
+                    .update(updatePayload)
+                    .eq('id', resId);
+                if (updErr) throw updErr;
+
+                await logAdminAction('TRANSFER_BENEFICIARY', 'reservations', resId, `Transferred reservation ${r.reservation_number} from ${clientName} to ${newName} (${sourceLabel})`);
+            } else if (transferType === 'RELOCATE_PLOT') {
+                const targetSelect = document.getElementById('adminTransferTargetPlotSelect');
+                const newSpaceId = Number(targetSelect?.value);
+                const opt = targetSelect?.options[targetSelect.selectedIndex];
+                const newPlotCode = opt?.dataset?.code || opt?.text || 'New Plot';
+                if (!newSpaceId) throw new Error('Please select a valid destination plot.');
+
+                // Update reservation to point to new space
+                const transferNote = `[Plot Relocated: Moved from Plot ${oldPlotCode} to Plot ${newPlotCode} on ${new Date().toLocaleDateString('en-US')}]. Reason: ${notes}`;
+                const combinedNotes = r.notes ? (r.notes + ' \n' + transferNote) : transferNote;
+
+                const { error: resUpdErr } = await supabaseClient
+                    .from('reservations')
+                    .update({ space_id: newSpaceId, notes: combinedNotes, updated_at: nowIso })
+                    .eq('id', resId);
+                if (resUpdErr) throw resUpdErr;
+
+                // Free old space
+                if (oldSpaceId) {
+                    await supabaseClient
+                        .from('memorial_spaces')
+                        .update({ status: 'available', updated_at: nowIso })
+                        .eq('id', oldSpaceId);
+                }
+
+                // Reserve new space
+                await supabaseClient
+                    .from('memorial_spaces')
+                    .update({ status: 'reserved', updated_at: nowIso })
+                    .eq('id', newSpaceId);
+
+                await logAdminAction('RELOCATE_PLOT', 'reservations', resId, `Relocated reservation ${r.reservation_number} from plot ${oldPlotCode} to ${newPlotCode}`);
+            } else if (transferType === 'RELINQUISH') {
+                const transferNote = `[Relinquished to Park Inventory: Transferred back by ${clientName} on ${new Date().toLocaleDateString('en-US')}]. Reason: ${notes}`;
+                const combinedNotes = r.notes ? (r.notes + ' \n' + transferNote) : transferNote;
+
+                const { error: relErr } = await supabaseClient
+                    .from('reservations')
+                    .update({ status: 'CANCELLED', notes: combinedNotes, updated_at: nowIso })
+                    .eq('id', resId);
+                if (relErr) throw relErr;
+
+                if (oldSpaceId) {
+                    await supabaseClient
+                        .from('memorial_spaces')
+                        .update({ status: 'available', updated_at: nowIso })
+                        .eq('id', oldSpaceId);
+                }
+
+                await logAdminAction('RELINQUISH_PLOT', 'reservations', resId, `Relinquished plot ${oldPlotCode} back to park inventory for reservation ${r.reservation_number}`);
+            }
+
+            if (transferModal) { transferModal.style.display = 'none'; transferModal.classList.remove('active'); }
+            if (typeof showNotificationModal === 'function') {
+                await showNotificationModal({
+                    type: 'success',
+                    title: 'Transfer Completed',
+                    message: 'Reservation transfer has been processed and saved successfully.',
+                    confirmText: 'OK'
+                });
+            } else {
+                alert('Transfer completed successfully.');
+            }
+            await loadReservationsTable();
+        } catch (err) {
+            console.error('Transfer failed:', err);
+            if (errBox) {
+                errBox.textContent = err.message || 'Transfer failed. Please try again.';
+                errBox.style.display = 'block';
+            } else {
+                alert('Transfer error: ' + err.message);
+            }
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm Transfer'; }
+        }
+    });
+
+document.getElementById('viewResCancelReservationBtn')?.addEventListener('click', (e) => {
         const id = Number(e.currentTarget.dataset.reservationId);
         closeAdminModal('viewReservationModal');
         if (id) window.cancelReservationAdmin(id);
@@ -1240,23 +1526,79 @@ window.viewReservationDetailsAdmin = function(reservationId) {
     setText('viewResDate', dateRaw ? new Date(dateRaw).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-');
     setText('viewResNotes', r.notes || 'No notes.');
 
+    // Populate Payment Proof Verification with Client GCash Screenshot
+    const proofEl = document.getElementById('viewResPaymentProof');
+    if (proofEl) {
+        proofEl.innerHTML = '<span style="color: #64748b; font-size: 0.8rem;">Checking payment records...</span>';
+    }
+    (async () => {
+        try {
+            let payment = (r.payments || []).find(p => Boolean(p.receipt_url)) || (r.payments && r.payments[0]);
+            if (!payment) {
+                const { data: pays } = await supabaseClient
+                    .from('payments')
+                    .select('*')
+                    .eq('reservation_id', r.id)
+                    .order('created_at', { ascending: false });
+                if (pays && pays.length > 0) {
+                    payment = pays.find(p => Boolean(p.receipt_url)) || pays[0];
+                }
+            }
+
+            if (!proofEl) return;
+            if (payment && payment.receipt_url) {
+                proofEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 6px; margin-top: 4px;">
+                        <img src="${payment.receipt_url}" alt="Screenshot Proof" style="width: 52px; height: 52px; object-fit: contain; border-radius: 4px; border: 1px solid #bfdbfe; background: #ffffff; cursor: pointer; flex-shrink: 0;" onclick="window.viewAdminPaymentProof(${payment.id})" title="Click to enlarge customer payment screenshot">
+                        <div style="flex: 1; overflow: hidden;">
+                            <button type="button" class="btn-action-text" style="background: #0284c7; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="window.viewAdminPaymentProof(${payment.id})">
+                                View Full Screenshot Proof
+                            </button>
+                            <span style="display: block; font-size: 0.74rem; color: #1e40af; font-weight: 600; margin-top: 3px;">
+                                Ref: ${escapeHtml(payment.payment_reference || 'N/A')} &bull; ${escapeHtml(payment.payment_method || 'GCash')}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            } else if (payment) {
+                proofEl.innerHTML = `
+                    <div style="padding: 6px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; margin-top: 4px; font-size: 0.8rem; color: #166534; font-weight: 600;">
+                        ${escapeHtml(payment.payment_method || 'Cash')} &bull; Ref: ${escapeHtml(payment.payment_reference || 'Counter Receipt')} &bull; Amount: ${formatPeso(payment.amount)}
+                    </div>
+                `;
+            } else {
+                proofEl.innerHTML = '<span style="font-size: 0.8rem; color: #94a3b8;">No payment recorded yet</span>';
+            }
+        } catch (err) {
+            console.warn('Could not load payment proof for reservation:', err);
+            if (proofEl) proofEl.innerHTML = '<span style="font-size: 0.8rem; color: #94a3b8;">Unable to load payment proof</span>';
+        }
+    })();
+
     const badge = document.getElementById('viewResStatusBadge');
     if (badge) {
-        const badgeClass = r.status === 'APPROVED' ? 'paid' : (r.status === 'CANCELLED' || r.status === 'REJECTED') ? 'overdue' : 'reserve';
+        const badgeClass = (r.status === 'APPROVED' || r.status === 'COMPLETED') ? 'paid' : (r.status === 'CANCELLED' || r.status === 'REJECTED') ? 'overdue' : 'reserve';
         badge.className = `admin-badge ${badgeClass}`;
         badge.textContent = r.status || '-';
     }
 
     const cancelBtn = document.getElementById('viewResCancelReservationBtn');
     if (cancelBtn) {
-        const canCancel = r.status === 'PENDING' || r.status === 'APPROVED';
+        const canCancel = r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'COMPLETED';
         cancelBtn.style.display = canCancel ? 'inline-block' : 'none';
         cancelBtn.dataset.reservationId = r.id;
     }
 
+    const transferBtn = document.getElementById('viewResTransferBtn');
+    if (transferBtn) {
+        const canTransfer = (r.status !== 'CANCELLED' && r.status !== 'REJECTED');
+        transferBtn.style.display = canTransfer ? 'inline-block' : 'none';
+        transferBtn.dataset.reservationId = r.id;
+    }
+
     const addDeceasedBtn = document.getElementById('viewResAddDeceasedBtn');
     if (addDeceasedBtn) {
-        const canAdd = (assignedCount < capacity) && (r.status === 'APPROVED' || r.status === 'PENDING');
+        const canAdd = (assignedCount < capacity) && (r.status === 'APPROVED' || r.status === 'COMPLETED' || r.status === 'PENDING');
         addDeceasedBtn.style.display = canAdd ? 'inline-block' : 'none';
         addDeceasedBtn.onclick = () => {
             closeAdminModal('viewReservationModal');
@@ -2686,6 +3028,16 @@ function setupAddDeceasedModal() {
 
     const closeModal = () => modal?.classList.remove('active');
 
+    // Chronological Date Validation for Record Deceased Modal
+    if (typeof setupChronologicalDateValidation === 'function') {
+        setupChronologicalDateValidation({
+            birthInput: 'deceasedBirthDate',
+            deathInput: 'deceasedDeathDate',
+            burialInput: 'deceasedBurialDate',
+            errorContainer: 'adminDeceasedDateError'
+        });
+    }
+
     if (openBtn) {
         openBtn.addEventListener('click', async () => {
             const hiddenResId = document.getElementById('deceasedReservationId');
@@ -2842,6 +3194,18 @@ function setupAddDeceasedModal() {
             if (!spaceId || !deathDate || !burialDate) {
                 alert("Please fill in all required fields (Plot, Date of Death, Burial Date).");
                 return;
+            }
+
+            // Chronological Date Validation for Interment Record
+            if (typeof checkDateChronology === 'function') {
+                const dateCheck = checkDateChronology(birthDate, deathDate, burialDate);
+                if (!dateCheck.valid) {
+                    alert("Invalid Date Chronology:\n\n" + dateCheck.message);
+                    if (dateCheck.field === 'birth') document.getElementById('deceasedBirthDate')?.focus();
+                    else if (dateCheck.field === 'death') document.getElementById('deceasedDeathDate')?.focus();
+                    else if (dateCheck.field === 'burial') document.getElementById('deceasedBurialDate')?.focus();
+                    return;
+                }
             }
 
             let familyId = null;
@@ -4741,6 +5105,7 @@ async function loadReportsView() {
                 status,
                 paid_at,
                 payment_reference,
+                receipt_url,
                 reservation_id,
                 reservations (
                     reservation_number,
@@ -4987,7 +5352,14 @@ function renderReportFinancialsTable(query = '') {
 
         return `
             <tr>
-                <td><strong>${escapeHtml(p.payment_reference || `#PAY-${p.id}`)}</strong></td>
+                <td>
+                    <strong>${escapeHtml(p.payment_reference || `#PAY-${p.id}`)}</strong>
+                    ${p.receipt_url ? `
+                        <div style="margin-top: 3px;">
+                            <button type="button" class="btn-action-text" style="color: #0284c7; font-weight: 700; font-size: 0.72rem; border: 1px solid #bfdbfe; background: #eff6ff; padding: 2px 7px; border-radius: 4px; cursor: pointer;" onclick="window.viewAdminPaymentProof(${p.id})" title="Click to view client payment screenshot">View Screenshot</button>
+                        </div>
+                    ` : ''}
+                </td>
                 <td>${escapeHtml(resNum)}</td>
                 <td>${escapeHtml(clientName)}</td>
                 <td><span class="admin-badge available">${escapeHtml(p.payment_method || 'Cash')}</span></td>
@@ -7031,7 +7403,153 @@ function setupWalkInReservationModal() {
     const cashPaidInput = document.getElementById('walkInCashPaid');
     const monthlyAmortInput = document.getElementById('walkInMonthlyAmort');
 
+    // Payment Channel Switcher Elements (Cash Over Counter vs GCash QR / Instant Pay)
+    const radioPayCash = document.getElementById('walkInPayMethodCash');
+    const radioPayGcash = document.getElementById('walkInPayMethodGcash');
+    const cardPayCash = document.getElementById('walkInPayCardCash');
+    const cardPayGcash = document.getElementById('walkInPayCardGcash');
+    const cashPane = document.getElementById('walkInCashPane');
+    const gcashPane = document.getElementById('walkInGcashPane');
+    const amountDueLabel = document.getElementById('walkInAmountDueLabel');
+    const gcashAmountDisplay = document.getElementById('walkInGcashAmountDisplay');
+    const gcashConfirmAmount = document.getElementById('walkInConfirmGcashAmount');
+    const gcashConfirmCheck = document.getElementById('walkInConfirmGcashCheck');
+    const proofInput = document.getElementById('walkInGcashProofInput');
+    const proofThumbBox = document.getElementById('walkInGcashProofThumbBox');
+    const proofThumbImg = document.getElementById('walkInGcashProofThumbImg');
+    const proofFileName = document.getElementById('walkInGcashProofFileName');
+    const removeProofBtn = document.getElementById('walkInRemoveGcashProofBtn');
+    const copyGcashBtn = document.getElementById('walkInGcashCopyBtn');
+    const qrWrapper = document.getElementById('walkInGcashQrWrapper');
+    const qrImg = document.getElementById('walkInGcashQrImg');
+    const merchantNameEl = document.getElementById('walkInGcashMerchantName');
+    const merchantNumberEl = document.getElementById('walkInGcashMerchantNumber');
+    const gcashRefInput = document.getElementById('walkInGcashRefInput');
+    const gcashNotesInput = document.getElementById('walkInGcashNotes');
+
+    let walkInGcashProofDataUrl = null;
+
     if (!modal) return;
+
+    const refreshGcashAmounts = () => {
+        const amt = parseFloat(cashPaidInput?.value) || 0;
+        const formatted = '₱ ' + amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (gcashAmountDisplay) gcashAmountDisplay.textContent = formatted;
+        if (gcashConfirmAmount) gcashConfirmAmount.textContent = formatted;
+    };
+
+    const updatePaymentChannelUi = (channel) => {
+        const isGcash = channel === 'GCash';
+        if (isGcash) {
+            if (radioPayGcash) radioPayGcash.checked = true;
+            if (cardPayGcash) {
+                cardPayGcash.style.borderColor = '#0057ff';
+                cardPayGcash.style.background = '#eff6ff';
+            }
+            if (cardPayCash) {
+                cardPayCash.style.borderColor = '#cbd5e1';
+                cardPayCash.style.background = '#f8fafc';
+            }
+            if (cashPane) cashPane.style.display = 'none';
+            if (gcashPane) gcashPane.style.display = 'block';
+            if (amountDueLabel) amountDueLabel.textContent = 'GCash Amount Paid (₱) *';
+
+            // Refresh QR config
+            const qrCfg = (typeof zmgGcashQr !== 'undefined' ? zmgGcashQr.getConfig() : null) || {};
+            if (merchantNameEl) merchantNameEl.textContent = qrCfg.merchantName || 'Zion Memorial Garden Inc.';
+            if (merchantNumberEl) merchantNumberEl.textContent = qrCfg.accountNumber || '0945 187 6774';
+            if (qrImg) qrImg.src = qrCfg.qrImageUrl || 'assets/images/gcash-qr-default.svg';
+
+            refreshGcashAmounts();
+        } else {
+            if (radioPayCash) radioPayCash.checked = true;
+            if (cardPayCash) {
+                cardPayCash.style.borderColor = '#2d4a36';
+                cardPayCash.style.background = '#f0fdf4';
+            }
+            if (cardPayGcash) {
+                cardPayGcash.style.borderColor = '#cbd5e1';
+                cardPayGcash.style.background = '#f8fafc';
+            }
+            if (cashPane) cashPane.style.display = 'block';
+            if (gcashPane) gcashPane.style.display = 'none';
+            if (amountDueLabel) amountDueLabel.textContent = 'Amount Paid Today (₱) *';
+        }
+    };
+
+    if (radioPayCash) radioPayCash.addEventListener('change', () => updatePaymentChannelUi('Cash'));
+    if (radioPayGcash) radioPayGcash.addEventListener('change', () => updatePaymentChannelUi('GCash'));
+    if (cardPayCash) cardPayCash.addEventListener('click', (e) => {
+        if (e.target !== radioPayCash) updatePaymentChannelUi('Cash');
+    });
+    if (cardPayGcash) cardPayGcash.addEventListener('click', (e) => {
+        if (e.target !== radioPayGcash) updatePaymentChannelUi('GCash');
+    });
+
+    // Copy number button
+    if (copyGcashBtn) {
+        copyGcashBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const num = merchantNumberEl?.textContent || '0945 187 6774';
+            navigator.clipboard?.writeText(num.replace(/[^0-9]/g, ''))
+                .then(() => {
+                    const prev = copyGcashBtn.textContent;
+                    copyGcashBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyGcashBtn.textContent = prev; }, 2000);
+                })
+                .catch(() => alert('GCash Mobile: ' + num));
+        });
+    }
+
+    // Zoom QR lightbox
+    if (qrWrapper) {
+        qrWrapper.addEventListener('click', () => {
+            const currentSrc = qrImg?.src || 'assets/images/gcash-qr-default.svg';
+            const info = `${merchantNameEl?.textContent || 'Zion Memorial Garden Inc.'} • ${merchantNumberEl?.textContent || '0945 187 6774'}`;
+            const lbModal = document.getElementById('adminGcashQrLightboxModal');
+            const lbImg = document.getElementById('adminLightboxQrImg');
+            const lbInfo = document.getElementById('adminLightboxMerchantInfo');
+            if (lbImg) lbImg.src = currentSrc;
+            if (lbInfo) lbInfo.textContent = info;
+            if (lbModal) lbModal.style.display = 'flex';
+        });
+    }
+
+    // Screenshot file upload handler
+    if (proofInput) {
+        proofInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                if (typeof zmgGcashQr !== 'undefined' && typeof zmgGcashQr.readAndCompressImageFile === 'function') {
+                    const res = await zmgGcashQr.readAndCompressImageFile(file, 800, 800, 0.85);
+                    walkInGcashProofDataUrl = res.dataUrl;
+                } else {
+                    const reader = new FileReader();
+                    walkInGcashProofDataUrl = await new Promise((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }
+                if (proofThumbImg) proofThumbImg.src = walkInGcashProofDataUrl;
+                if (proofFileName) proofFileName.textContent = file.name;
+                if (proofThumbBox) proofThumbBox.style.display = 'flex';
+            } catch (err) {
+                alert('Could not attach receipt screenshot: ' + err.message);
+            }
+        });
+    }
+
+    // Remove screenshot handler
+    if (removeProofBtn) {
+        removeProofBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            walkInGcashProofDataUrl = null;
+            if (proofInput) proofInput.value = '';
+            if (proofThumbBox) proofThumbBox.style.display = 'none';
+        });
+    }
 
     const updateWalkInPlanTypeUi = (isAtNeed) => {
         if (isAtNeed) {
@@ -7087,6 +7605,12 @@ function setupWalkInReservationModal() {
         modal.classList.add('active');
         if (radioPreNeed) radioPreNeed.checked = true;
         updateWalkInPlanTypeUi(false);
+        updatePaymentChannelUi('Cash');
+        walkInGcashProofDataUrl = null;
+        if (proofInput) proofInput.value = '';
+        if (proofThumbBox) proofThumbBox.style.display = 'none';
+        if (gcashRefInput) gcashRefInput.value = '';
+        if (gcashConfirmCheck) gcashConfirmCheck.checked = false;
         await loadWalkInPlotsDropdown();
     };
 
@@ -7095,11 +7619,25 @@ function setupWalkInReservationModal() {
         if (form) form.reset();
         if (radioPreNeed) radioPreNeed.checked = true;
         updateWalkInPlanTypeUi(false);
+        walkInGcashProofDataUrl = null;
+        if (proofInput) proofInput.value = '';
+        if (proofThumbBox) proofThumbBox.style.display = 'none';
+        updatePaymentChannelUi('Cash');
     };
 
     if (openBtn) openBtn.addEventListener('click', openModal);
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Setup Chronological Date Validation for Walk-In Modal
+    if (typeof setupChronologicalDateValidation === 'function') {
+        setupChronologicalDateValidation({
+            birthInput: 'walkInDeceasedDOB',
+            deathInput: 'walkInDeceasedDOD',
+            burialInput: 'walkInDeceasedBurial',
+            errorContainer: 'walkInDeceasedDateError'
+        });
+    }
 
     // Plan type toggle
     if (radioPreNeed) {
@@ -7150,6 +7688,8 @@ function setupWalkInReservationModal() {
             const monthly = term > 0 ? (remaining / term) : 0;
             if (monthlyAmortInput) monthlyAmortInput.value = monthly.toFixed(2);
         }
+
+        refreshGcashAmounts();
     };
 
     if (plotSelect) {
@@ -7193,12 +7733,17 @@ function setupWalkInReservationModal() {
             const totalPrice = parseFloat(totalPriceInput?.value) || 65000;
             const cashTendered = parseFloat(cashPaidInput?.value) || 0;
             const monthlyAmort = parseFloat(monthlyAmortInput?.value) || 0;
-            const staffNotes = document.getElementById('walkInNotes')?.value.trim();
+
+            const isGcash = form.querySelector('input[name="walkInPaymentChannel"]:checked')?.value === 'GCash';
+            const rawGcashRef = gcashRefInput?.value?.trim() || '';
+            const rawStaffNotes = isGcash 
+                ? (document.getElementById('walkInGcashNotes')?.value?.trim() || '')
+                : (document.getElementById('walkInNotes')?.value?.trim() || '');
 
             const submitBtn = form.querySelector('button[type="submit"]');
 
             if (!spaceId || !fn || !ln || cashTendered <= 0) {
-                alert('Please select a plot, enter client details, and record cash payment.');
+                alert('Please select a plot, enter client details, and record the payment amount.');
                 return;
             }
 
@@ -7218,6 +7763,32 @@ function setupWalkInReservationModal() {
                 }
             }
 
+            // Chronological Date Validation for Walk-In Interment Details
+            if (typeof checkDateChronology === 'function') {
+                const dateCheck = checkDateChronology(decDOB, decDOD, decBurial);
+                if (!dateCheck.valid) {
+                    alert('Invalid Date Chronology:\n\n' + dateCheck.message);
+                    if (dateCheck.field === 'birth') document.getElementById('walkInDeceasedDOB')?.focus();
+                    else if (dateCheck.field === 'death') document.getElementById('walkInDeceasedDOD')?.focus();
+                    else if (dateCheck.field === 'burial') document.getElementById('walkInDeceasedBurial')?.focus();
+                    return;
+                }
+            }
+
+            // GCash validation
+            if (isGcash) {
+                if (!walkInGcashProofDataUrl && !rawGcashRef) {
+                    alert('Please attach the GCash payment screenshot or enter the GCash reference number.');
+                    if (proofInput) proofInput.focus();
+                    return;
+                }
+                if (gcashConfirmCheck && !gcashConfirmCheck.checked) {
+                    alert('Please verify and check the GCash payment confirmation box before proceeding.');
+                    gcashConfirmCheck.focus();
+                    return;
+                }
+            }
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Processing Walk-In Booking...';
@@ -7227,11 +7798,15 @@ function setupWalkInReservationModal() {
                 const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const randomNo = Math.floor(100 + Math.random() * 900);
                 const resNumber = `ZMG-${todayStr}-${randomNo}`;
-                const paymentRef = `COUNTER-CASH-${Date.now().toString(36).toUpperCase()}`;
+                const paymentMethod = isGcash ? 'GCash' : 'Cash';
+                const paymentRef = isGcash
+                    ? (rawGcashRef || `GCASH-WALKIN-${Date.now().toString(36).toUpperCase()}`)
+                    : `COUNTER-CASH-${Date.now().toString(36).toUpperCase()}`;
 
                 const balance = Math.max(0, totalPrice - cashTendered);
                 const deceasedTag = decFullName ? ` [Interred: ${decFullName}${decBurial ? ` | Burial: ${decBurial}` : ''}${decDOD ? ` | DOD: ${decDOD}` : ''}]` : '';
-                const combinedNotes = `[Channel: Cash (Staff Counter Walk-In)] [Receipt Tag: PAID] (Walk-In Client: ${clientFullName} | Phone: ${phone} <${email}>).${deceasedTag} ${staffNotes}`.trim();
+                const channelTag = isGcash ? '[Channel: GCash (Staff Walk-In QR)]' : '[Channel: Cash (Staff Counter Walk-In)]';
+                const combinedNotes = `${channelTag} [Receipt Tag: PAID] (Walk-In Client: ${clientFullName} | Phone: ${phone} <${email}>).${deceasedTag} ${rawStaffNotes}`.trim();
 
                 // Resolve user_id for the reservation (required by public.reservations.user_id FK & NOT NULL constraint)
                 const { data: authData } = await supabaseClient.auth.getUser();
@@ -7267,7 +7842,7 @@ function setupWalkInReservationModal() {
                         reservation_number: resNumber,
                         space_id: spaceId,
                         plan_type: isAtNeed ? 'AT-NEED' : 'PRE-NEED',
-                        payment_method: 'Cash',
+                        payment_method: paymentMethod,
                         installment_term_months: mode === 'FULL_PAYMENT' ? 0 : term,
                         total_price: totalPrice,
                         down_payment_amount: cashTendered,
@@ -7291,7 +7866,8 @@ function setupWalkInReservationModal() {
                         payment_reference: paymentRef,
                         amount: cashTendered,
                         payment_type: mode === 'FULL_PAYMENT' ? 'FULL_PAYMENT' : 'DOWN_PAYMENT',
-                        payment_method: 'Cash',
+                        payment_method: paymentMethod,
+                        receipt_url: isGcash ? walkInGcashProofDataUrl : null,
                         status: 'COMPLETED',
                         paid_at: new Date().toISOString()
                     }]);
@@ -7325,19 +7901,53 @@ function setupWalkInReservationModal() {
                         .eq('id', spaceId);
                 }
 
-                // 5. Log Audit Action
+                // 5. Generate Official PDF Receipt
+                if (typeof generateAndDownloadReceiptPDF === 'function') {
+                    try {
+                        const selectedPlot = adminAvailablePlotsCache.find(p => String(p.id) === String(spaceId)) || {};
+                        generateAndDownloadReceiptPDF({
+                            reservationNumber: resNumber,
+                            paymentTag: 'PAID',
+                            paymentChannel: paymentMethod,
+                            paymentReference: paymentRef,
+                            gcashReference: isGcash ? paymentRef : 'N/A',
+                            dateIssued: new Date().toLocaleString(),
+                            clientName: clientFullName,
+                            clientEmail: email,
+                            clientPhone: phone,
+                            plotIdentifier: selectedPlot.plot_identifier || `Space #${spaceId}`,
+                            sectionName: selectedPlot.section_name || 'Memorial Lawn',
+                            category: selectedPlot.category || 'Standard Plot',
+                            planType: isAtNeed ? 'AT-NEED' : 'PRE-NEED',
+                            paymentOption: mode,
+                            termMonths: mode === 'FULL_PAYMENT' ? 0 : term,
+                            totalPrice: totalPrice,
+                            amountNow: cashTendered,
+                            remainingBalance: balance,
+                            monthlyAmortization: mode === 'FULL_PAYMENT' ? 0 : monthlyAmort,
+                            counterInstructions: isGcash
+                                ? 'Payment received via GCash QR code. Verification screenshot filed and receipt logged as PAID.'
+                                : 'Official cash payment received at Zion Memorial Garden office counter.'
+                        });
+                    } catch (pdfErr) {
+                        console.warn('PDF Receipt generation notice:', pdfErr);
+                    }
+                }
+
+                // 6. Log Audit Action
                 await logAdminAction(
                     'WALK_IN_RESERVATION',
                     'reservations',
                     newRes.id,
-                    `Created walk-in reservation ${resNumber} for ${clientFullName} on plot #${spaceId}. Plan: ${isAtNeed ? 'AT-NEED' : 'PRE-NEED'}. Cash paid: ₱${cashTendered.toLocaleString()}`
+                    `Created walk-in reservation ${resNumber} for ${clientFullName} on plot #${spaceId}. Method: ${paymentMethod}. Paid: ₱${cashTendered.toLocaleString()}`
                 );
 
                 alert(
                     `SUCCESS: Walk-In Reservation Confirmed!\n\n` +
                     `Reservation Number: ${resNumber}\n` +
                     `Purchaser: ${clientFullName}\n` +
-                    `Official Receipt: ${paymentRef}\n` +
+                    `Payment Channel: ${paymentMethod}\n` +
+                    `Payment Reference / Receipt: ${paymentRef}\n` +
                     `Amount Paid: ₱ ${cashTendered.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
                     `Remaining Balance: ₱ ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\n` +
                     `The plot has been confirmed and locked.`
@@ -7451,6 +8061,196 @@ async function sendDirectNotification(userId, title, message, category, type, li
     }
 }
 
+// ==============================================================================
+// EMAILJS NOTIFICATION SERVICE (SHARED TEMPLATE template_56p30ne)
+// ==============================================================================
+const ZMG_EMAIL_CONFIG = {
+    PUBLIC_KEY: 'siuCT77XCPFo0C3Pl',
+    SERVICE_ID: 'service_xvwt6qa',
+    TEMPLATE_ID: 'template_56p30ne'
+};
+
+async function ensureEmailJsInitialized() {
+    if (typeof window.emailjs === 'undefined') {
+        try {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+                s.onload = () => {
+                    if (window.emailjs) window.emailjs.init({ publicKey: ZMG_EMAIL_CONFIG.PUBLIC_KEY });
+                    resolve();
+                };
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        } catch (e) {
+            console.warn('[ZMG Email] Failed to load EmailJS SDK dynamically:', e);
+            return false;
+        }
+    } else {
+        try {
+            window.emailjs.init({ publicKey: ZMG_EMAIL_CONFIG.PUBLIC_KEY });
+        } catch (_) {}
+    }
+    return typeof window.emailjs !== 'undefined';
+}
+
+function resolveMaintenanceClientEmail(visit) {
+    if (!visit) return '';
+    if (visit.profiles?.email) return visit.profiles.email;
+    const notes = visit.notes || '';
+    const match = notes.match(/(?:Client Contact:s*|<)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?:>|\])?/i);
+    if (match && match[1]) return match[1];
+
+    if (Array.isArray(adminReservationsCache)) {
+        const matchingRes = adminReservationsCache.find(r => 
+            (visit.space_id && r.space_id === visit.space_id) || 
+            (visit.requested_by && r.user_id === visit.requested_by)
+        );
+        if (matchingRes && matchingRes.notes) {
+            const resMatch = matchingRes.notes.match(/<([^>]+@[^>]+)>/);
+            if (resMatch && resMatch[1]) return resMatch[1];
+        }
+    }
+
+    if (Array.isArray(adminWalkInCache)) {
+        const walkin = adminWalkInCache.find(w => 
+            (visit.space_id && w.space_id === visit.space_id) || 
+            (visit.requested_by && w.user_id === visit.requested_by)
+        );
+        if (walkin && walkin.email && walkin.email.includes('@')) return walkin.email;
+    }
+
+    if (Array.isArray(adminSupportCache)) {
+        const st = adminSupportCache.find(t => t.user_id && t.user_id === visit.requested_by && t.contact_email);
+        if (st && st.contact_email && st.contact_email.includes('@')) return st.contact_email;
+    }
+    return '';
+}
+
+function resolveTicketClientEmail(ticket) {
+    if (!ticket) return '';
+    if (ticket.contact_email && ticket.contact_email.includes('@')) return ticket.contact_email;
+    if (ticket.profiles?.email) return ticket.profiles.email;
+
+    if (Array.isArray(adminReservationsCache)) {
+        const matchingRes = adminReservationsCache.find(r => ticket.user_id && r.user_id === ticket.user_id);
+        if (matchingRes && matchingRes.notes) {
+            const resMatch = matchingRes.notes.match(/<([^>]+@[^>]+)>/);
+            if (resMatch && resMatch[1]) return resMatch[1];
+        }
+    }
+
+    if (Array.isArray(adminWalkInCache)) {
+        const walkin = adminWalkInCache.find(w => ticket.user_id && w.user_id === ticket.user_id);
+        if (walkin && walkin.email && walkin.email.includes('@')) return walkin.email;
+    }
+
+    if (Array.isArray(adminMaintenanceCache)) {
+        const mv = adminMaintenanceCache.find(m => ticket.user_id && m.requested_by === ticket.user_id && m.notes);
+        if (mv && mv.notes) {
+            const match = mv.notes.match(/(?:Client Contact:s*|<)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?:>|\])?/i);
+            if (match && match[1]) return match[1];
+        }
+    }
+    return '';
+}
+
+async function sendZmgEmailUpdate(options) {
+    const {
+        toEmail,
+        toName,
+        subject,
+        status,
+        referenceNo,
+        plotCode,
+        sectionName,
+        serviceType,
+        counterInstructions,
+        message,
+        proofImageUrl
+    } = options;
+
+    if (!toEmail || !toEmail.includes('@')) {
+        console.warn('[ZMG Email] Skipping email update: no valid recipient email provided.', toEmail);
+        return { sent: false, reason: 'invalid_email' };
+    }
+
+    const ready = await ensureEmailJsInitialized();
+    if (!ready) {
+        console.warn('[ZMG Email] EmailJS not available; skipping email delivery.');
+        return { sent: false, reason: 'sdk_unavailable' };
+    }
+
+    const normalizedStatus = (status || 'UPDATED').toUpperCase();
+    const formattedDate = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
+    const templateParams = {
+        to_email: toEmail,
+        email: toEmail,
+        user_email: toEmail,
+        recipient_email: toEmail,
+
+        to_name: toName || 'Valued Client',
+        client_name: toName || 'Valued Client',
+        user_name: toName || 'Valued Client',
+
+        name: 'Zion Memorial Garden',
+        from_name: 'Zion Memorial Garden Support & Operations',
+
+        subject: subject || `Zion Memorial Garden Update: ${referenceNo || ''}`,
+        ticket_subject: subject || '',
+
+        status: normalizedStatus,
+        tag: normalizedStatus,
+        payment_status_tag: normalizedStatus,
+
+        reservation_number: referenceNo || 'N/A',
+        payment_reference: referenceNo || 'N/A',
+        ticket_number: referenceNo || 'N/A',
+        reference_number: referenceNo || 'N/A',
+
+        plot_code: plotCode || 'Memorial Lot',
+        plot_identifier: plotCode || 'Memorial Lot',
+        section_name: sectionName || 'Zion Memorial Garden Grounds',
+
+        payment_method: serviceType || 'Cemetery Ground Service',
+        service_type: serviceType || 'Support & Maintenance',
+        plan_type: serviceType || 'Customer Care',
+
+        counter_instructions: counterInstructions || message || 'No extra instructions.',
+        notes: counterInstructions || message || '',
+        resolution: counterInstructions || '',
+
+        proof_image_url: proofImageUrl || '',
+        proof_url: proofImageUrl || '',
+        image_url: proofImageUrl || '',
+
+        receipt_date: formattedDate,
+        date: formattedDate,
+
+        message: message
+    };
+
+    try {
+        console.log('[ZMG Email] Sending email update to:', toEmail, 'Reference:', referenceNo, 'Status:', normalizedStatus);
+        const res = await window.emailjs.send(
+            ZMG_EMAIL_CONFIG.SERVICE_ID,
+            ZMG_EMAIL_CONFIG.TEMPLATE_ID,
+            templateParams,
+            { publicKey: ZMG_EMAIL_CONFIG.PUBLIC_KEY }
+        );
+        console.log('[ZMG Email] Email sent successfully:', res);
+        return { sent: true, res };
+    } catch (err) {
+        console.error('[ZMG Email] EmailJS send error:', err);
+        return { sent: false, error: err };
+    }
+}
+window.sendZmgEmailUpdate = sendZmgEmailUpdate;
+window.resolveMaintenanceClientEmail = resolveMaintenanceClientEmail;
+window.resolveTicketClientEmail = resolveTicketClientEmail;
+
 function setupAdminMaintenanceModule() {
     const filterSelect = document.getElementById('adminFilterMaintStatus');
     const searchInput = document.getElementById('adminSearchMaintInput');
@@ -7466,8 +8266,36 @@ function setupAdminMaintenanceModule() {
     const proofStatus = document.getElementById('editMaintProofStatus');
     const clearProofBtn = document.getElementById('btnClearMaintProof');
 
+    const viewProofModal = document.getElementById('viewMaintenanceProofModal');
+    const closeProofBtn = document.getElementById('closeMaintProofModalBtn');
+    const cancelProofBtn = document.getElementById('cancelMaintProofViewBtn');
+
+    const closeProofModal = () => {
+        if (viewProofModal) {
+            viewProofModal.style.display = 'none';
+            viewProofModal.classList.remove('active');
+        }
+    };
+    if (closeProofBtn) closeProofBtn.addEventListener('click', closeProofModal);
+    if (cancelProofBtn) cancelProofBtn.addEventListener('click', closeProofModal);
+    if (viewProofModal) {
+        viewProofModal.addEventListener('click', (e) => {
+            if (e.target === viewProofModal) closeProofModal();
+        });
+    }
+
     if (filterSelect) filterSelect.addEventListener('change', () => renderAdminMaintenanceTable());
     if (searchInput) searchInput.addEventListener('input', () => renderAdminMaintenanceTable());
+
+    const statusSelect = document.getElementById('editMaintStatus');
+    const proofGroup = document.getElementById('editMaintProofGroup');
+    function updateMaintProofVisibility() {
+        const isCompleted = (statusSelect?.value === 'completed');
+        if (proofGroup) {
+            proofGroup.style.display = isCompleted ? 'block' : 'none';
+        }
+    }
+    statusSelect?.addEventListener('change', updateMaintProofVisibility);
 
     const closeModal = () => modal?.classList.remove('active');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -7520,7 +8348,7 @@ function setupAdminMaintenanceModule() {
                 }
 
                 if (proofStatus) {
-                    proofStatus.textContent = ' Proof photo attached successfully';
+                    proofStatus.textContent = 'Proof photo attached successfully.';
                     proofStatus.style.color = '#16a34a';
                 }
             } catch (procErr) {
@@ -7540,6 +8368,15 @@ function setupAdminMaintenanceModule() {
             if (proofPreviewImg) proofPreviewImg.src = '';
             if (proofPreviewBox) proofPreviewBox.style.display = 'none';
             if (proofStatus) proofStatus.style.display = 'none';
+        });
+    }
+
+    if (proofPreviewImg) {
+        proofPreviewImg.addEventListener('click', () => {
+            const currentId = parseInt(document.getElementById('editMaintId')?.value || '0');
+            if (currentId) {
+                window.viewMaintenanceProofPhoto(currentId);
+            }
         });
     }
 
@@ -7588,8 +8425,8 @@ function setupAdminMaintenanceModule() {
                 if (cachedVisit && cachedVisit.requested_by) {
                     const plotName = cachedVisit.memorial_spaces?.plot_identifier || 'Memorial Lot';
                     const title = status === 'completed' 
-                        ? `Maintenance Completed: ${cachedVisit.visit_type || 'Task'} ` 
-                        : (status === 'in-progress' ? `Maintenance In-Progress: ${cachedVisit.visit_type || 'Task'} ` : `Maintenance Request ${status.toUpperCase()}`);
+                        ? `Maintenance Completed: ${cachedVisit.visit_type || 'Task'}` 
+                        : (status === 'in-progress' ? `Maintenance In-Progress: ${cachedVisit.visit_type || 'Task'}` : `Maintenance Request ${status.toUpperCase()}`);
                     const msg = `Cemetery staff updated your request for plot ${plotName} to '${status}'.` + 
                         (notes ? ` Staff note: "${notes}"` : '') + 
                         (proofUrl ? ` Completion proof photo attached.` : '');
@@ -7604,6 +8441,54 @@ function setupAdminMaintenanceModule() {
                         String(id),
                         proofUrl
                     );
+                }
+
+                // Send EmailJS update to client
+                try {
+                    const enteredMaintEmail = document.getElementById('editMaintClientEmail')?.value.trim() || '';
+                    const targetMaintEmail = enteredMaintEmail || resolveMaintenanceClientEmail(cachedVisit);
+                    if (targetMaintEmail) {
+                        const targetName = cachedVisit?.profiles?.full_name || cachedVisit?.profiles?.username || 'Valued Client';
+                        const space = cachedVisit?.memorial_spaces || {};
+                        const plotCode = space.plot_identifier || 'Memorial Lot';
+                        const sectionName = space.section_name ? `${space.section_name} (${space.category || 'Plot'})` : 'Zion Memorial Garden';
+                        const visitType = cachedVisit?.visit_type || 'Grounds Maintenance';
+
+                        const emailSubject = `Maintenance Service ${status.toUpperCase()}: ${plotCode} (${visitType})`;
+                        const emailMessage = [
+                            `ZION MEMORIAL GARDEN - GROUNDS CARE & MAINTENANCE UPDATE`,
+                            `-------------------------------------------------------`,
+                            `Client: ${targetName}`,
+                            `Service Request: #${id} (${visitType})`,
+                            `Assigned Plot: ${plotCode} — ${sectionName}`,
+                            `Status: ${status.toUpperCase()}`,
+                            `Scheduled Date: ${cachedVisit?.scheduled_date || 'N/A'}`,
+                            status === 'completed' ? `Completed At: ${new Date().toLocaleString()}` : '',
+                            notes ? `Staff Completion Report / Notes:\n${notes}` : 'Staff notes: Routine cemetery maintenance inspection completed.',
+                            proofUrl ? `\nVerified Proof Photo attached:\n${proofUrl}` : '',
+                            `\nThank you for choosing Zion Memorial Garden.`
+                        ].filter(Boolean).join('\n\n');
+
+                        sendZmgEmailUpdate({
+                            toEmail: targetMaintEmail,
+                            toName: targetName,
+                            subject: emailSubject,
+                            status: status,
+                            referenceNo: `#MNT-${id}`,
+                            plotCode: plotCode,
+                            sectionName: sectionName,
+                            serviceType: `Maintenance: ${visitType}`,
+                            counterInstructions: notes || `Service ${status.toUpperCase()} for plot ${plotCode}.`,
+                            message: emailMessage,
+                            proofImageUrl: proofUrl
+                        }).then(res => {
+                            if (res && res.sent) console.log(`[ZMG Maintenance] Email update delivered to ${targetMaintEmail}`);
+                        }).catch(err => {
+                            console.warn('[ZMG Maintenance] Email update notice:', err);
+                        });
+                    }
+                } catch (emailEx) {
+                    console.warn('[ZMG Maintenance] Email processing notice:', emailEx);
                 }
 
                 closeModal();
@@ -7724,8 +8609,9 @@ function renderAdminMaintenanceTable() {
         if (status === 'completed') badgeClass = 'paid';
         else if (status === 'cancelled') badgeClass = 'overdue';
 
-        const proofBadge = v.proof_image_url ? `
-            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; margin-left: 6px;" title="Proof photo uploaded"> Proof</span>
+        const hasPhoto = Boolean(v.proof_image_url);
+        const photoPill = hasPhoto ? `
+            <button type="button" class="btn-action-text" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: #0284c7; color: #ffffff; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; text-decoration: none; margin-left: 6px;" onclick="window.viewMaintenanceProofPhoto(${v.id})" title="Click to view work completion proof photo">View Proof</button>
         ` : '';
 
         return `
@@ -7733,12 +8619,17 @@ function renderAdminMaintenanceTable() {
                 <td><strong>#MNT-${v.id}</strong></td>
                 <td><strong>${escapeHtml(space.plot_identifier || 'N/A')}</strong></td>
                 <td>${escapeHtml(space.section_name || '-')}</td>
-                <td><span style="font-weight: 600; color: #1e3a29;">${escapeHtml(v.visit_type)}</span>${proofBadge}</td>
+                <td><span style="font-weight: 600; color: #1e3a29;">${escapeHtml(v.visit_type)}</span>${photoPill}</td>
                 <td>${escapeHtml(clientName)}</td>
                 <td>${v.scheduled_date ? new Date(v.scheduled_date).toLocaleDateString() : '-'}</td>
                 <td><span class="admin-badge ${badgeClass}">${status.toUpperCase()}</span></td>
                 <td style="text-align: center;">
-                    <button type="button" class="btn-action-text" style="color: #2d4a36; font-weight: 700;" onclick="openUpdateMaintenanceModal(${v.id})">Update Status</button>
+                    <div class="admin-actions">
+                        ${hasPhoto ? `
+                            <button type="button" class="btn-action-text" style="color: #0284c7; font-weight: 700;" onclick="window.viewMaintenanceProofPhoto(${v.id})" title="View completion proof photo">Proof</button>
+                        ` : ''}
+                        <button type="button" class="btn-action-text" style="color: #2d4a36; font-weight: 700;" onclick="openUpdateMaintenanceModal(${v.id})">Update Status</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -7758,8 +8649,20 @@ window.openUpdateMaintenanceModal = function(visitId) {
     const summaryInput = document.getElementById('editMaintSummary');
     if (summaryInput) summaryInput.value = `${space.plot_identifier || 'Plot'} - ${v.visit_type} (${v.scheduled_date || ''})`;
 
+    const emailInput = document.getElementById('editMaintClientEmail');
+    if (emailInput) {
+        emailInput.value = resolveMaintenanceClientEmail(v) || '';
+    }
+
     const statusSelect = document.getElementById('editMaintStatus');
-    if (statusSelect) statusSelect.value = v.status || 'scheduled';
+    const currentStatus = (v.status || 'scheduled').toLowerCase();
+    if (statusSelect) statusSelect.value = currentStatus;
+
+    // Only show proof photo group when status is completed
+    const proofGroup = document.getElementById('editMaintProofGroup');
+    if (proofGroup) {
+        proofGroup.style.display = (currentStatus === 'completed') ? 'block' : 'none';
+    }
 
     const notesInput = document.getElementById('editMaintNotes');
     if (notesInput) notesInput.value = v.notes || '';
@@ -7785,6 +8688,44 @@ window.openUpdateMaintenanceModal = function(visitId) {
     }
 
     if (modal) modal.classList.add('active');
+};
+
+window.viewMaintenanceProofPhoto = function(visitId) {
+    const v = adminMaintenanceCache.find(x => x.id === visitId);
+    if (!v || !v.proof_image_url) {
+        alert('No proof photo uploaded for this maintenance request yet.');
+        return;
+    }
+
+    const modal = document.getElementById('viewMaintenanceProofModal');
+    if (!modal) return;
+
+    const space = v.memorial_spaces || {};
+    setText('viewMaintProofTitle', `${v.visit_type || 'Maintenance'} Proof Photo`);
+    setText('viewMaintProofSubtitle', `Work Order: #MNT-${v.id} | Plot: ${space.plot_identifier || 'N/A'}`);
+
+    const img = document.getElementById('adminMaintProofImg');
+    if (img) img.src = v.proof_image_url;
+
+    setText('maintProofDetailType', v.visit_type || '-');
+    setText('maintProofDetailPlot', `${space.plot_identifier || 'N/A'} (${space.section_name || '-'})`);
+    setText('maintProofDetailStatus', (v.status || 'completed').toUpperCase());
+    setText('maintProofDetailNotes', v.notes || 'No staff completion notes recorded.');
+
+    const dlBtn = document.getElementById('adminDownloadMaintProofBtn');
+    if (dlBtn) {
+        dlBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = v.proof_image_url;
+            a.download = `maintenance-proof-MNT-${v.id}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
 };
 
 // ==============================================================================
@@ -7862,6 +8803,52 @@ function setupAdminSupportTicketsModule() {
                         'support',
                         String(id)
                     );
+                }
+
+                // Send EmailJS update to client
+                try {
+                    const enteredTicketEmail = document.getElementById('editTicketClientEmail')?.value.trim() || '';
+                    const targetTicketEmail = enteredTicketEmail || cachedTicket?.contact_email || resolveTicketClientEmail(cachedTicket);
+                    if (targetTicketEmail) {
+                        const targetName = cachedTicket?.contact_name || cachedTicket?.profiles?.full_name || cachedTicket?.profiles?.username || 'Valued Client';
+                        const ticketNo = cachedTicket?.ticket_number || `TCK-${id}`;
+                        const subject = cachedTicket?.subject || 'Support Inquiry';
+
+                        const emailSubject = `Support Ticket ${status.toUpperCase()}: ${ticketNo} - ${subject}`;
+                        const emailMessage = [
+                            `ZION MEMORIAL GARDEN - SUPPORT TICKET RESPONSE`,
+                            `-------------------------------------------------------`,
+                            `Client: ${targetName}`,
+                            `Ticket Number: ${ticketNo}`,
+                            `Subject: ${subject}`,
+                            `Category: ${cachedTicket?.category || 'General Inquiry'}`,
+                            `Status: ${status.toUpperCase()}`,
+                            `Updated: ${new Date().toLocaleString()}`,
+                            `Official Staff Response / Resolution:\n${resolution}`,
+                            `Original Inquiry:\n"${cachedTicket?.message || 'N/A'}"`,
+                            `\nIf you have further questions, you can respond directly via your Zion Memorial Garden Client Portal.`
+                        ].filter(Boolean).join('\n\n');
+
+                        sendZmgEmailUpdate({
+                            toEmail: targetTicketEmail,
+                            toName: targetName,
+                            subject: emailSubject,
+                            status: status,
+                            referenceNo: ticketNo,
+                            plotCode: 'Support Desk',
+                            sectionName: 'Customer Support Services',
+                            serviceType: `Support: ${cachedTicket?.category || 'General Inquiry'}`,
+                            counterInstructions: resolution,
+                            message: emailMessage,
+                            proofImageUrl: null
+                        }).then(res => {
+                            if (res && res.sent) console.log(`[ZMG Support] Email response delivered to ${targetTicketEmail}`);
+                        }).catch(err => {
+                            console.warn('[ZMG Support] Email response notice:', err);
+                        });
+                    }
+                } catch (emailEx) {
+                    console.warn('[ZMG Support] Email processing notice:', emailEx);
                 }
 
                 closeModal();
@@ -7948,7 +8935,7 @@ function renderAdminSupportTicketsTable() {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">No support tickets found matching criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No support tickets found matching criteria.</td></tr>`;
         return;
     }
 
@@ -7968,7 +8955,6 @@ function renderAdminSupportTicketsTable() {
                 </td>
                 <td>${escapeHtml(t.category || 'General')}</td>
                 <td><strong style="color: #1e3a29;">${escapeHtml(t.subject)}</strong></td>
-                <td><span style="text-transform: capitalize; font-size: 0.8rem; font-weight: 700; color: ${t.priority === 'urgent' ? '#dc2626' : t.priority === 'high' ? '#ea580c' : '#475569'};">${escapeHtml(t.priority || 'normal')}</span></td>
                 <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
                 <td><span class="admin-badge ${badgeClass}">${status.toUpperCase()}</span></td>
                 <td style="text-align: center;">
@@ -7990,7 +8976,9 @@ window.openRespondSupportTicketModal = function(ticketId) {
     if (idInput) idInput.value = t.id;
 
     setText('editTicketNumber', t.ticket_number || `#${t.id}`);
-    setText('editTicketPriority', (t.priority || 'normal').toUpperCase());
+    if (document.getElementById('editTicketPriority')) {
+        setText('editTicketPriority', (t.priority || 'normal').toUpperCase());
+    }
     setText('editTicketSubject', t.subject || 'Support Ticket');
     setText('editTicketContact', `From: ${contactName} ${t.contact_email ? `(${t.contact_email})` : ''} \u2022 ${new Date(t.created_at).toLocaleDateString()}`);
     setText('editTicketMessage', t.message || 'No description');
@@ -8000,6 +8988,11 @@ window.openRespondSupportTicketModal = function(ticketId) {
 
     const resInput = document.getElementById('editTicketResolution');
     if (resInput) resInput.value = t.resolution_notes || '';
+
+    const emailInput = document.getElementById('editTicketClientEmail');
+    if (emailInput) {
+        emailInput.value = t.contact_email || resolveTicketClientEmail(t) || '';
+    }
 
     if (modal) modal.classList.add('active');
 };
@@ -9338,3 +10331,1205 @@ function setupAdminProfileModule() {
     }
 }
 
+
+
+window.transferReservationAdmin = async function(reservationId) {
+    setupReservationModals();
+    const r = adminReservationsCache.find(x => x.id === reservationId);
+    if (!r) return;
+    const space = r.memorial_spaces || {};
+    const clientName = r.profiles?.full_name || r.profiles?.username || 'Client';
+
+    const modal = document.getElementById('adminTransferReservationModal');
+    if (!modal) return;
+
+    document.getElementById('adminTransferResId').value = reservationId;
+    document.getElementById('adminTransferOldSpaceId').value = space.id || '';
+    document.getElementById('adminTransferOldPlotCode').value = space.plot_identifier || '';
+    
+    setText('adminTransferSubtitle', `Reservation: ${r.reservation_number || ('ZMG-' + reservationId)} | Current Plot: ${space.plot_identifier || 'N/A'} (${clientName})`);
+
+    // Reset Beneficiary Source UI
+    const sourceExistingRadio = document.getElementById('adminTransferSourceExisting');
+    const sourceManualRadio = document.getElementById('adminTransferSourceManual');
+    if (sourceExistingRadio) sourceExistingRadio.checked = true;
+    if (sourceManualRadio) sourceManualRadio.checked = false;
+    const existingGroup = document.getElementById('adminTransferExistingUserGroup');
+    if (existingGroup) existingGroup.style.display = 'block';
+
+    const userSelect = document.getElementById('adminTransferUserSelect');
+    if (userSelect) userSelect.value = '';
+
+    document.getElementById('adminTransferNewName').value = '';
+    document.getElementById('adminTransferNewPhone').value = '';
+    document.getElementById('adminTransferRelationship').value = '';
+    document.getElementById('adminTransferNotes').value = '';
+    const errBox = document.getElementById('adminTransferError');
+    if (errBox) errBox.style.display = 'none';
+
+    const typeSelect = document.getElementById('adminTransferTypeSelect');
+    if (typeSelect) {
+        typeSelect.value = 'BENEFICIARY';
+        toggleAdminTransferFields('BENEFICIARY');
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+
+    // Populate registered accounts for beneficiary transfer
+    if (userSelect) {
+        userSelect.innerHTML = '<option value="">Loading client accounts...</option>';
+        try {
+            const { data: users, error: uErr } = await supabaseClient
+                .from('profiles')
+                .select('id, full_name, username, phone, role')
+                .order('full_name', { ascending: true });
+
+            if (uErr) throw uErr;
+
+            if (!users || users.length === 0) {
+                userSelect.innerHTML = '<option value="">No registered accounts found</option>';
+            } else {
+                userSelect.innerHTML = '<option value="">-- Choose Registered Account --</option>' +
+                    users.map(u => {
+                        const displayName = u.full_name || u.username || 'Client';
+                        const isCurrent = (r.user_id && String(u.id) === String(r.user_id));
+                        const disabledAttr = isCurrent ? ' disabled' : '';
+                        const currentBadge = isCurrent ? ' (Current Holder)' : '';
+                        const phoneBadge = u.phone ? ` (${u.phone})` : '';
+                        const roleBadge = (u.role && u.role !== 'client') ? ` [${u.role.toUpperCase()}]` : '';
+                        return `<option value="${u.id}" data-name="${escapeHtml(displayName)}" data-phone="${escapeHtml(u.phone || '')}"${disabledAttr}>${escapeHtml(displayName)}${phoneBadge}${roleBadge}${currentBadge}</option>`;
+                    }).join('');
+            }
+        } catch (e) {
+            console.error('Failed to load profiles for transfer:', e);
+            userSelect.innerHTML = '<option value="">Error loading accounts</option>';
+        }
+    }
+
+    // Populate available plots for relocation
+    const plotSelect = document.getElementById('adminTransferTargetPlotSelect');
+    if (plotSelect) {
+        plotSelect.innerHTML = '<option value="">Loading available plots...</option>';
+        try {
+            const { data: spaces, error } = await supabaseClient
+                .from('memorial_spaces')
+                .select('id, plot_identifier, section_name, category, price')
+                .eq('status', 'available')
+                .order('plot_identifier', { ascending: true });
+
+            if (error) throw error;
+            if (!spaces || spaces.length === 0) {
+                plotSelect.innerHTML = '<option value="">No other plots currently available</option>';
+            } else {
+                plotSelect.innerHTML = '<option value="">-- Select Destination Plot --</option>' +
+                    spaces.map(s => `<option value="${s.id}" data-code="${s.plot_identifier}">${s.plot_identifier} - ${s.section_name} (${s.category || 'Standard'}) - ${formatPeso(s.price)}</option>`).join('');
+            }
+        } catch (e) {
+            console.error('Failed to load available plots for transfer:', e);
+            plotSelect.innerHTML = '<option value="">Error loading spaces</option>';
+        }
+    }
+};
+
+function toggleAdminTransferFields(type) {
+    const ben = document.getElementById('adminTransferBeneficiaryFields');
+    const plot = document.getElementById('adminTransferPlotFields');
+    const rel = document.getElementById('adminTransferReleaseFields');
+    if (ben) ben.style.display = (type === 'BENEFICIARY') ? 'block' : 'none';
+    if (plot) plot.style.display = (type === 'RELOCATE_PLOT') ? 'block' : 'none';
+    if (rel) rel.style.display = (type === 'RELINQUISH') ? 'block' : 'none';
+}
+
+
+window.viewAdminPaymentProof = async function(paymentId) {
+    const modal = document.getElementById('viewPaymentProofModal');
+    if (!modal) return;
+
+    try {
+        let p = null;
+        if (typeof paymentId === 'number' || (typeof paymentId === 'string' && !isNaN(paymentId))) {
+            const { data, error } = await supabaseClient
+                .from('payments')
+                .select('*, reservations(*, profiles(*), memorial_spaces(*))')
+                .eq('id', Number(paymentId))
+                .single();
+            if (!error && data) p = data;
+        }
+
+        if (!p) throw new Error('Payment record not found.');
+
+        const clientName = p.reservations?.profiles?.full_name || p.reservations?.profiles?.username || 'Client';
+        const plotCode = p.reservations?.memorial_spaces?.plot_identifier || 'Memorial Space';
+        const resNum = p.reservations?.reservation_number || ('ZMG-' + p.reservation_id);
+
+        setText('viewPaymentProofTitle', `Payment Proof: ${plotCode}`);
+        setText('viewPaymentProofSubtitle', `Ref: ${p.payment_reference || 'N/A'} • Res: ${resNum} • ${clientName}`);
+        setText('proofDetailRef', p.payment_reference || 'None');
+        setText('proofDetailMethod', p.payment_method || 'Standard');
+        setText('proofDetailAmount', formatPeso(p.amount));
+
+        const imgEl = document.getElementById('adminPaymentProofImg');
+        const imgWrap = document.getElementById('paymentProofImageWrapper');
+        if (p.receipt_url) {
+            imgEl.src = p.receipt_url;
+            imgEl.style.display = 'block';
+            if (imgWrap) imgWrap.style.display = 'flex';
+        } else {
+            imgEl.src = '';
+            imgEl.style.display = 'none';
+            if (imgWrap) imgWrap.style.display = 'none';
+        }
+
+        // Wire Download Screenshot button
+        const dlBtn = document.getElementById('adminDownloadPaymentProofBtn');
+        if (dlBtn) {
+            dlBtn.onclick = () => {
+                if (!p.receipt_url) {
+                    alert('No screenshot image available to download.');
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = p.receipt_url;
+                a.download = `payment-proof-${p.payment_reference || p.id}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+        }
+
+        const approveBtn = document.getElementById('adminApprovePaymentProofBtn');
+        if (approveBtn) {
+            const isApproved = (p.status === 'COMPLETED' && (p.reservations?.status === 'APPROVED' || p.reservations?.status === 'COMPLETED'));
+            approveBtn.style.display = isApproved ? 'none' : 'inline-block';
+            approveBtn.onclick = async () => {
+                approveBtn.disabled = true;
+                approveBtn.textContent = 'Verifying...';
+                try {
+                    const nowIso = new Date().toISOString();
+                    await supabaseClient.from('payments').update({ status: 'COMPLETED', paid_at: nowIso }).eq('id', p.id);
+                    if (p.reservation_id) {
+                        const targetStatus = p.reservations?.status === 'COMPLETED' ? 'COMPLETED' : 'APPROVED';
+                        await supabaseClient.from('reservations').update({ status: targetStatus, updated_at: nowIso }).eq('id', p.reservation_id);
+                    }
+                    await logAdminAction('VERIFY_PAYMENT_PROOF', 'payments', p.id, `Verified payment ref ${p.payment_reference} of ${formatPeso(p.amount)}`);
+                    alert('Payment and reservation successfully verified and approved.');
+                    modal.style.display = 'none';
+                    modal.classList.remove('active');
+                    await loadReservationsTable();
+                } catch (e) {
+                    alert('Verification error: ' + e.message);
+                } finally {
+                    approveBtn.disabled = false;
+                    approveBtn.textContent = 'Approve & Verify Payment';
+                }
+            };
+        }
+
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    } catch (err) {
+        alert('Could not open payment proof: ' + err.message);
+    }
+};
+
+window.viewAdminPaymentProofByResId = async function(reservationId) {
+    const r = (adminReservationsCache || []).find(x => x.id === reservationId);
+    let payment = (r?.payments || []).find(p => Boolean(p.receipt_url)) || (r?.payments && r.payments[0]);
+    if (!payment) {
+        try {
+            const { data: pays } = await supabaseClient
+                .from('payments')
+                .select('*, reservations(*, profiles(*), memorial_spaces(*))')
+                .eq('reservation_id', reservationId)
+                .order('created_at', { ascending: false });
+            if (pays && pays.length > 0) {
+                payment = pays.find(p => Boolean(p.receipt_url)) || pays[0];
+            }
+        } catch (e) {
+            console.warn('Failed to fetch payment by reservation ID:', e);
+        }
+    }
+
+    if (payment && payment.id) {
+        window.viewAdminPaymentProof(payment.id);
+    } else {
+        alert('No payment or screenshot proof record found for this reservation.');
+    }
+};
+
+// Wire close buttons for viewPaymentProofModal
+document.getElementById('closePaymentProofModalBtn')?.addEventListener('click', () => {
+    const modal = document.getElementById('viewPaymentProofModal');
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
+});
+document.getElementById('cancelPaymentProofViewBtn')?.addEventListener('click', () => {
+    const modal = document.getElementById('viewPaymentProofModal');
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
+});
+
+
+
+// ==============================================================================
+// PROMOTIONS & LOT PRICING MANAGEMENT MODULE (ADMIN PORTAL)
+// Dynamic Pricing Engine, Vouchers & Bulk Lot Rates
+// ==============================================================================
+
+const ZMG_PROMOTIONS_STORAGE_KEY = 'zmg_active_promotions';
+const ZMG_CATEGORY_PRICING_STORAGE_KEY = 'zmg_category_pricing';
+
+const DEFAULT_PROMOTIONS = [
+    {
+        id: 'promo_1',
+        code: 'ZIONPROMO',
+        type: 'PERCENT',
+        value: 5,
+        description: '5% Promotional Discount on Gross TCP',
+        expiry: '',
+        minTcp: 0,
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+        id: 'promo_2',
+        code: 'PROMO5',
+        type: 'PERCENT',
+        value: 5,
+        description: '5% Standard Booking Voucher',
+        expiry: '',
+        minTcp: 0,
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+        id: 'promo_3',
+        code: 'MEMORIAL2026',
+        type: 'FIXED',
+        value: 3000,
+        description: '₱3,000 Seasonal Memorial Subsidy',
+        expiry: '2026-12-31',
+        minTcp: 50000,
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+        id: 'promo_4',
+        code: 'SPOTCASH10',
+        type: 'PERCENT',
+        value: 10,
+        description: '10% Spot Full Cash Settlement Incentive',
+        expiry: '',
+        minTcp: 0,
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
+    }
+];
+
+const DEFAULT_CATEGORY_PRICES = {
+    'Single Tiered': { defaultPrice: 55000, defaultDown: 8250, label: 'Single Tiered Lawn' },
+    'Special Supreme': { defaultPrice: 85000, defaultDown: 12500, label: 'Special Supreme Estate' },
+    'Supreme': { defaultPrice: 75000, defaultDown: 11250, label: 'Supreme Garden' },
+    'Family Estate Jr.': { defaultPrice: 180000, defaultDown: 27000, label: 'Family Estate Jr. Lawn' },
+    'Condominium': { defaultPrice: 45000, defaultDown: 6750, label: 'Condominium Niches & Vaults' },
+    'Mausoleum': { defaultPrice: 180000, defaultDown: 27000, label: 'Mausoleum Court Estate' }
+};
+
+let adminPromotionsCache = [];
+let adminCategoryPricesCache = { ...DEFAULT_CATEGORY_PRICES };
+let adminPricingInitialized = false;
+
+// Pagination and state for lot pricing table
+let lotPriceCurrentPage = 1;
+let lotPricePageSize = 12;
+let lotPriceFilteredList = [];
+
+function setupPricingModuleOnce() {
+    if (adminPricingInitialized) return;
+
+    // Subtab switching (Promos vs Lot Prices vs Category Rates)
+    const subtabs = document.querySelectorAll('[data-pricing-tab]');
+    subtabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            subtabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const targetTab = btn.getAttribute('data-pricing-tab');
+            document.querySelectorAll('.pricing-content-panel').forEach(panel => {
+                panel.style.display = 'none';
+            });
+
+            const activePanel = document.getElementById('pricingPanel_' + targetTab);
+            if (activePanel) activePanel.style.display = 'block';
+
+            if (targetTab === 'promos') {
+                renderPromotionsTable();
+            } else if (targetTab === 'lotprices') {
+                loadLotPricingTable();
+            } else if (targetTab === 'categoryprices') {
+                renderCategoryPricingCards();
+            }
+        });
+    });
+
+    // Promo Code Search & Status Filter
+    const searchPromoInput = document.getElementById('adminSearchPromoInput');
+    const filterPromoStatus = document.getElementById('adminFilterPromoStatus');
+    if (searchPromoInput) {
+        searchPromoInput.addEventListener('input', () => {
+            renderPromotionsTable(searchPromoInput.value.trim(), filterPromoStatus?.value || 'ALL');
+        });
+    }
+    if (filterPromoStatus) {
+        filterPromoStatus.addEventListener('change', () => {
+            renderPromotionsTable(searchPromoInput?.value.trim() || '', filterPromoStatus.value);
+        });
+    }
+
+    // New Promo Code Button
+    const addPromoBtn = document.getElementById('adminAddPromoBtn');
+    if (addPromoBtn) {
+        addPromoBtn.addEventListener('click', () => openPromoModal(null));
+    }
+
+    // Promo Modal Close / Cancel
+    const closePromoModalBtn = document.getElementById('closeAdminPromoModal');
+    const cancelPromoModalBtn = document.getElementById('cancelAdminPromoModal');
+    const promoModal = document.getElementById('adminPromoModal');
+    const closePromoModal = () => promoModal?.classList.remove('active');
+    if (closePromoModalBtn) closePromoModalBtn.addEventListener('click', closePromoModal);
+    if (cancelPromoModalBtn) cancelPromoModalBtn.addEventListener('click', closePromoModal);
+
+    // Promo Form Submit
+    const promoForm = document.getElementById('adminPromoForm');
+    if (promoForm) {
+        promoForm.addEventListener('submit', handleSavePromoForm);
+    }
+
+    // Lot Price Search & Filters
+    const searchPlotInput = document.getElementById('adminSearchPlotPriceInput');
+    const filterCat = document.getElementById('adminPriceFilterCategory');
+    const filterStat = document.getElementById('adminPriceFilterStatus');
+    const resetPriceFiltersBtn = document.getElementById('adminResetPriceFiltersBtn');
+
+    if (searchPlotInput) {
+        searchPlotInput.addEventListener('input', () => {
+            lotPriceCurrentPage = 1;
+            renderLotPricingTable();
+        });
+    }
+    if (filterCat) {
+        filterCat.addEventListener('change', () => {
+            lotPriceCurrentPage = 1;
+            renderLotPricingTable();
+        });
+    }
+    if (filterStat) {
+        filterStat.addEventListener('change', () => {
+            lotPriceCurrentPage = 1;
+            renderLotPricingTable();
+        });
+    }
+    if (resetPriceFiltersBtn) {
+        resetPriceFiltersBtn.addEventListener('click', () => {
+            if (searchPlotInput) searchPlotInput.value = '';
+            if (filterCat) filterCat.value = 'ALL';
+            if (filterStat) filterStat.value = 'available';
+            lotPriceCurrentPage = 1;
+            renderLotPricingTable();
+        });
+    }
+
+    // Page Size Selector
+    const pageSizeSelect = document.getElementById('lotPricePageSizeSelect');
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', () => {
+            lotPricePageSize = parseInt(pageSizeSelect.value, 10) || 12;
+            lotPriceCurrentPage = 1;
+            renderLotPricingTable();
+        });
+    }
+
+    // Lot Price Modal Close / Cancel
+    const closeLotPriceModalBtn = document.getElementById('closeAdminLotPriceModal');
+    const cancelLotPriceModalBtn = document.getElementById('cancelAdminLotPriceModal');
+    const lotPriceModal = document.getElementById('adminLotPriceModal');
+    const closeLotPriceModal = () => lotPriceModal?.classList.remove('active');
+    if (closeLotPriceModalBtn) closeLotPriceModalBtn.addEventListener('click', closeLotPriceModal);
+    if (cancelLotPriceModalBtn) cancelLotPriceModalBtn.addEventListener('click', closeLotPriceModal);
+
+    // Auto-update down payment input when price changes (10% standard down)
+    const editPriceInput = document.getElementById('editPlotPriceInput');
+    const editDownInput = document.getElementById('editPlotDownPaymentInput');
+    if (editPriceInput && editDownInput) {
+        editPriceInput.addEventListener('input', () => {
+            const priceVal = parseFloat(editPriceInput.value) || 0;
+            if (priceVal > 0) {
+                const suggestedDown = Math.max(100, Math.round(priceVal * 0.10));
+                editDownInput.value = suggestedDown;
+            }
+        });
+    }
+
+    // Lot Price Form Submit
+    const lotPriceForm = document.getElementById('adminLotPriceForm');
+    if (lotPriceForm) {
+        lotPriceForm.addEventListener('submit', handleSaveLotPriceForm);
+    }
+
+    // Save All Category Rates Button
+    const saveCategoryRatesBtn = document.getElementById('adminSaveAllCategoryRatesBtn');
+    if (saveCategoryRatesBtn) {
+        saveCategoryRatesBtn.addEventListener('click', handleSaveAllCategoryRates);
+    }
+
+    adminPricingInitialized = true;
+}
+
+// Main View Loader
+async function loadPricingModuleView() {
+    setupPricingModuleOnce();
+    await Promise.all([
+        loadPromotionsData(),
+        loadCategoryPricingData(),
+        ensureAdminSpacesLoaded()
+    ]);
+    renderPromotionsTable();
+    renderLotPricingTable();
+    renderCategoryPricingCards();
+}
+
+// Ensure spaces cache is available
+async function ensureAdminSpacesLoaded() {
+    if (!adminSpacesCache || adminSpacesCache.length === 0) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('memorial_spaces')
+                .select('*')
+                .order('plot_identifier', { ascending: true });
+            if (!error && data) {
+                adminSpacesCache = data;
+            }
+        } catch (e) {
+            console.warn('Spaces query notice:', e);
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------
+// PROMOTIONS & DISCOUNT VOUCHERS
+// ------------------------------------------------------------------------------
+
+async function loadPromotionsData() {
+    // 1. Try Supabase system_settings
+    try {
+        const { data, error } = await supabaseClient
+            .from('system_settings')
+            .select('value, updated_at')
+            .eq('key', 'promotions')
+            .maybeSingle();
+
+        if (!error && data?.value) {
+            const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            if (Array.isArray(val) && val.length > 0) {
+                adminPromotionsCache = val;
+                try {
+                    localStorage.setItem(ZMG_PROMOTIONS_STORAGE_KEY, JSON.stringify(val));
+                } catch (_) {}
+                updatePromoKpis();
+                return adminPromotionsCache;
+            }
+        }
+    } catch (e) {
+        console.warn('Promotions cloud fetch fallback to local:', e);
+    }
+
+    // 2. Try localStorage
+    try {
+        const local = localStorage.getItem(ZMG_PROMOTIONS_STORAGE_KEY);
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                adminPromotionsCache = parsed;
+                updatePromoKpis();
+                return adminPromotionsCache;
+            }
+        }
+    } catch (_) {}
+
+    // 3. Fallback to default promotions
+    adminPromotionsCache = [...DEFAULT_PROMOTIONS];
+    try {
+        localStorage.setItem(ZMG_PROMOTIONS_STORAGE_KEY, JSON.stringify(adminPromotionsCache));
+    } catch (_) {}
+    updatePromoKpis();
+    return adminPromotionsCache;
+}
+
+function updatePromoKpis() {
+    const total = adminPromotionsCache.length;
+    const active = adminPromotionsCache.filter(p => p.isActive).length;
+    let maxLabel = '0%';
+    let maxVal = 0;
+    adminPromotionsCache.forEach(p => {
+        if (p.isActive) {
+            if (p.type === 'PERCENT' && p.value > maxVal) {
+                maxVal = p.value;
+                maxLabel = p.value + '% Off';
+            } else if (p.type === 'FIXED' && p.value > 1000) {
+                if (maxVal === 0) maxLabel = '₱' + p.value.toLocaleString();
+            }
+        }
+    });
+
+    setText('kpiTotalPromos', String(total));
+    setText('kpiActivePromos', String(active));
+    setText('kpiMaxPromoDiscount', maxLabel);
+    setText('badgePromosCount', String(active));
+}
+
+function renderPromotionsTable(searchQuery = '', statusFilter = 'ALL') {
+    const tbody = document.getElementById('adminPromosTableBody');
+    if (!tbody) return;
+
+    let list = [...adminPromotionsCache];
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter(p => (p.code || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+    }
+    if (statusFilter === 'ACTIVE') {
+        list = list.filter(p => p.isActive);
+    } else if (statusFilter === 'INACTIVE') {
+        list = list.filter(p => !p.isActive);
+    }
+
+    updatePromoKpis();
+
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No promotional vouchers found matching filters. Click "+ New Promo Code" above.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map(p => {
+        const isPercent = p.type === 'PERCENT';
+        const typeBadge = isPercent
+            ? '<span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.74rem;">Percentage (%)</span>'
+            : '<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.74rem;">Fixed PHP (₱)</span>';
+
+        const discountText = isPercent
+            ? '<strong>' + p.value + '% Off</strong>'
+            : '<strong>₱ ' + Number(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Off</strong>';
+
+        const statusBadge = p.isActive
+            ? '<span style="background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.74rem;">Active</span>'
+            : '<span style="background: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.74rem;">Inactive</span>';
+
+        const expiryText = p.expiry
+            ? new Date(p.expiry).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '<span style="color: #64748b; font-style: italic;">No Expiry (Standing)</span>';
+
+        const toggleBtnLabel = p.isActive ? 'Deactivate' : 'Activate';
+        const toggleBtnColor = p.isActive ? '#dc2626' : '#166534';
+
+        return '<tr>' +
+            '<td><strong style="font-family: monospace; font-size: 0.95rem; color: #1e3a29; letter-spacing: 0.5px;">' + (p.code || '') + '</strong></td>' +
+            '<td>' + typeBadge + '</td>' +
+            '<td>' + discountText + '</td>' +
+            '<td style="max-width: 260px; font-size: 0.82rem; color: #334155;">' + (p.description || '-') + '</td>' +
+            '<td style="font-size: 0.82rem;">' + expiryText + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td style="text-align: center; white-space: nowrap;">' +
+                '<button type="button" class="btn-action-text" style="color: ' + toggleBtnColor + '; margin-right: 8px;" onclick="window.togglePromoStatus(\'' + p.id + '\')">' + toggleBtnLabel + '</button>' +
+                '<button type="button" class="btn-action-text" style="color: #2563eb; margin-right: 8px;" onclick="window.openPromoModal(\'' + p.id + '\')">Edit</button>' +
+                '<button type="button" class="btn-action-text" style="color: #dc2626;" onclick="window.deletePromo(\'' + p.id + '\')">Delete</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+}
+
+function openPromoModal(promoId = null) {
+    const modal = document.getElementById('adminPromoModal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('adminPromoModalTitle');
+    const editIdInput = document.getElementById('editPromoId');
+    const codeInput = document.getElementById('promoCodeInput');
+    const typeSelect = document.getElementById('promoTypeSelect');
+    const valInput = document.getElementById('promoValueInput');
+    const descInput = document.getElementById('promoDescInput');
+    const expiryInput = document.getElementById('promoExpiryInput');
+    const minTcpInput = document.getElementById('promoMinTcpInput');
+    const activeCheck = document.getElementById('promoIsActiveCheck');
+
+    if (promoId) {
+        const item = adminPromotionsCache.find(p => p.id === promoId);
+        if (!item) return;
+        if (titleEl) titleEl.textContent = 'Edit Promotional Voucher: ' + item.code;
+        if (editIdInput) editIdInput.value = item.id;
+        if (codeInput) codeInput.value = item.code || '';
+        if (typeSelect) typeSelect.value = item.type || 'PERCENT';
+        if (valInput) valInput.value = item.value || '';
+        if (descInput) descInput.value = item.description || '';
+        if (expiryInput) expiryInput.value = item.expiry || '';
+        if (minTcpInput) minTcpInput.value = item.minTcp || 0;
+        if (activeCheck) activeCheck.checked = item.isActive !== false;
+    } else {
+        if (titleEl) titleEl.textContent = 'Create Promotional Discount Voucher';
+        if (editIdInput) editIdInput.value = '';
+        if (codeInput) codeInput.value = '';
+        if (typeSelect) typeSelect.value = 'PERCENT';
+        if (valInput) valInput.value = '5';
+        if (descInput) descInput.value = '';
+        if (expiryInput) expiryInput.value = '';
+        if (minTcpInput) minTcpInput.value = '0';
+        if (activeCheck) activeCheck.checked = true;
+    }
+
+    modal.classList.add('active');
+}
+
+async function handleSavePromoForm(e) {
+    e.preventDefault();
+    const editId = (document.getElementById('editPromoId')?.value || '').trim();
+    const code = (document.getElementById('promoCodeInput')?.value || '').trim().toUpperCase();
+    const type = document.getElementById('promoTypeSelect')?.value || 'PERCENT';
+    const value = parseFloat(document.getElementById('promoValueInput')?.value || 0);
+    const description = (document.getElementById('promoDescInput')?.value || '').trim();
+    const expiry = (document.getElementById('promoExpiryInput')?.value || '').trim();
+    const minTcp = parseFloat(document.getElementById('promoMinTcpInput')?.value || 0);
+    const isActive = document.getElementById('promoIsActiveCheck')?.checked ?? true;
+
+    if (!code) {
+        alert('Please enter a promo code.');
+        return;
+    }
+    if (value <= 0) {
+        alert('Discount value must be greater than zero.');
+        return;
+    }
+
+    // Check duplicate code if creating new
+    if (!editId) {
+        const exists = adminPromotionsCache.some(p => p.code === code);
+        if (exists) {
+            alert('A promo with code "' + code + '" already exists.');
+            return;
+        }
+    }
+
+    if (editId) {
+        const idx = adminPromotionsCache.findIndex(p => p.id === editId);
+        if (idx !== -1) {
+            adminPromotionsCache[idx] = {
+                ...adminPromotionsCache[idx],
+                code,
+                type,
+                value,
+                description,
+                expiry,
+                minTcp,
+                isActive,
+                updatedAt: new Date().toISOString()
+            };
+        }
+    } else {
+        const newPromo = {
+            id: 'promo_' + Date.now(),
+            code,
+            type,
+            value,
+            description,
+            expiry,
+            minTcp,
+            isActive,
+            createdAt: new Date().toISOString()
+        };
+        adminPromotionsCache.unshift(newPromo);
+    }
+
+    await savePromotionsToCloudAndLocal();
+    document.getElementById('adminPromoModal')?.classList.remove('active');
+    renderPromotionsTable();
+
+    if (typeof showNotification === 'function') {
+        showNotification('Promo Saved', 'Promo voucher ' + code + ' has been saved successfully.', 'success');
+    }
+    if (typeof logAdminAction === 'function') {
+        logAdminAction('CONFIG_PROMO_SAVE', 'promotions', code, 'Saved promo ' + code + ' (' + (type === 'PERCENT' ? value + '%' : 'PHP ' + value) + ')');
+    }
+}
+
+async function savePromotionsToCloudAndLocal() {
+    try {
+        localStorage.setItem(ZMG_PROMOTIONS_STORAGE_KEY, JSON.stringify(adminPromotionsCache));
+    } catch (_) {}
+
+    try {
+        await supabaseClient
+            .from('system_settings')
+            .upsert({
+                key: 'promotions',
+                value: adminPromotionsCache,
+                description: 'Active system promo codes and discounts for client reservation checkout',
+                updated_at: new Date().toISOString()
+            });
+    } catch (e) {
+        console.warn('Promotions cloud upsert notice:', e.message);
+    }
+}
+
+window.togglePromoStatus = async function(promoId) {
+    const item = adminPromotionsCache.find(p => p.id === promoId);
+    if (!item) return;
+
+    item.isActive = !item.isActive;
+    await savePromotionsToCloudAndLocal();
+    renderPromotionsTable();
+
+    if (typeof showNotification === 'function') {
+        showNotification('Promo ' + (item.isActive ? 'Activated' : 'Deactivated'), 'Promo ' + item.code + ' is now ' + (item.isActive ? 'active' : 'inactive') + '.', 'info');
+    }
+    if (typeof logAdminAction === 'function') {
+        logAdminAction('CONFIG_PROMO_TOGGLE', 'promotions', item.code, 'Toggled promo status to ' + (item.isActive ? 'ACTIVE' : 'INACTIVE'));
+    }
+};
+
+window.deletePromo = async function(promoId) {
+    const item = adminPromotionsCache.find(p => p.id === promoId);
+    if (!item) return;
+
+    let confirmed = false;
+    if (typeof showConfirmModal === 'function') {
+        confirmed = await showConfirmModal({
+            title: 'Delete Promo Code',
+            message: 'Are you sure you want to permanently delete promotional code "' + item.code + '"?',
+            confirmText: 'Delete Promo',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+    } else {
+        confirmed = confirm('Are you sure you want to delete promo code ' + item.code + '?');
+    }
+
+    if (!confirmed) return;
+
+    adminPromotionsCache = adminPromotionsCache.filter(p => p.id !== promoId);
+    await savePromotionsToCloudAndLocal();
+    renderPromotionsTable();
+
+    if (typeof showNotification === 'function') {
+        showNotification('Promo Deleted', 'Promo ' + item.code + ' was removed.', 'warning');
+    }
+    if (typeof logAdminAction === 'function') {
+        logAdminAction('CONFIG_PROMO_DELETE', 'promotions', item.code, 'Deleted promo ' + item.code);
+    }
+};
+
+// ------------------------------------------------------------------------------
+// LOT PRICING & DIRECT EDITING TABLE
+// ------------------------------------------------------------------------------
+
+function loadLotPricingTable() {
+    renderLotPricingTable();
+}
+
+function renderLotPricingTable() {
+    const tbody = document.getElementById('adminLotPricingTableBody');
+    if (!tbody) return;
+
+    const spaces = adminSpacesCache || [];
+    const searchVal = (document.getElementById('adminSearchPlotPriceInput')?.value || '').trim().toLowerCase();
+    const catVal = document.getElementById('adminPriceFilterCategory')?.value || 'ALL';
+    const statVal = document.getElementById('adminPriceFilterStatus')?.value || 'ALL';
+
+    let list = spaces.filter(space => {
+        if (catVal !== 'ALL' && space.category !== catVal) return false;
+        if (statVal !== 'ALL' && (space.status || '').toLowerCase() !== statVal.toLowerCase()) return false;
+        if (searchVal) {
+            const idMatch = (space.plot_identifier || '').toLowerCase().includes(searchVal);
+            const secMatch = (space.section_name || '').toLowerCase().includes(searchVal);
+            const catMatch = (space.category || '').toLowerCase().includes(searchVal);
+            if (!idMatch && !secMatch && !catMatch) return false;
+        }
+        return true;
+    });
+
+    lotPriceFilteredList = list;
+    const totalCount = list.length;
+    setText('lotPriceTotalCount', String(totalCount));
+    setText('badgeLotPricesCount', String(spaces.length));
+
+    if (totalCount === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No memorial spaces found matching selected filters.</td></tr>';
+        renderLotPricePagination(0);
+        return;
+    }
+
+    const totalPages = Math.ceil(totalCount / lotPricePageSize);
+    if (lotPriceCurrentPage > totalPages) lotPriceCurrentPage = totalPages;
+    if (lotPriceCurrentPage < 1) lotPriceCurrentPage = 1;
+
+    const startIdx = (lotPriceCurrentPage - 1) * lotPricePageSize;
+    const endIdx = Math.min(startIdx + lotPricePageSize, totalCount);
+    const pageItems = list.slice(startIdx, endIdx);
+
+    setText('lotPriceShowingStart', String(startIdx + 1));
+    setText('lotPriceShowingEnd', String(endIdx));
+
+    tbody.innerHTML = pageItems.map(p => {
+        const price = Number(p.price || 0);
+        const dp = Number(p.down_payment || (price * 0.10) || 100);
+        const statusClass = (p.status || 'available').toLowerCase();
+        const statusLabel = statusClass.charAt(0).toUpperCase() + statusClass.slice(1);
+
+        return '<tr>' +
+            '<td><strong style="font-family: monospace; font-size: 0.95rem; color: #1e3a29;">' + (p.plot_identifier || '-') + '</strong></td>' +
+            '<td style="font-size: 0.82rem; color: #475569;">' + (p.section_name || '-') + '</td>' +
+            '<td><span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;">' + (p.category || 'Memorial Space') + '</span></td>' +
+            '<td style="text-align: right; font-weight: 700; color: #1e3a29;">₱ ' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+            '<td style="text-align: right; font-weight: 600; color: #0369a1;">₱ ' + dp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+            '<td style="text-align: center;"><span class="admin-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
+            '<td style="text-align: center;">' +
+                '<button type="button" class="btn-action-text" style="color: #2563eb; font-weight: 700;" onclick="window.openLotPriceEditModal(' + p.id + ')">Edit Price</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+
+    renderLotPricePagination(totalPages);
+}
+
+function renderLotPricePagination(totalPages) {
+    const container = document.getElementById('lotPricePaginationControls');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    html += '<button type="button" class="pagination-btn" ' + (lotPriceCurrentPage === 1 ? 'disabled' : '') + ' onclick="window.changeLotPricePage(' + (lotPriceCurrentPage - 1) + ')">&laquo; Prev</button>';
+
+    let startPage = Math.max(1, lotPriceCurrentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        html += '<button type="button" class="pagination-btn ' + (p === lotPriceCurrentPage ? 'active' : '') + '" onclick="window.changeLotPricePage(' + p + ')">' + p + '</button>';
+    }
+
+    html += '<button type="button" class="pagination-btn" ' + (lotPriceCurrentPage === totalPages ? 'disabled' : '') + ' onclick="window.changeLotPricePage(' + (lotPriceCurrentPage + 1) + ')">Next &raquo;</button>';
+    container.innerHTML = html;
+}
+
+window.changeLotPricePage = function(page) {
+    lotPriceCurrentPage = page;
+    renderLotPricingTable();
+};
+
+window.openLotPriceEditModal = function(plotId) {
+    const space = adminSpacesCache.find(s => s.id === plotId);
+    if (!space) return;
+
+    const modal = document.getElementById('adminLotPriceModal');
+    if (!modal) return;
+
+    document.getElementById('editPlotId').value = space.id;
+    setText('editPlotIdentifierDisplay', space.plot_identifier);
+    setText('editPlotSectionDisplay', space.section_name || 'Area Section');
+    setText('editPlotCategoryDisplay', space.category || 'Memorial Space');
+
+    const badge = document.getElementById('editPlotStatusBadge');
+    if (badge) {
+        const stat = (space.status || 'available').toLowerCase();
+        badge.className = 'admin-badge ' + stat;
+        badge.textContent = stat.charAt(0).toUpperCase() + stat.slice(1);
+    }
+
+    const price = Number(space.price || 0);
+    const dp = Number(space.down_payment || Math.round(price * 0.10) || 100);
+
+    const priceInput = document.getElementById('editPlotPriceInput');
+    const downInput = document.getElementById('editPlotDownPaymentInput');
+    if (priceInput) priceInput.value = price;
+    if (downInput) downInput.value = dp;
+
+    modal.classList.add('active');
+};
+
+async function handleSaveLotPriceForm(e) {
+    e.preventDefault();
+    const plotId = parseInt(document.getElementById('editPlotId')?.value || '0', 10);
+    const newPrice = parseFloat(document.getElementById('editPlotPriceInput')?.value || 0);
+    const newDown = parseFloat(document.getElementById('editPlotDownPaymentInput')?.value || 0);
+
+    if (!plotId || newPrice <= 0) {
+        alert('Please enter a valid plot price.');
+        return;
+    }
+
+    const space = adminSpacesCache.find(s => s.id === plotId);
+    if (!space) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('memorial_spaces')
+            .update({
+                price: newPrice,
+                down_payment: newDown,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', plotId);
+
+        if (error) throw error;
+
+        // Update cache
+        space.price = newPrice;
+        space.down_payment = newDown;
+
+        document.getElementById('adminLotPriceModal')?.classList.remove('active');
+        renderLotPricingTable();
+        if (typeof loadInventoryTable === 'function') loadInventoryTable();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Plot Price Updated', 'Updated ' + space.plot_identifier + ' Total Contract Price to ₱' + newPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }), 'success');
+        }
+        if (typeof logAdminAction === 'function') {
+            logAdminAction('UPDATE_PLOT_PRICE', 'memorial_spaces', space.plot_identifier, 'Updated price to ₱' + newPrice + ', down payment to ₱' + newDown);
+        }
+    } catch (err) {
+        console.error('Failed to update plot price:', err);
+        alert('Could not update plot price: ' + err.message);
+    }
+}
+
+// ------------------------------------------------------------------------------
+// CATEGORY BASE PRICING & BATCH PRICE ADJUSTMENTS
+// ------------------------------------------------------------------------------
+
+async function loadCategoryPricingData() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'category_pricing')
+            .maybeSingle();
+
+        if (!error && data?.value) {
+            const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            if (val && typeof val === 'object') {
+                adminCategoryPricesCache = { ...DEFAULT_CATEGORY_PRICES, ...val };
+                try {
+                    localStorage.setItem(ZMG_CATEGORY_PRICING_STORAGE_KEY, JSON.stringify(adminCategoryPricesCache));
+                } catch (_) {}
+                return adminCategoryPricesCache;
+            }
+        }
+    } catch (e) {
+        console.warn('Category pricing cloud fetch fallback:', e);
+    }
+
+    try {
+        const local = localStorage.getItem(ZMG_CATEGORY_PRICING_STORAGE_KEY);
+        if (local) {
+            const parsed = JSON.parse(local);
+            adminCategoryPricesCache = { ...DEFAULT_CATEGORY_PRICES, ...parsed };
+            return adminCategoryPricesCache;
+        }
+    } catch (_) {}
+
+    adminCategoryPricesCache = { ...DEFAULT_CATEGORY_PRICES };
+    return adminCategoryPricesCache;
+}
+
+function renderCategoryPricingCards() {
+    const grid = document.getElementById('adminCategoryCardsGrid');
+    if (!grid) return;
+
+    const spaces = adminSpacesCache || [];
+    const categories = Object.keys(DEFAULT_CATEGORY_PRICES);
+
+    grid.innerHTML = categories.map(catKey => {
+        const conf = adminCategoryPricesCache[catKey] || DEFAULT_CATEGORY_PRICES[catKey];
+        const catPlots = spaces.filter(s => s.category === catKey);
+        const totalPlots = catPlots.length;
+        const availablePlots = catPlots.filter(s => (s.status || '').toLowerCase() === 'available').length;
+        const price = conf.defaultPrice || 50000;
+        const down = conf.defaultDown || Math.round(price * 0.10);
+        const safeKey = catKey.replace(/[^a-zA-Z0-9]/g, '_');
+
+        return '<div class="admin-table-card" style="padding: 18px; border-top: 4px solid #1e3a29;">' +
+            '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">' +
+                '<div>' +
+                    '<h4 style="margin: 0; font-size: 1rem; color: #1e293b;">' + (conf.label || catKey) + '</h4>' +
+                    '<span style="font-size: 0.76rem; color: #64748b; text-transform: uppercase; font-weight: 700;">' + catKey + '</span>' +
+                '</div>' +
+                '<span style="background: #f1f5f9; color: #334155; font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">' +
+                    totalPlots + ' Total Slots' +
+                '</span>' +
+            '</div>' +
+
+            '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px 12px; margin-bottom: 14px; font-size: 0.8rem; display: flex; justify-content: space-between;">' +
+                '<span style="color: #64748b;">Available for Sale:</span>' +
+                '<strong style="color: #166534;">' + availablePlots + ' Available</strong>' +
+            '</div>' +
+
+            '<div style="margin-bottom: 10px;">' +
+                '<label for="catPrice_' + safeKey + '" style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Base Contract Price (₱)</label>' +
+                '<input type="number" id="catPrice_' + safeKey + '" class="admin-input" value="' + price + '" min="1000" step="500" style="font-weight: 700; color: #1e3a29; font-size: 0.92rem; width: 100%;">' +
+            '</div>' +
+
+            '<div style="margin-bottom: 14px;">' +
+                '<label for="catDown_' + safeKey + '" style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 3px;">Standard Down Payment (₱)</label>' +
+                '<input type="number" id="catDown_' + safeKey + '" class="admin-input" value="' + down + '" min="100" step="100" style="font-weight: 600; font-size: 0.88rem; width: 100%;">' +
+            '</div>' +
+
+            '<div style="display: flex; flex-direction: column; gap: 8px;">' +
+                '<button type="button" class="btn-admin-add" style="background: #2d4a36; justify-content: center; padding: 8px; font-size: 0.82rem;" onclick="window.saveCategoryRate(\'' + catKey + '\', \'' + safeKey + '\')">' +
+                    'Update Base Rate' +
+                '</button>' +
+                '<button type="button" class="btn-action-text" style="color: #0369a1; text-align: center; font-size: 0.78rem; font-weight: 700; padding: 4px; border: 1px dashed #bae6fd; border-radius: 4px; background: #f0f9ff;" onclick="window.batchApplyCategoryPriceToAvailableLots(\'' + catKey + '\', \'' + safeKey + '\')">' +
+                    'Apply Rate to ' + availablePlots + ' Available Lots' +
+                '</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+window.saveCategoryRate = async function(catKey, safeKey) {
+    const price = parseFloat(document.getElementById('catPrice_' + safeKey)?.value || 0);
+    const down = parseFloat(document.getElementById('catDown_' + safeKey)?.value || 0);
+
+    if (price <= 0) {
+        alert('Please enter a valid base price.');
+        return;
+    }
+
+    adminCategoryPricesCache[catKey] = {
+        ...(adminCategoryPricesCache[catKey] || DEFAULT_CATEGORY_PRICES[catKey]),
+        defaultPrice: price,
+        defaultDown: down,
+        updatedAt: new Date().toISOString()
+    };
+
+    try {
+        localStorage.setItem(ZMG_CATEGORY_PRICING_STORAGE_KEY, JSON.stringify(adminCategoryPricesCache));
+        await supabaseClient
+            .from('system_settings')
+            .upsert({
+                key: 'category_pricing',
+                value: adminCategoryPricesCache,
+                description: 'Default category lot rates and standard down payment thresholds',
+                updated_at: new Date().toISOString()
+            });
+
+        if (typeof showNotification === 'function') {
+            showNotification('Category Base Rate Saved', 'Base rate for ' + catKey + ' updated to ₱' + price.toLocaleString(), 'success');
+        }
+    } catch (e) {
+        console.warn('Category pricing save notice:', e);
+    }
+};
+
+window.batchApplyCategoryPriceToAvailableLots = async function(catKey, safeKey) {
+    const price = parseFloat(document.getElementById('catPrice_' + safeKey)?.value || 0);
+    const down = parseFloat(document.getElementById('catDown_' + safeKey)?.value || 0);
+
+    const spaces = adminSpacesCache || [];
+    const availablePlots = spaces.filter(s => s.category === catKey && (s.status || '').toLowerCase() === 'available');
+
+    if (availablePlots.length === 0) {
+        alert('No available plots found in category "' + catKey + '".');
+        return;
+    }
+
+    let confirmed = false;
+    const msg = 'Are you sure you want to mass-update all ' + availablePlots.length + ' available plots in "' + catKey + '" to ₱' + price.toLocaleString() + ' (Down: ₱' + down.toLocaleString() + ')?';
+
+    if (typeof showConfirmModal === 'function') {
+        confirmed = await showConfirmModal({
+            title: 'Batch Update Lot Pricing',
+            message: msg,
+            confirmText: 'Apply to All Available Lots',
+            cancelText: 'Cancel',
+            type: 'warning'
+        });
+    } else {
+        confirmed = confirm(msg);
+    }
+
+    if (!confirmed) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('memorial_spaces')
+            .update({
+                price: price,
+                down_payment: down,
+                updated_at: new Date().toISOString()
+            })
+            .eq('category', catKey)
+            .eq('status', 'available');
+
+        if (error) throw error;
+
+        // Update memory cache
+        availablePlots.forEach(p => {
+            p.price = price;
+            p.down_payment = down;
+        });
+
+        // Save category config as well
+        window.saveCategoryRate(catKey, safeKey);
+
+        renderLotPricingTable();
+        renderCategoryPricingCards();
+        if (typeof loadInventoryTable === 'function') loadInventoryTable();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Bulk Update Applied', 'Successfully updated ' + availablePlots.length + ' available plots in ' + catKey + ' to ₱' + price.toLocaleString(), 'success');
+        }
+        if (typeof logAdminAction === 'function') {
+            logAdminAction('BATCH_UPDATE_PRICING', 'memorial_spaces', catKey, 'Batch updated ' + availablePlots.length + ' plots to ₱' + price);
+        }
+    } catch (err) {
+        console.error('Failed to batch update plots:', err);
+        alert('Could not mass-update plots: ' + err.message);
+    }
+};
+
+async function handleSaveAllCategoryRates() {
+    const categories = Object.keys(DEFAULT_CATEGORY_PRICES);
+    categories.forEach(catKey => {
+        const safeKey = catKey.replace(/[^a-zA-Z0-9]/g, '_');
+        const price = parseFloat(document.getElementById('catPrice_' + safeKey)?.value || 0);
+        const down = parseFloat(document.getElementById('catDown_' + safeKey)?.value || 0);
+        if (price > 0) {
+            adminCategoryPricesCache[catKey] = {
+                ...(adminCategoryPricesCache[catKey] || DEFAULT_CATEGORY_PRICES[catKey]),
+                defaultPrice: price,
+                defaultDown: down,
+                updatedAt: new Date().toISOString()
+            };
+        }
+    });
+
+    try {
+        localStorage.setItem(ZMG_CATEGORY_PRICING_STORAGE_KEY, JSON.stringify(adminCategoryPricesCache));
+        await supabaseClient
+            .from('system_settings')
+            .upsert({
+                key: 'category_pricing',
+                value: adminCategoryPricesCache,
+                description: 'Default category lot rates and standard down payment thresholds',
+                updated_at: new Date().toISOString()
+            });
+
+        if (typeof showNotification === 'function') {
+            showNotification('All Rates Saved', 'All category base rates have been saved successfully.', 'success');
+        }
+    } catch (e) {
+        console.warn('Save all rates notice:', e);
+    }
+}

@@ -332,8 +332,8 @@
 .btn-action-delete {
     background-color: #ffffff;
     color: #b91c1c;
-    border: 1.5px solid #dc2626;
-    border-radius: 3px;
+    border: 1px solid #dc2626;
+    border-radius: 4px;
     padding: 5px 12px;
     font-size: 0.78rem;
     font-weight: 700;
@@ -344,6 +344,24 @@
 
 .btn-action-delete:hover {
     background-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-action-transfer {
+    background-color: #ffffff;
+    color: #0369a1;
+    border: 1px solid #0284c7;
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-action-transfer:hover {
+    background-color: #0284c7;
     color: #ffffff;
 }
 

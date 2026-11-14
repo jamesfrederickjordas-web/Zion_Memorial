@@ -1,3 +1,8 @@
+
+let activePromoCode = '';
+let promoCodeDiscountAmount = 0;
+let currentPaymentProofDataUrl = '';
+
 // ==============================================================================
 // INTERACTIVE SINGLE PLOT LAYOUT CONTROLLER - RESERVATION PORTAL
 // Zion Memorial Garden - Cloud-Based Online Reservation & Records Management
@@ -208,9 +213,60 @@ function resolveInitialSectionFromUrl() {
 }
 
 // ==============================================================================
+const CUSTOM_CATEGORY_DEFAULTS = {
+    'Single Teired':     { defaultPrice: 55000,  defaultDown: 8250 },
+    'Supreme':           { defaultPrice: 65000,  defaultDown: 9750 },
+    'Special Supreme':   { defaultPrice: 85000,  defaultDown: 12750 },
+    'Condominium':       { defaultPrice: 35000,  defaultDown: 5250 },
+    'Family Estate Jr.': { defaultPrice: 220000, defaultDown: 33000 },
+    'Mausoleum':         { defaultPrice: 350000, defaultDown: 52500 }
+};
+
+function registerCustomAreasForPlotDetails(layersOverride) {
+    if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') return;
+    const layers = Array.isArray(layersOverride)
+        ? layersOverride
+        : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
+    const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.entries(entries).forEach(([secName, meta]) => {
+        const pricing = CUSTOM_CATEGORY_DEFAULTS[meta.category] || { defaultPrice: 65000, defaultDown: 9750 };
+        SECTION_SHAPE_MAP[secName] = {
+            ...meta,
+            asset: meta.asset || window.ZMGFence.buildAreaSvgDataUrl(meta.cols, meta.rows, meta.area),
+            defaultPrice: pricing.defaultPrice,
+            defaultDown: pricing.defaultDown
+        };
+    });
+}
+
+async function syncCustomAreasFromSupabase() {
+    registerCustomAreasForPlotDetails();
+    if (typeof supabaseClient === 'undefined') return;
+    try {
+        const { data: cfgRow, error } = await supabaseClient
+            .from('memorial_spaces')
+            .select('coordinates')
+            .eq('section_name', '__SYSTEM_MAP_CONFIG__')
+            .maybeSingle();
+        if (!error && cfgRow && cfgRow.coordinates && Array.isArray(cfgRow.coordinates.vectorLayers)) {
+            const cleaned = cfgRow.coordinates.vectorLayers.filter(v => !window.ZMGFence || !window.ZMGFence.isLegacyWall(v));
+            try {
+                localStorage.setItem('zion_cemetery_map_vector_layout_v2', JSON.stringify(cleaned));
+            } catch (_) {}
+            registerCustomAreasForPlotDetails(cleaned);
+        }
+    } catch (err) {
+        console.warn('Notice syncing custom map areas for plot-details:', err);
+    }
+}
+
+// ==============================================================================
 // 1. DOM READY & INITIALIZATION
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    await syncCustomAreasFromSupabase();
+    currentSectionName = resolveInitialSectionFromUrl();
+
     setupHeaderButtons();
     setupSectionDropdown();
     setupStatusFilters();
@@ -254,6 +310,18 @@ function setupHeaderButtons() {
 function setupSectionDropdown() {
     const dropdown = document.getElementById('sectionSelectDropdown');
     if (!dropdown) return;
+
+    const existingValues = new Set(Array.from(dropdown.options).map(o => o.value));
+    Object.entries(SECTION_SHAPE_MAP).forEach(([secName, meta]) => {
+        if (!existingValues.has(secName)) {
+            const opt = document.createElement('option');
+            opt.value = secName;
+            opt.dataset.area = meta.area || '';
+            opt.dataset.tab = meta.tab || '';
+            opt.textContent = secName;
+            dropdown.appendChild(opt);
+        }
+    });
 
     dropdown.value = currentSectionName;
     dropdown.addEventListener('change', async (e) => {
@@ -386,6 +454,19 @@ async function loadPlotsForSection(sectionName, shapeInfo) {
         console.warn('Notice loading section plots from cloud:', e);
     }
 
+    // Local editor cache fallback before blueprint generation
+    if (currentPlotsList.length === 0) {
+        try {
+            const cachedRaw = localStorage.getItem('zion_section_plots_v1_' + sectionName);
+            if (cachedRaw) {
+                const parsed = JSON.parse(cachedRaw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentPlotsList = parsed;
+                }
+            }
+        } catch (_) {}
+    }
+
     // Fallback: Generate full accurate blueprint plots if no rows exist in DB
     if (currentPlotsList.length === 0) {
         if (sectionName === 'Area 5 - Special Supreme Estate') {
@@ -404,11 +485,20 @@ function updateSectionKPIs() {
     const avail = currentPlotsList.filter(p => (p.status || 'available').toLowerCase() === 'available').length;
     const res = currentPlotsList.filter(p => (p.status || '').toLowerCase() === 'reserved').length;
     const occ = currentPlotsList.filter(p => (p.status || '').toLowerCase() === 'occupied').length;
+    const maint = Math.max(0, total - (avail + res + occ));
+    const availPct = total > 0 ? Math.round((avail / total) * 100) : 0;
 
     setText('statTotal', total.toLocaleString());
     setText('statAvail', avail.toLocaleString());
     setText('statRes', res.toLocaleString());
     setText('statOcc', occ.toLocaleString());
+
+    setText('legendCountTotal', total.toLocaleString());
+    setText('legendCountAvail', avail.toLocaleString());
+    setText('legendCountRes', res.toLocaleString());
+    setText('legendCountOcc', occ.toLocaleString());
+    setText('legendCountMaint', maint.toLocaleString());
+    setText('legendAvailRate', `${availPct}%`);
 }
 
 function generateArea5Blueprint() {
@@ -473,7 +563,7 @@ function generateGenericBlueprint(sectionName, shapeInfo) {
         for (let c = 1; c <= cols - pW + 1; c += stepCol) {
             const code = `${shapeInfo.prefix}-${String(seq).padStart(3, '0')}`;
             plots.push({
-                id: (Number(shapeInfo.area) * 1000) + seq,
+                id: ((parseInt(shapeInfo.area, 10) || 13) * 1000) + seq,
                 plot_identifier: code,
                 section_name: sectionName,
                 category: shapeInfo.category,
@@ -771,6 +861,8 @@ function updatePlanTypeUi(type) {
     const reqFirst = document.getElementById('reqDeceasedFirst');
     const reqLast = document.getElementById('reqDeceasedLast');
 
+    const priorityNotice = document.getElementById('atNeedPriorityNotice');
+    if (priorityNotice) priorityNotice.style.display = (type === 'AT-NEED') ? 'block' : 'none';
     if (type === 'AT-NEED') {
         if (subLabel) subLabel.innerHTML = '<span style="color: #dc2626; font-weight: 700;"> Required for At-Need Interment</span>';
         if (helpText) {
@@ -795,12 +887,118 @@ function updatePlanTypeUi(type) {
 function setupBookingModal() {
     const modal = document.getElementById('reservationBookingModal');
     const closeBtn = document.getElementById('closeBookingModalBtn');
-    const cancelBtn = document.getElementById('cancelBookingModalBtn');
+    const cancelBtn = document.getElementById('cancelBookingBtn') || document.getElementById('cancelBookingModalBtn');
     const form = document.getElementById('plotReservationForm');
     const termSelect = document.getElementById('installmentTerm');
     const customDpInput = document.getElementById('customDownPayment');
 
     const closeModal = () => modal?.classList.remove('active');
+    const noticeEl = document.getElementById('atNeedPriorityNotice');
+
+    // Setup Chronological Date Validation for Interred Loved One
+    if (typeof setupChronologicalDateValidation === 'function') {
+        setupChronologicalDateValidation({
+            birthInput: 'bookDeceasedBirthDate',
+            deathInput: 'bookDeceasedDeathDate',
+            burialInput: 'bookDeceasedBurialDate',
+            errorContainer: 'bookDeceasedDateError'
+        });
+    }
+
+    // Promo Code Apply Button
+    document.getElementById('btnApplyPromo')?.addEventListener('click', () => {
+        const basePrice = parseFloat(document.getElementById('bookPlotPrice')?.value) || 0;
+        const grossPrice = basePrice + 2500 + 1200;
+        const code = (document.getElementById('bookPromoCode')?.value || '').trim().toUpperCase();
+        let msg = '';
+        let color = '#15803d';
+
+        if (!code) {
+            activePromoCode = '';
+            promoCodeDiscountAmount = 0;
+            msg = '';
+        } else {
+            // Check dynamic promotions list (from Admin Pricing Module)
+            let promosList = [];
+            try {
+                const stored = localStorage.getItem('zmg_active_promotions');
+                if (stored) promosList = JSON.parse(stored);
+            } catch (_) {}
+
+            if (!promosList || promosList.length === 0) {
+                promosList = [
+                    { code: 'ZIONPROMO', type: 'PERCENT', value: 5, isActive: true },
+                    { code: 'PROMO5', type: 'PERCENT', value: 5, isActive: true },
+                    { code: 'MEMORIAL2026', type: 'FIXED', value: 3000, isActive: true },
+                    { code: 'SPOTCASH10', type: 'PERCENT', value: 10, isActive: true }
+                ];
+            }
+
+            const matchedPromo = promosList.find(p => (p.code || '').toUpperCase() === code);
+            const now = new Date();
+            const isExpired = matchedPromo?.expiry ? new Date(matchedPromo.expiry) < now : false;
+
+            if (matchedPromo && matchedPromo.isActive && !isExpired) {
+                if (matchedPromo.minTcp && grossPrice < matchedPromo.minTcp) {
+                    activePromoCode = '';
+                    promoCodeDiscountAmount = 0;
+                    msg = `Minimum contract value of ₱${Number(matchedPromo.minTcp).toLocaleString()} required.`;
+                    color = '#dc2626';
+                } else {
+                    activePromoCode = code;
+                    if (matchedPromo.type === 'PERCENT') {
+                        promoCodeDiscountAmount = Math.round(grossPrice * (Number(matchedPromo.value) / 100));
+                        msg = `${matchedPromo.value}% Promotional Discount Applied!`;
+                    } else {
+                        promoCodeDiscountAmount = Number(matchedPromo.value);
+                        msg = `₱${Number(matchedPromo.value).toLocaleString()} Special Promo Applied!`;
+                    }
+                }
+            } else {
+                activePromoCode = '';
+                promoCodeDiscountAmount = 0;
+                msg = isExpired ? 'This promo code has expired' : 'Invalid or inactive promo code';
+                color = '#dc2626';
+            }
+        }
+
+        const msgEl = document.getElementById('promoStatusMessage');
+        if (msgEl) {
+            msgEl.textContent = msg;
+            msgEl.style.color = color;
+        }
+        recalculateAmortization();
+    });
+
+    // Payment Proof File Upload
+    document.getElementById('bookPaymentProofFile')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentPaymentProofDataUrl = ev.target.result;
+                window.stagedGcashReceiptProofUrl = ev.target.result;
+                const prevImg = document.getElementById('paymentProofPreviewImg');
+                if (prevImg) prevImg.src = currentPaymentProofDataUrl;
+                const nameEl = document.getElementById('paymentProofFileName');
+                if (nameEl) nameEl.textContent = file.name;
+                const box = document.getElementById('paymentProofPreviewBox');
+                if (box) box.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Remove Payment Proof
+    document.getElementById('btnRemovePaymentProof')?.addEventListener('click', () => {
+        currentPaymentProofDataUrl = '';
+        window.stagedGcashReceiptProofUrl = null;
+        const fileInput = document.getElementById('bookPaymentProofFile');
+        if (fileInput) fileInput.value = '';
+        const box = document.getElementById('paymentProofPreviewBox');
+        if (box) box.style.display = 'none';
+    });
+
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
@@ -845,10 +1043,8 @@ function setupBookingModal() {
         r.addEventListener('change', () => {
             document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
             r.closest('.channel-pill')?.classList.add('active');
-
-            const bankPanel = document.getElementById('zmgBankPanel');
-            if (bankPanel) {
-                bankPanel.style.display = r.value === 'Bank' ? 'block' : 'none';
+            if (typeof renderReservationChecksPanel === 'function') {
+                renderReservationChecksPanel();
             }
         });
     });
@@ -883,6 +1079,17 @@ function openBookingModalForPlot(plot) {
     document.getElementById('bookPlotIdentifier').value = plot.plot_identifier;
     document.getElementById('bookPlotPrice').value = price;
     document.getElementById('bookPlotDownPayment').value = dp;
+    activePromoCode = '';
+    promoCodeDiscountAmount = 0;
+    currentPaymentProofDataUrl = '';
+    window.stagedGcashReceiptProofUrl = null;
+    if (typeof stagedGcashReceiptProofUrl !== 'undefined') stagedGcashReceiptProofUrl = null;
+    if (document.getElementById('zmgGcashReceiptUpload')) document.getElementById('zmgGcashReceiptUpload').value = '';
+    if (document.getElementById('zmgGcashReceiptThumbBox')) document.getElementById('zmgGcashReceiptThumbBox').style.display = 'none';
+    if (document.getElementById('bookPromoCode')) document.getElementById('bookPromoCode').value = '';
+    if (document.getElementById('promoStatusMessage')) document.getElementById('promoStatusMessage').textContent = '';
+    if (document.getElementById('bookPaymentRefNumber')) document.getElementById('bookPaymentRefNumber').value = '';
+    if (document.getElementById('paymentProofPreviewBox')) document.getElementById('paymentProofPreviewBox').style.display = 'none';
 
     const customDpInput = document.getElementById('customDownPayment');
     if (customDpInput) {
@@ -894,6 +1101,25 @@ function openBookingModalForPlot(plot) {
     setText('bookDisplaySection', `${plot.section_name || currentSectionName} | ${plot.category || 'Memorial Space'}`);
     setText('bookDisplayPrice', `₱ ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     setText('displayFullDue', `₱ ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+    // Only GCash for clients; GCash & Cash Over Counter for staff/admin
+    if (typeof detectCurrentUserStaffRole === 'function') {
+        detectCurrentUserStaffRole().then(isStaff => {
+            const cashPill = document.getElementById('channelPillCash');
+            if (cashPill) cashPill.style.display = isStaff ? 'inline-flex' : 'none';
+            if (!isStaff) {
+                const gcashRadio = document.querySelector('input[name="paymentChannel"][value="GCash"]');
+                if (gcashRadio) {
+                    gcashRadio.checked = true;
+                    document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
+                    document.getElementById('channelPillGcash')?.classList.add('active');
+                }
+            }
+            if (typeof renderReservationChecksPanel === 'function') {
+                renderReservationChecksPanel();
+            }
+        });
+    }
 
     // Reset deceased fields
     ['bookDeceasedFirstName', 'bookDeceasedMiddleName', 'bookDeceasedLastName', 'bookDeceasedBirthDate', 'bookDeceasedDeathDate', 'bookDeceasedBurialDate', 'bookDeceasedEpitaph'].forEach(id => {
@@ -918,7 +1144,16 @@ function openBookingModalForPlot(plot) {
 }
 
 function recalculateAmortization() {
-    const price = parseFloat(document.getElementById('bookPlotPrice')?.value) || 0;
+    const basePrice = parseFloat(document.getElementById('bookPlotPrice')?.value) || 0;
+    const maintenanceFee = 2500.00;
+    const cemeteryTax = 1200.00;
+    const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+
+    const isFullPayment = document.querySelector('input[name="paymentOption"]:checked')?.value === 'FULL_PAYMENT';
+    const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
+    const totalDiscount = spotDiscount + promoCodeDiscountAmount;
+    const netPrice = Math.max(100, grossPrice - totalDiscount);
+
     const customDpInput = document.getElementById('customDownPayment');
     const rawDp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : 100;
     const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
@@ -926,15 +1161,26 @@ function recalculateAmortization() {
     const termSelect = document.getElementById('installmentTerm');
     const term = parseInt(termSelect?.value) || 60;
 
-    const balance = Math.max(0, price - dp);
-    const monthly = term > 0 ? (balance / term) : 0;
+    const balance = isFullPayment ? 0 : Math.max(0, netPrice - dp);
+    const monthly = (term > 0 && !isFullPayment) ? (balance / term) : 0;
 
     const peso = (n) => '₱ ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    setText('displayBasePlotPrice', peso(basePrice));
+    setText('displayMaintenanceFee', peso(maintenanceFee));
+    setText('displayCemeteryTax', peso(cemeteryTax));
+    setText('displayNetContractPrice', peso(netPrice));
+    setText('bookDisplayPrice', peso(netPrice));
     setText('calcDownPayment', peso(dp));
     setText('calcRemainingBalance', peso(balance));
     setText('calcMonthlyAmortization', `${peso(monthly)} / mo`);
-    setText('displayFullDue', peso(price));
+    setText('displayFullDue', peso(netPrice));
+
+    const rowPromo = document.getElementById('rowPromoDiscount');
+    if (rowPromo) {
+        rowPromo.style.display = totalDiscount > 0 ? 'flex' : 'none';
+        setText('displayPromoDiscount', '- ' + peso(totalDiscount));
+    }
 }
 
 async function handleReservationSubmit(e) {
@@ -959,17 +1205,28 @@ async function handleReservationSubmit(e) {
             return;
         }
 
+        const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
+        const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
+        const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'GCash';
+        const notes = document.getElementById('reservationNotes')?.value.trim() || '';
+
         const spaceId = document.getElementById('bookSpaceId').value;
         const plotCode = document.getElementById('bookPlotIdentifier').value;
-        const price = parseFloat(document.getElementById('bookPlotPrice').value) || 0;
+        const basePrice = parseFloat(document.getElementById('bookPlotPrice').value) || 0;
+        const maintenanceFee = 2500.00;
+        const cemeteryTax = 1200.00;
+        const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+        const isFullPayment = paymentOption === 'FULL_PAYMENT';
+        const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
+        const totalDiscount = spotDiscount + promoCodeDiscountAmount;
+        const price = Math.max(100, grossPrice - totalDiscount);
+        const manualRef = (document.getElementById('bookPaymentRefNumber')?.value || '').trim();
+        const counterRef = (document.getElementById('counterCashReceiptNumber')?.value || '').trim();
+        const gcashQrRef = (document.getElementById('zmgGcashQrRefNumber')?.value || '').trim();
+        const isCash = paymentChannel === 'Cash';
         const customDpInput = document.getElementById('customDownPayment');
         let dp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : (parseFloat(document.getElementById('bookPlotDownPayment')?.value) || 0);
         if (isNaN(dp) || dp < 0) dp = 0;
-
-        const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
-        const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
-        const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'Cash';
-        const notes = document.getElementById('reservationNotes')?.value.trim() || '';
 
         // Deceased Details
         const deceasedFirstName = document.getElementById('bookDeceasedFirstName')?.value?.trim() || '';
@@ -995,28 +1252,59 @@ async function handleReservationSubmit(e) {
             return;
         }
 
-        const isBank = paymentChannel === 'Bank';
-        const bankSelect = document.getElementById('zmgBankSelect');
-        const bankOpt = bankSelect?.options[bankSelect.selectedIndex];
-        const bankName = bankOpt?.text || 'BDO Unibank';
-        const isBankTestPaid = isBank && (document.getElementById('zmgCheckConfirmBankTest')?.checked ?? true);
+        // Chronological Date Validation for Interred Loved One
+        if (typeof checkDateChronology === 'function') {
+            const dateCheck = checkDateChronology(deceasedBirthDate, deceasedDeathDate, deceasedBurialDate);
+            if (!dateCheck.valid) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirm & Place Reservation';
+                    const btnText = submitBtn.querySelector('.btn-text');
+                    const btnLoader = submitBtn.querySelector('.btn-loader');
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoader) btnLoader.style.display = 'none';
+                }
+                alert('Invalid Date Chronology:\n\n' + dateCheck.message);
+                if (dateCheck.field === 'birth') document.getElementById('bookDeceasedBirthDate')?.focus();
+                else if (dateCheck.field === 'death') document.getElementById('bookDeceasedDeathDate')?.focus();
+                else if (dateCheck.field === 'burial') document.getElementById('bookDeceasedBurialDate')?.focus();
+                return;
+            }
+        }
 
         const term = paymentOption === 'INSTALLMENT' ? (parseInt(document.getElementById('installmentTerm')?.value) || 60) : 0;
         const amountNow = paymentOption === 'INSTALLMENT' ? (dp > 0 ? dp : price) : price;
-        const isGcashQr = paymentChannel === 'GCash' && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
-        const gcashQrRef = document.getElementById('zmgGcashQrRefNumber')?.value?.trim();
-        const isImmediatelyPaid = isBankTestPaid || isGcashQr;
+        const isGcashQr = !isCash && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
+        const hasGcashAutoDebit = Boolean(document.getElementById('zmgGcashSubMethodAutoDebit')?.checked);
+        const attachedProof = currentPaymentProofDataUrl || window.stagedGcashReceiptProofUrl || (typeof stagedGcashReceiptProofUrl !== 'undefined' ? stagedGcashReceiptProofUrl : null);
+
+        // Mandatory GCash Screenshot Validation (Required instead of typing reference number)
+        if (paymentChannel === 'GCash' && !hasGcashAutoDebit && !attachedProof) {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                const btnText = submitBtn.querySelector('.btn-text');
+                const btnLoader = submitBtn.querySelector('.btn-loader');
+                if (btnText) btnText.style.display = 'inline';
+                if (btnLoader) btnLoader.style.display = 'none';
+            }
+            alert('Please attach your GCash payment screenshot to proceed. Screenshot is required for GCash reservations.');
+            const fileInput = document.getElementById('zmgGcashReceiptUpload') || document.getElementById('bookPaymentProofFile');
+            if (fileInput) fileInput.focus();
+            return;
+        }
+
+        const isImmediatelyPaid = isCash || isGcashQr || Boolean(attachedProof) || Boolean(manualRef);
         const totalPaidRecorded = isImmediatelyPaid ? amountNow : 0.00;
         const balanceRecorded = isImmediatelyPaid ? Math.max(0, price - amountNow) : price;
         const monthly = term > 0 ? (balanceRecorded / term) : 0;
         const paymentTag = isImmediatelyPaid ? 'PAID' : 'UNPAID';
-        const paymentReference = isBank
-            ? `BNK-TEST-${Date.now().toString(36).toUpperCase()}`
-            : (isGcashQr ? (gcashQrRef || `GCASH-QR-${Date.now().toString(36).toUpperCase()}`) : (paymentChannel === 'GCash' ? `GCASH-PENDING-${Date.now().toString(36).toUpperCase()}` : `CASH-UNPAID-${Date.now().toString(36).toUpperCase()}`));
+        const paymentReference = isCash
+            ? (counterRef || manualRef || `CSH-COUNTER-${Date.now().toString(36).toUpperCase()}`)
+            : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`);
 
         const resNumber = `RES-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const deceasedTagNote = fullDeceasedName ? ` [Interred: ${fullDeceasedName}${deceasedDeathDate ? ` (DOD: ${deceasedDeathDate})` : ''}]` : '';
-        const finalNotes = `[Channel: ${isBank ? `Bank Transfer (${bankName})` : paymentChannel}]${isBankTestPaid ? ` [Receipt Tag: PAID] (Test Mode Bank Authorized: ${bankName} | Ref: ${paymentReference})` : ''}${deceasedTagNote} ${notes}`.trim();
+        const finalNotes = `[Channel: ${paymentChannel}] [Receipt Tag: ${paymentTag}] [Ref: ${paymentReference}]${deceasedTagNote} ${notes}`.trim();
 
         // 1. Create Reservation in Supabase (down_payment_amount is the correct DB column)
         const { data: newRes, error: resError } = await supabaseClient
@@ -1044,11 +1332,12 @@ async function handleReservationSubmit(e) {
         // 2. Insert Payment Record
         await supabaseClient.from('payments').insert([{
             reservation_id: newRes.id,
-            payment_reference: paymentReference,
+            payment_reference: manualRef || paymentReference,
             amount: amountNow,
             payment_type: paymentOption === 'INSTALLMENT' ? 'DOWN_PAYMENT' : 'FULL_PAYMENT',
-            payment_method: isBank ? 'Bank Transfer' : (paymentChannel === 'GCash' ? 'GCash' : (paymentChannel === 'Maya' ? 'Maya' : (paymentChannel === 'Card' ? 'Card' : 'Cash'))),
+            payment_method: isCash ? 'Cash' : 'GCash',
             status: isImmediatelyPaid ? 'COMPLETED' : 'PENDING',
+            receipt_url: attachedProof || currentPaymentProofDataUrl || null,
             paid_at: isImmediatelyPaid ? new Date().toISOString() : null,
             due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
         }]);
@@ -1098,8 +1387,8 @@ async function handleReservationSubmit(e) {
                 paymentTag,
                 reservationNumber: resNumber,
                 paymentReference,
-                paymentChannel: isBank ? `Bank Transfer (${bankName} - Test Mode)` : (paymentChannel === 'GCash' ? 'GCash Auto-Debit' : 'Cash (Over the Counter)'),
-                gcashReference: isBank ? paymentReference : '',
+                paymentChannel: (paymentChannel === 'GCash' ? 'GCash (Instant Pay)' : 'Cash (Over the Counter)'),
+                gcashReference: (paymentChannel === 'GCash' ? paymentReference : ''),
                 dateIssued: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
                 clientName,
                 clientEmail: user.email || '',
@@ -1113,9 +1402,9 @@ async function handleReservationSubmit(e) {
                 amountNow,
                 remainingBalance: balanceRecorded,
                 monthlyAmortization: monthly,
-                counterInstructions: isBankTestPaid
-                    ? `ONLINE BANK PAYMENT AUTHORIZED IN TEST MODE (TAG: PAID • ${bankName} • Ref: ${paymentReference}). Verified via Zion Memorial Garden test sandbox.`
-                    : 'Please present this reservation confirmation at the Zion Memorial Garden counter.'
+                counterInstructions: isCash
+                    ? 'Please present this reservation confirmation at the Zion Memorial Garden counter.'
+                    : 'Payment settled via official GCash merchant QR.'
             };
 
             window.generateAndDownloadReceiptPDF(receiptData);

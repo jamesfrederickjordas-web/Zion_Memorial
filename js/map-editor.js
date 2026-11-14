@@ -35,13 +35,10 @@ const VECTOR_FILE_TO_AREA = {
     'Vector (14).png': { area: '10', name: 'Area 10 - Condominium Block A', category: 'Condominium', tab: 'condominium', desc: 'Area 10 - Condominium Block A lawn & niches' },
     'Vector (3).png':  { area: '11', name: 'Area 11 - Lawn of Memories', category: 'Special Supreme', tab: 'special-supreme', desc: 'Area 11 - Lawn of Memories memorial section' },
     'Vector (4).png':  { area: '12', name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum', desc: 'Area 12 - Mausoleum Court memorial section' },
-    'Group 109.png':   { area: null, name: 'Group 109 (Base Framework & Pathways)', category: 'Framework', tab: null, desc: 'Master cemetery boundary and pathways framework' },
-    'cemetery-boundary-bg.png': { area: null, name: 'Cemetery Boundary & Pathways (Full)', category: 'Framework', tab: null, desc: 'Master cemetery boundary and road framework' }
 };
 
 const VECTOR_CATALOG = [
-    { file: 'cemetery-boundary-bg.png', name: 'Cemetery Boundary & Pathways (Full)', desc: 'Master cemetery boundary, road pathways, & water canal', defaultW: 90, defaultZ: 1 },
-    { file: 'Group 109.png',   name: 'Group 109 (Base Framework)', desc: 'Master cemetery boundary & roads framework', defaultW: 82, defaultZ: 2 },
+    { special: 'entrance', name: 'Entrance Gate', desc: 'Main gate - snaps onto the automatic perimeter fence', defaultW: 12, defaultZ: 9 },
     { file: 'Vector (7).png',   name: 'Area 1 - Single Tiered Lawn', desc: 'Single Tiered Lawn entry area', defaultW: 22, defaultZ: 6 },
     { file: 'Vector (8).png',   name: 'Area 2 - Lawn of Love', desc: 'Lawn of Love section', defaultW: 14, defaultZ: 6 },
     { file: 'Vector (9).png',   name: 'Area 3 - Lawn of Hope (Family Estate)', desc: 'Family Estate Jr. premium lot', defaultW: 20, defaultZ: 6 },
@@ -79,7 +76,7 @@ const BOARD_HEIGHT = 900;
 // ── Background Image State ──
 const BG_STORAGE_KEY = 'zion_cemetery_map_bg_v1';
 const DEFAULT_BG_CONFIG = {
-    src: 'assets/images/backgrounds/cemetery-boundary-bg.png',
+    src: '',
     opacity: 1.0,
     visible: true,
     x: 0, y: 0,
@@ -121,6 +118,21 @@ let panHasMoved = false;
 let isDraggingVector = false;
 let dragContext = null;
 
+// ── Perimeter Fence & Polygon Point-Edit State ──
+const DEFAULT_FENCE_CONFIG = { mode: 'auto', points: [] };
+let fenceConfig = { ...DEFAULT_FENCE_CONFIG };
+let pointEditState = null; // null | { mode: 'wall' } | { mode: 'shape', layerId: string }
+let isDraggingVertex = false;
+
+// Map Vector Undo / Redo & Clipboard State
+let mapUndoStack = [];
+let mapRedoStack = [];
+let mapUndoLastCoalesceKey = '';
+let mapUndoLastCoalesceAt = 0;
+let mapClipboard = [];
+let mapPasteCounter = 0;
+const MAX_MAP_HISTORY = 40;
+
 // Plot State
 let currentPlotsList = [];
 let activePlotId = null;
@@ -131,7 +143,10 @@ let currentPlotFilter = 'all';
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initModeTabs();
+    initNewAreaSystem();
+    initMapPartSystem();
     initVectorSystem();
+    initFenceSystem();
     initBlueprintSystem();
     initBgSystem();
     initPlotSystem();
@@ -209,13 +224,18 @@ function switchEditorMode(mode) {
 
         if (badge) badge.textContent = ' Map Vector Editor';
         if (detail) detail.textContent = `${vectorLayers.length} Vectors Loaded · Boundless Canvas`;
-        if (hint) hint.innerHTML = ' <strong>Boundless Canvas:</strong> Drag empty space to pan · Drag vectors anywhere · Scroll to zoom';
+        if (hint) hint.innerHTML = '<strong>Shortcuts:</strong> <strong>[Ctrl+Z/Y]</strong> Undo/Redo · <strong>[Ctrl+C/X/V]</strong> Copy/Cut/Paste · <strong>[Ctrl+D]</strong> Dup · <strong>[Del]</strong> Del · <strong>[H]</strong> Hide · <strong>[Ctrl+S]</strong> Save';
 
         renderVectorMap();
         renderLayerSidebar();
         updateVectorInspector();
+        updateWallPointsInspector();
+        renderPointOverlay();
         applyCanvasTransform();
     } else {
+        pointEditState = null;
+        renderPointOverlay();
+        updateWallPointsInspector();
         if (tabPlots) tabPlots.classList.add('active');
         if (tabMap) tabMap.classList.remove('active');
         if (panelMap) panelMap.style.display = 'none';
@@ -241,6 +261,21 @@ function switchEditorMode(mode) {
 // ==============================================================================
 // 1. MAP VECTOR SYSTEM
 // ==============================================================================
+const ME_ICONS = {
+    eye: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeOff: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+    trash: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    lock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    unlock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'
+};
+
+function focusVectorInspector() {
+    const inspector = document.getElementById('inspectorMapMode');
+    if (inspector && inspector.scrollTop > 0) {
+        inspector.scrollTop = 0;
+    }
+}
+
 function initVectorSystem() {
     loadSavedVectors();
     renderVectorMap();
@@ -257,6 +292,27 @@ function initVectorSystem() {
 
     const btnExport = document.getElementById('btnExportJson');
     if (btnExport) btnExport.addEventListener('click', exportVectorLayoutJson);
+
+    const btnUndoMap = document.getElementById('btnUndoMap');
+    if (btnUndoMap) btnUndoMap.addEventListener('click', undoMapAction);
+
+    const btnRedoMap = document.getElementById('btnRedoMap');
+    if (btnRedoMap) btnRedoMap.addEventListener('click', redoMapAction);
+
+    const btnShowShortcuts = document.getElementById('btnShowShortcuts');
+    if (btnShowShortcuts) btnShowShortcuts.addEventListener('click', openShortcutsModal);
+
+    const btnCloseShortcuts = document.getElementById('btnCloseShortcutsModal');
+    if (btnCloseShortcuts) btnCloseShortcuts.addEventListener('click', closeShortcutsModal);
+
+    const shortcutsModal = document.getElementById('shortcutsModal');
+    if (shortcutsModal) {
+        shortcutsModal.addEventListener('click', (e) => {
+            if (e.target === shortcutsModal) closeShortcutsModal();
+        });
+    }
+
+    updateMapHistoryButtons();
 
     const btnAddTop = document.getElementById('btnAddVectorTop');
     if (btnAddTop) btnAddTop.addEventListener('click', openVectorAssetModal);
@@ -341,19 +397,21 @@ function applyBlueprintConfig() {
     const quickDragBtn = document.getElementById('btnQuickDragBp');
     if (quickDragBtn) {
         quickDragBtn.classList.toggle('active', !!blueprintConfig.unlocked);
-        quickDragBtn.innerHTML = blueprintConfig.unlocked ? ' Ref Movable' : ' Ref Locked';
+        quickDragBtn.innerHTML = blueprintConfig.unlocked
+            ? `${ME_ICONS.unlock} <span>Ref Movable</span>`
+            : `${ME_ICONS.lock} <span>Ref Locked</span>`;
         quickDragBtn.title = blueprintConfig.unlocked ? 'Reference image is movable (Click to lock)' : 'Reference image is locked (Click to unlock)';
     }
 
     const sidebarLockBtn = document.getElementById('sidebarBpLockBtn');
     if (sidebarLockBtn) {
-        sidebarLockBtn.textContent = blueprintConfig.unlocked ? '' : '';
+        sidebarLockBtn.innerHTML = blueprintConfig.unlocked ? ME_ICONS.unlock : ME_ICONS.lock;
         sidebarLockBtn.title = blueprintConfig.unlocked ? 'Movable: Click to lock' : 'Locked: Click to unlock';
     }
 
     const sidebarVisBtn = document.getElementById('sidebarBpVisBtn');
     if (sidebarVisBtn) {
-        sidebarVisBtn.textContent = blueprintConfig.visible ? '' : '‍';
+        sidebarVisBtn.innerHTML = blueprintConfig.visible ? ME_ICONS.eye : ME_ICONS.eyeOff;
         sidebarVisBtn.title = blueprintConfig.visible ? 'Hide Blueprint' : 'Show Blueprint';
     }
 
@@ -604,6 +662,7 @@ function loadBgConfig() {
         const saved = localStorage.getItem(BG_STORAGE_KEY);
         if (saved) {
             bgConfig = { ...DEFAULT_BG_CONFIG, ...JSON.parse(saved) };
+            sanitizeBgConfig();
             return;
         }
     } catch (e) { console.warn('BG config parse error:', e); }
@@ -700,7 +759,7 @@ function updateSidebarBgMeta() {
 
     const visBtn = document.getElementById('sidebarBgVisBtn');
     if (visBtn) {
-        visBtn.textContent = bgConfig.visible ? '' : '‍';
+        visBtn.innerHTML = bgConfig.visible ? ME_ICONS.eye : ME_ICONS.eyeOff;
         visBtn.title = bgConfig.visible ? 'Hide Background' : 'Show Background';
     }
 }
@@ -948,23 +1007,55 @@ function normalizeEditorVector(v) {
         v.desc = meta.desc;
         v.area = meta.area;
     }
+    if (v.kind === 'decor' && window.ZMGFence) {
+        const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0) ? Number(v.shapeAspect) : 1;
+        v.area = null;
+        v.custom = false;
+        v.shapeAspect = parseFloat(aspect.toFixed(4));
+        v.points = ZMGFence.sanitizePolygonPoints(v.points, 3) || ZMGFence.defaultShapePoints(4, aspect);
+        v.fill = v.fill || '#f3ecd8';
+        v.stroke = v.stroke || '#2f332e';
+        v.strokeWidth = (v.strokeWidth !== undefined && Number.isFinite(Number(v.strokeWidth)))
+            ? Number(v.strokeWidth)
+            : 2.5;
+        v.dashed = !!v.dashed;
+        v.fenceExclude = !!v.fenceExclude;
+        v.fenceInclude = !v.fenceExclude;
+        v.label = String(v.label || '');
+        v.src = ZMGFence.buildPartSvgDataUrl(v);
+    } else if (v.custom && window.ZMGFence) {
+        const cols = Number(v.cols) || 20;
+        const rows = Number(v.rows) || 20;
+        const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0)
+            ? Number(v.shapeAspect)
+            : (rows / Math.max(1, cols));
+        v.shapeAspect = parseFloat(aspect.toFixed(4));
+        const pts = ZMGFence.sanitizePolygonPoints(v.points, 3) || ZMGFence.defaultShapePoints(4, aspect);
+        v.points = pts;
+        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect);
+    }
     return v;
 }
 
 const ZMG_DB_MAP_CONFIG_ID = 'ZMG-MAP-VECTOR-LAYOUT-CONFIG';
 
 function loadSavedVectors() {
+    if (window.ZMGFence) {
+        fenceConfig = ZMGFence.readStoredFenceConfig();
+    }
     try {
         const saved = localStorage.getItem(MAP_STORAGE_KEY);
         if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
                 vectorLayers = parsed
-                    .filter(v => v && v.id !== 'group-109' && !(v.src && v.src.includes('Group 109')))
+                    .filter(v => v && !isLegacyWallLayer(v))
                     .map(v => normalizeEditorVector({ visible: true, ...v }));
                 if (vectorLayers.length > 0) {
                     activeVectorId = vectorLayers[0]?.id || null;
                     selectedVectorIds = activeVectorId ? new Set([activeVectorId]) : new Set();
+                    finalizeLoadedVectors(false);
+                    resetMapUndoHistory();
                     syncEditorVectorsWithSupabase();
                     return;
                 }
@@ -976,6 +1067,8 @@ function loadSavedVectors() {
     vectorLayers = JSON.parse(JSON.stringify(DEFAULT_VECTORS)).map(normalizeEditorVector);
     activeVectorId = 'vector-14';
     selectedVectorIds = new Set(['vector-14']);
+    finalizeLoadedVectors(false);
+    resetMapUndoHistory();
     syncEditorVectorsWithSupabase();
 }
 
@@ -990,12 +1083,14 @@ async function syncEditorVectorsWithSupabase() {
 
         if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
             vectorLayers = row.coordinates.vectorLayers
-                .filter(v => v && v.id !== 'group-109' && !(v.src && v.src.includes('Group 109')))
+                .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
+            finalizeLoadedVectors(!!row.coordinates.entranceSeeded);
             localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 
             if (row.coordinates.bgConfig) {
                 bgConfig = { ...DEFAULT_BG_CONFIG, ...row.coordinates.bgConfig };
+                sanitizeBgConfig();
                 saveBgConfig();
                 applyBgConfig();
                 publishBgToDashboard();
@@ -1005,9 +1100,15 @@ async function syncEditorVectorsWithSupabase() {
                 saveBlueprintConfig();
                 applyBlueprintConfig();
             }
+            if (row.coordinates.fenceConfig && window.ZMGFence) {
+                fenceConfig = ZMGFence.writeStoredFenceConfig(row.coordinates.fenceConfig);
+            }
             renderVectorMap();
             renderLayerSidebar();
             updateVectorInspector();
+            updateWallPointsInspector();
+            renderPointOverlay();
+            resetMapUndoHistory();
             return;
         }
 
@@ -1038,6 +1139,8 @@ async function persistEditorVectorsToSupabase() {
                     vectorLayers,
                     bgConfig,
                     blueprintConfig,
+                    fenceConfig,
+                    entranceSeeded: !!localStorage.getItem(ENTRANCE_SEEDED_KEY),
                     updatedAt: new Date().toISOString()
                 }
             }], { onConflict: 'plot_identifier' });
@@ -1095,14 +1198,26 @@ async function saveVectorLayout() {
 
 async function resetVectorLayout() {
     if (!await showConfirmModal({ title: "Reset Vectors", message: "Are you sure you want to reset all vectors to factory default positions?", confirmText: "Reset to Default", cancelText: "Cancel", type: "warning", danger: true })) return;
+    const beforeSnap = captureMapSnapshot('reset layout');
     localStorage.removeItem(MAP_STORAGE_KEY);
-    vectorLayers = JSON.parse(JSON.stringify(DEFAULT_VECTORS));
+    const keptCustomAreas = vectorLayers.filter(v => v.custom);
+    vectorLayers = JSON.parse(JSON.stringify(DEFAULT_VECTORS)).concat(keptCustomAreas);
+    localStorage.removeItem(ENTRANCE_SEEDED_KEY);
+    fenceConfig = window.ZMGFence
+        ? ZMGFence.writeStoredFenceConfig({ ...DEFAULT_FENCE_CONFIG })
+        : { ...DEFAULT_FENCE_CONFIG };
+    pointEditState = null;
+    finalizeLoadedVectors(false);
     activeVectorId = vectorLayers[0]?.id || null;
+    selectedVectorIds = activeVectorId ? new Set([activeVectorId]) : new Set();
+    commitMapUndo(beforeSnap, 'reset layout');
     renderVectorMap();
     renderLayerSidebar();
     updateVectorInspector();
+    updateWallPointsInspector();
+    renderPointOverlay();
     if (typeof showNotification === 'function') {
-        showNotification('Layout Reset', 'Restored default vector coordinates.', 'info');
+        showNotification('Layout Reset', 'Restored default vector coordinates and auto-fit perimeter fence.', 'info');
     }
 }
 
@@ -1138,6 +1253,22 @@ function renderVectorMap() {
         img.alt = v.name;
         img.dataset.vectorId = v.id;
         img.draggable = false;
+        img.addEventListener('load', scheduleFence);
+        if (v.area) {
+            img.dataset.areaId = String(v.area);
+            img.title = `${v.name} - double-click to edit its plots`;
+            img.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                openAreaInPlotEditor(v);
+            });
+        } else if (v.kind === 'decor') {
+            img.dataset.partId = String(v.id);
+            img.title = `${v.name} - double-click to edit shape & style`;
+            img.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                openEditPartModal(v.id);
+            });
+        }
 
         img.style.left = `${v.left}%`;
         img.style.top = `${v.top}%`;
@@ -1166,6 +1297,10 @@ function renderVectorMap() {
 
         board.appendChild(img);
     });
+
+    scheduleFence();
+    renderPointOverlay();
+    updateWallPointsInspector();
 }
 
 // ── Render Left Sidebar Layers List ──
@@ -1186,20 +1321,21 @@ function renderLayerSidebar() {
         item.className = `me-layer-item ${isSelected ? 'active' : ''}`;
         item.dataset.vectorId = v.id;
 
+        item.classList.toggle('layer-hidden', !v.visible);
         item.innerHTML = `
             <div class="me-layer-thumb">
                 <img src="${v.src}" alt="${v.name}">
             </div>
             <div class="me-layer-meta">
-                <span class="me-layer-name">${v.name}</span>
+                <span class="me-layer-name">${v.name}${!v.visible ? '<span class="me-hidden-pill">Hidden</span>' : ''}</span>
                 <span class="me-layer-sub">${Math.round(v.left)}%, ${Math.round(v.top)}% · ${Math.round(v.width)}% w</span>
             </div>
             <div class="me-layer-actions">
                 <button type="button" class="me-action-icon-btn btn-vis" title="${v.visible ? 'Hide Layer' : 'Show Layer'}">
-                    ${v.visible ? '' : '‍'}
+                    ${v.visible ? ME_ICONS.eye : ME_ICONS.eyeOff}
                 </button>
                 <button type="button" class="me-action-icon-btn btn-trash" title="Delete Vector Layer">
-                    
+                    ${ME_ICONS.trash}
                 </button>
             </div>
         `;
@@ -1215,10 +1351,7 @@ function renderLayerSidebar() {
             const visBtn = e.target.closest('.btn-vis');
             if (visBtn) {
                 e.stopPropagation();
-                v.visible = !v.visible;
-                renderVectorMap();
-                renderLayerSidebar();
-                saveVectorLayout();
+                toggleVectorVisibility([v.id]);
                 return;
             }
 
@@ -1232,6 +1365,11 @@ function renderLayerSidebar() {
 
         list.appendChild(item);
     });
+
+    const modeDetail = document.getElementById('activeModeDetail');
+    if (modeDetail && currentMode === 'map') {
+        modeDetail.textContent = `${vectorLayers.length} Vectors Loaded · Boundless Canvas`;
+    }
 }
 
 function selectBlueprint() {
@@ -1268,6 +1406,9 @@ function deselectAll() {
     activeSelectionType = null;
     activeVectorId = null;
     selectedVectorIds.clear();
+    if (pointEditState && pointEditState.mode === 'shape') {
+        pointEditState = null;
+    }
 
     const bp = document.getElementById('blueprintImg');
     if (bp) bp.classList.remove('selected');
@@ -1283,6 +1424,7 @@ function deselectAll() {
     document.querySelectorAll('.me-layer-item').forEach(el => el.classList.remove('active'));
 
     updateVectorInspector();
+    renderPointOverlay();
 }
 
 function toggleSelectVector(id) {
@@ -1297,6 +1439,9 @@ function toggleSelectVector(id) {
         selectedVectorIds.add(id);
         activeVectorId = id;
     }
+    if (pointEditState && pointEditState.mode === 'shape' && pointEditState.layerId !== activeVectorId) {
+        pointEditState = null;
+    }
 
     // Deselect blueprint and background
     const bp = document.getElementById('blueprintImg');
@@ -1310,6 +1455,8 @@ function toggleSelectVector(id) {
 
     syncSelectionUI();
     updateVectorInspector();
+    focusVectorInspector();
+    renderPointOverlay();
 }
 
 function selectVector(id, isMulti = false) {
@@ -1320,6 +1467,9 @@ function selectVector(id, isMulti = false) {
     activeSelectionType = 'vector';
     activeVectorId = id;
     selectedVectorIds = new Set([id]);
+    if (pointEditState && pointEditState.mode === 'shape' && pointEditState.layerId !== id) {
+        pointEditState = null;
+    }
 
     // Deselect blueprint and bg
     const bp = document.getElementById('blueprintImg');
@@ -1333,6 +1483,8 @@ function selectVector(id, isMulti = false) {
 
     syncSelectionUI();
     updateVectorInspector();
+    focusVectorInspector();
+    renderPointOverlay();
 }
 
 function syncSelectionUI() {
@@ -1411,6 +1563,7 @@ function startVectorDrag(e, vector) {
     isDraggingVector = true;
     dragContext = {
         primaryId: vector.id,
+        beforeSnapshot: captureMapSnapshot('move layer'),
         startX: e.clientX,
         startY: e.clientY,
         vectors: Array.from(selectedVectorIds).map(id => {
@@ -1434,7 +1587,7 @@ function startVectorDrag(e, vector) {
 
 // Helper: Check if moving vector to (candidateLeft, candidateTop) intersects another visible vector
 function getVectorOverlap(currentVector, candidateLeft, candidateTop) {
-    if (!currentVector || currentVector.id === 'group-109') return null;
+    if (!currentVector || currentVector.id === 'group-109' || currentVector.kind === 'entrance') return null;
     const w1 = Number(currentVector.width) || 15;
     const h1 = w1 * 1.1; // proportional height
     const r1 = {
@@ -1445,7 +1598,7 @@ function getVectorOverlap(currentVector, candidateLeft, candidateTop) {
     };
 
     for (const other of vectorLayers) {
-        if (!other.visible || other.id === currentVector.id || other.id === 'group-109') continue;
+        if (!other.visible || other.id === currentVector.id || other.id === 'group-109' || other.kind === 'entrance') continue;
         const w2 = Number(other.width) || 15;
         const h2 = w2 * 1.1;
         const r2 = {
@@ -1497,13 +1650,18 @@ function onVectorDragMove(e) {
         setVal('propX', activeV.left);
         setVal('propY', activeV.top);
     }
+    if (pointEditState) {
+        renderPointOverlay();
+    }
 }
 
 function onVectorDragEnd() {
     if (!isDraggingVector) return;
     isDraggingVector = false;
+    let beforeSnap = null;
 
     if (dragContext) {
+        beforeSnap = dragContext.beforeSnapshot || null;
         dragContext.vectors.forEach(item => {
             const targetEl = document.querySelector(`.me-vec-element[data-vector-id="${item.id}"]`);
             if (targetEl) {
@@ -1511,15 +1669,21 @@ function onVectorDragEnd() {
                 targetEl.classList.remove('me-vec-overlap');
             }
         });
+        dragContext.vectors.forEach(item => {
+            const dragged = vectorLayers.find(l => l.id === item.id);
+            if (dragged && dragged.kind === 'entrance') snapEntranceLayer(dragged);
+        });
         dragContext = null;
     }
 
     window.removeEventListener('mousemove', onVectorDragMove);
     window.removeEventListener('mouseup', onVectorDragEnd);
 
+    if (beforeSnap) commitMapUndo(beforeSnap, 'move layer');
     localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
     renderLayerSidebar();
     updateVectorInspector();
+    renderPointOverlay();
 }
 
 // ── Quick Actions: Resize & Rotate Multi-Select ──
@@ -1529,6 +1693,7 @@ function quickResizeSelected(delta) {
     }
     if (selectedVectorIds.size === 0) return;
 
+    const beforeSnap = captureMapSnapshot('resize layer');
     selectedVectorIds.forEach(id => {
         const v = vectorLayers.find(layer => layer.id === id);
         if (!v) return;
@@ -1540,8 +1705,10 @@ function quickResizeSelected(delta) {
         if (targetEl) targetEl.style.width = `${v.width}%`;
     });
 
+    commitMapUndo(beforeSnap, 'resize layer', 'quick-resize');
     renderLayerSidebar();
     updateVectorInspector();
+    renderPointOverlay();
     localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 }
 
@@ -1551,6 +1718,7 @@ function quickRotateSelected(deg, isDelta = true) {
     }
     if (selectedVectorIds.size === 0) return;
 
+    const beforeSnap = captureMapSnapshot('rotate layer');
     selectedVectorIds.forEach(id => {
         const v = vectorLayers.find(layer => layer.id === id);
         if (!v) return;
@@ -1563,7 +1731,9 @@ function quickRotateSelected(deg, isDelta = true) {
         if (targetEl) targetEl.style.transform = `rotate(${v.rotate}deg)`;
     });
 
+    commitMapUndo(beforeSnap, 'rotate layer', isDelta ? 'quick-rotate' : null);
     updateVectorInspector();
+    renderPointOverlay();
     localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 }
 
@@ -1574,9 +1744,18 @@ async function deleteSelectedVectors() {
         deleteVector(Array.from(selectedVectorIds)[0]);
         return;
     }
+    const selectedCustom = vectorLayers.filter(l => selectedVectorIds.has(l.id) && l.custom);
+    if (selectedCustom.length > 0) {
+        if (typeof showNotification === 'function') {
+            showNotification('Custom Areas Selected', 'Custom cemetery areas must be deleted one at a time so their plots can be checked first.', 'warning');
+        }
+        return;
+    }
     if (!await showConfirmModal({ title: "Delete Vector Layers", message: `Delete all ${count} selected vector layers?`, confirmText: "Delete Layers", cancelText: "Cancel", type: "warning", danger: true })) return;
 
+    const beforeSnap = captureMapSnapshot('delete layers');
     vectorLayers = vectorLayers.filter(l => !selectedVectorIds.has(l.id));
+    commitMapUndo(beforeSnap, 'delete layers');
     deselectAll();
     renderVectorMap();
     renderLayerSidebar();
@@ -1589,19 +1768,30 @@ function setupVectorInspectorEvents() {
         const el = document.getElementById(id);
         if (!el) return;
 
-        const updateFn = (val) => {
+        let pendingSnap = null;
+        const ensurePending = () => {
+            if (!pendingSnap) pendingSnap = captureMapSnapshot(`edit ${propKey}`);
+        };
+        el.addEventListener('focus', ensurePending);
+        el.addEventListener('pointerdown', ensurePending);
+
+        const updateFn = (val, isCommit = false) => {
             const v = vectorLayers.find(l => l.id === activeVectorId);
             if (!v) return;
+            if (propKey === 'name' && v.custom) return;
 
             let parsed = isNumeric ? parseFloat(val) : val;
             if (isNumeric && isNaN(parsed)) return;
             if (transform) parsed = transform(parsed);
 
+            const beforeSnap = pendingSnap || captureMapSnapshot(`edit ${propKey}`);
+            if (!pendingSnap && !isCommit) pendingSnap = beforeSnap;
+
             if (selectedVectorIds.size > 1 && (propKey === 'width' || propKey === 'rotate' || propKey === 'opacity' || propKey === 'zIndex')) {
                 const oldVal = v[propKey] || 0;
                 const delta = parsed - oldVal;
-                selectedVectorIds.forEach(id => {
-                    const layer = vectorLayers.find(l => l.id === id);
+                selectedVectorIds.forEach(sid => {
+                    const layer = vectorLayers.find(l => l.id === sid);
                     if (!layer) return;
                     if (propKey === 'width') {
                         layer.width = parseFloat(Math.max(2, Math.min(150, (Number(layer.width) || 15) + delta)).toFixed(1));
@@ -1618,13 +1808,18 @@ function setupVectorInspectorEvents() {
                 v[propKey] = parsed;
             }
 
+            commitMapUndo(beforeSnap, `edit ${propKey}`, `insp-${propKey}`);
+            if (isCommit) pendingSnap = null;
+
             renderVectorMap();
             renderLayerSidebar();
+            renderPointOverlay();
             localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
         };
 
-        el.addEventListener('input', (e) => updateFn(e.target.value));
-        el.addEventListener('change', (e) => updateFn(e.target.value));
+        el.addEventListener('input', (e) => updateFn(e.target.value, false));
+        el.addEventListener('change', (e) => updateFn(e.target.value, true));
+        el.addEventListener('blur', () => { pendingSnap = null; });
     };
 
     bindVal('propName', 'name', false);
@@ -1638,6 +1833,39 @@ function setupVectorInspectorEvents() {
     bindVal('propOpSlider', 'opacity', true, v => v / 100);
     bindVal('propZ', 'zIndex');
 
+    // Live Custom Part appearance controls (Fill, Border, Width, Dashed, Label, Fence wrap)
+    const bindPartField = (id, eventName, mutator, labelText, coalescePrefix) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener(eventName, () => {
+            const v = vectorLayers.find(l => l.id === activeVectorId);
+            if (!v || v.kind !== 'decor') return;
+            const beforeSnap = captureMapSnapshot(labelText);
+            mutator(v, el);
+            rebuildCustomShapeSvgAndSync(v);
+            const img = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
+            if (img) img.src = v.src;
+            if (v.label !== undefined && id === 'inspPartLabel') {
+                v.desc = v.label ? `${v.name} (${v.label})` : `${v.name} map structure`;
+            }
+            commitMapUndo(beforeSnap, labelText, coalescePrefix ? `${coalescePrefix}:${v.id}` : null);
+            if (typeof scheduleFence === 'function') scheduleFence();
+            localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+        });
+    };
+    bindPartField('inspPartLabel', 'input', (v, el) => { v.label = el.value.slice(0, 24); }, 'part label', 'part-label');
+    bindPartField('inspPartFill', 'input', (v, el) => { v.fill = el.value; }, 'part fill', 'part-fill');
+    bindPartField('inspPartStroke', 'input', (v, el) => { v.stroke = el.value; }, 'part border', 'part-stroke');
+    bindPartField('inspPartStrokeW', 'input', (v, el) => {
+        const sw = parseFloat(el.value);
+        v.strokeWidth = Number.isFinite(sw) ? Math.max(0, Math.min(12, sw)) : 2.5;
+    }, 'part border width', 'part-sw');
+    bindPartField('inspPartDashed', 'change', (v, el) => { v.dashed = !!el.checked; }, 'part outline style', null);
+    bindPartField('inspPartFenceInclude', 'change', (v, el) => {
+        v.fenceInclude = !!el.checked;
+        v.fenceExclude = !el.checked;
+    }, 'part fence inclusion', null);
+
     // Directional Nudge Pad (applies to all selected vectors)
     const setupNudge = (btnId, dx, dy) => {
         const btn = document.getElementById(btnId);
@@ -1646,6 +1874,8 @@ function setupVectorInspectorEvents() {
                 if (selectedVectorIds.size === 0 && activeVectorId) {
                     selectedVectorIds.add(activeVectorId);
                 }
+                if (selectedVectorIds.size === 0) return;
+                const beforeSnap = captureMapSnapshot('nudge layer');
                 selectedVectorIds.forEach(id => {
                     const v = vectorLayers.find(l => l.id === id);
                     if (!v) return;
@@ -1657,8 +1887,10 @@ function setupVectorInspectorEvents() {
                         targetEl.style.top = `${v.top}%`;
                     }
                 });
+                commitMapUndo(beforeSnap, 'nudge layer', 'btn-nudge');
                 renderLayerSidebar();
                 updateVectorInspector();
+                renderPointOverlay();
                 localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
             });
         }
@@ -1691,30 +1923,21 @@ function setupVectorInspectorEvents() {
 
     // Stacking Order Buttons
     const btnBringFwd = document.getElementById('btnBringFwd');
-    if (btnBringFwd) {
-        btnBringFwd.addEventListener('click', () => {
-            const v = vectorLayers.find(l => l.id === activeVectorId);
-            if (v) {
-                v.zIndex = (Number(v.zIndex) || 5) + 1;
-                renderVectorMap();
-                renderLayerSidebar();
-                updateVectorInspector();
-                localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-            }
-        });
-    }
+    if (btnBringFwd) btnBringFwd.addEventListener('click', () => reorderSelectedVectors('forward'));
 
     const btnSendBack = document.getElementById('btnSendBack');
-    if (btnSendBack) {
-        btnSendBack.addEventListener('click', () => {
-            const v = vectorLayers.find(l => l.id === activeVectorId);
-            if (v) {
-                v.zIndex = Math.max(1, (Number(v.zIndex) || 5) - 1);
-                renderVectorMap();
-                renderLayerSidebar();
-                updateVectorInspector();
-                localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-            }
+    if (btnSendBack) btnSendBack.addEventListener('click', () => reorderSelectedVectors('backward'));
+
+    const btnShowHidden = document.getElementById('btnShowHiddenLayer');
+    if (btnShowHidden) btnShowHidden.addEventListener('click', () => toggleVectorVisibility(null, true));
+
+    const btnInspectorVis = document.getElementById('btnInspectorToggleVis');
+    if (btnInspectorVis) btnInspectorVis.addEventListener('click', () => toggleVectorVisibility(null, null));
+
+    const btnEditFromName = document.getElementById('btnEditCustomAreaFromName');
+    if (btnEditFromName) {
+        btnEditFromName.addEventListener('click', () => {
+            if (activeVectorId) openEditAreaModal(activeVectorId);
         });
     }
 
@@ -1731,6 +1954,69 @@ function setupVectorInspectorEvents() {
     }
 }
 
+function isShapeEditableLayer(v) {
+    return !!v && (v.custom === true || Array.isArray(v.points));
+}
+
+function normalizeHex6(val, fallback) {
+    const raw = String(val || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+        return ('#' + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3]).toLowerCase();
+    }
+    return fallback;
+}
+
+function updatePartStyleInspector(v) {
+    const card = document.getElementById('partStyleGroup');
+    if (!card) return;
+    if (!v || v.kind !== 'decor') {
+        card.style.display = 'none';
+        return;
+    }
+    card.style.display = 'block';
+    const setIfIdle = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = val;
+    };
+    setIfIdle('inspPartLabel', v.label || '');
+    setIfIdle('inspPartFill', normalizeHex6(v.fill, '#f3ecd8'));
+    setIfIdle('inspPartStroke', normalizeHex6(v.stroke, '#2f332e'));
+    setIfIdle('inspPartStrokeW', v.strokeWidth ?? 2.5);
+    const dashedEl = document.getElementById('inspPartDashed');
+    if (dashedEl) dashedEl.checked = !!v.dashed;
+    const fenceEl = document.getElementById('inspPartFenceInclude');
+    if (fenceEl) fenceEl.checked = v.fenceExclude !== true;
+}
+
+function updateShapePointsInspector(v) {
+    const card = document.getElementById('shapePointsGroup');
+    if (!card) return;
+    if (!isShapeEditableLayer(v)) {
+        card.style.display = 'none';
+        return;
+    }
+    card.style.display = 'block';
+    const pts = ensureCustomShapePoints(v);
+    const badge = document.getElementById('shapePointCountBadge');
+    const countInput = document.getElementById('shapePointCountInput');
+    const toggleBtn = document.getElementById('btnToggleEditShapePoints');
+    const modalBtn = document.getElementById('btnOpenModalShapeEditor');
+    const isEditingThis = !!(pointEditState && pointEditState.mode === 'shape' && pointEditState.layerId === v.id);
+
+    if (badge) badge.textContent = `${pts.length} pts`;
+    if (countInput && document.activeElement !== countInput) {
+        countInput.value = pts.length;
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.toggle('me-btn-active-tool', isEditingThis);
+        toggleBtn.textContent = isEditingThis ? 'Done Editing Shape Points' : 'Edit Shape Points on Map';
+    }
+    if (modalBtn) {
+        modalBtn.textContent = v.kind === 'decor' ? 'Edit Part Shape & Style' : 'Open Visual Shape Editor';
+    }
+}
+
 function updateVectorInspector() {
     const v = vectorLayers.find(l => l.id === activeVectorId);
     const emptyMsg = document.getElementById('propsEmptyMap');
@@ -1742,6 +2028,8 @@ function updateVectorInspector() {
         if (emptyMsg) emptyMsg.style.display = 'block';
         if (form) form.style.display = 'none';
         if (multiBadge) multiBadge.style.display = 'none';
+        updatePartStyleInspector(null);
+        updateShapePointsInspector(null);
         return;
     }
 
@@ -1757,7 +2045,24 @@ function updateVectorInspector() {
         }
     }
 
+    const isVisible = v.visible !== false;
+    const hiddenBanner = document.getElementById('propHiddenBanner');
+    if (hiddenBanner) hiddenBanner.style.display = isVisible ? 'none' : 'flex';
+
+    const visToggleBtn = document.getElementById('btnInspectorToggleVis');
+    if (visToggleBtn) {
+        visToggleBtn.classList.toggle('is-hidden', !isVisible);
+        visToggleBtn.innerHTML = isVisible
+            ? `${ME_ICONS.eye} <span>Visible</span>`
+            : `${ME_ICONS.eyeOff} <span>Hidden</span>`;
+        visToggleBtn.title = isVisible ? 'Click to hide this layer on map' : 'Hidden on map — click to show';
+    }
+
     setVal('propName', v.name);
+    const propNameEl = document.getElementById('propName');
+    if (propNameEl) propNameEl.readOnly = !!v.custom;
+    const customHint = document.getElementById('propCustomAreaHint');
+    if (customHint) customHint.style.display = v.custom ? 'flex' : 'none';
     setVal('propX', v.left);
     setVal('propY', v.top);
     setVal('propW', v.width);
@@ -1769,6 +2074,8 @@ function updateVectorInspector() {
     setVal('propOpacity', opPct);
     setVal('propOpSlider', opPct);
     setVal('propZ', v.zIndex || 5);
+    updatePartStyleInspector(v);
+    updateShapePointsInspector(v);
 }
 
 // ── Deleting Vectors ──
@@ -1776,18 +2083,27 @@ async function deleteVector(id) {
     const v = vectorLayers.find(l => l.id === id);
     const name = v ? v.name : 'Vector layer';
 
+    if (v && v.custom && !(await canRemoveCustomArea(v.name))) return;
+
     if (!await showConfirmModal({ title: "Delete Vector", message: `Are you sure you want to delete "${name}" from the map?`, confirmText: "Delete", cancelText: "Cancel", type: "warning", danger: true })) return;
 
+    const beforeSnap = captureMapSnapshot(`delete ${name}`);
     vectorLayers = vectorLayers.filter(l => l.id !== id);
     selectedVectorIds.delete(id);
+    if (pointEditState && pointEditState.mode === 'shape' && pointEditState.layerId === id) {
+        pointEditState = null;
+    }
+    syncCustomAreasFromLayers();
     if (activeVectorId === id) {
         activeVectorId = selectedVectorIds.size > 0 ? Array.from(selectedVectorIds)[0] : (vectorLayers[0]?.id || null);
     }
 
+    commitMapUndo(beforeSnap, `delete ${name}`);
     saveVectorLayout();
     renderVectorMap();
     renderLayerSidebar();
     updateVectorInspector();
+    renderPointOverlay();
 
     if (typeof showNotification === 'function') {
         showNotification('Layer Deleted', `Removed "${name}" from layout.`, 'info');
@@ -1810,7 +2126,7 @@ function setupVectorAssetGalleryModal() {
         const card = document.createElement('div');
         card.className = 'me-asset-card';
         card.innerHTML = `
-            <img src="${MAP_DIR}${asset.file}" alt="${asset.name}">
+            <img src="${asset.special === 'entrance' ? ZMGFence.entranceSvgDataUrl() : MAP_DIR + asset.file}" alt="${asset.name}">
             <span>${asset.name}</span>
         `;
         card.addEventListener('click', () => {
@@ -1835,6 +2151,7 @@ function setupVectorAssetGalleryModal() {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (uploadEvt) => {
+                    const beforeSnap = captureMapSnapshot('upload vector');
                     const newVector = {
                         id: `custom-vector-${Date.now()}`,
                         name: file.name.replace(/\.[^/.]+$/, ''),
@@ -1848,11 +2165,11 @@ function setupVectorAssetGalleryModal() {
                         visible: true
                     };
                     vectorLayers.push(newVector);
-                    activeVectorId = newVector.id;
+                    commitMapUndo(beforeSnap, `upload ${newVector.name}`);
                     saveVectorLayout();
                     renderVectorMap();
                     renderLayerSidebar();
-                    updateVectorInspector();
+                    selectVector(newVector.id, false);
                     closeVectorAssetModal();
                     if (typeof showNotification === 'function') {
                         showNotification('Vector Uploaded', `Added "${newVector.name}" to canvas!`, 'success');
@@ -1875,6 +2192,11 @@ function closeVectorAssetModal() {
 }
 
 function addVectorFromAsset(asset) {
+    if (asset.special === 'entrance') {
+        addEntranceLayer();
+        return;
+    }
+    const beforeSnap = captureMapSnapshot(`add ${asset.name}`);
     const newVector = {
         id: `vec-${Date.now()}`,
         name: asset.name,
@@ -1889,11 +2211,11 @@ function addVectorFromAsset(asset) {
     };
 
     vectorLayers.push(newVector);
-    activeVectorId = newVector.id;
+    commitMapUndo(beforeSnap, `add ${asset.name}`);
     saveVectorLayout();
     renderVectorMap();
     renderLayerSidebar();
-    updateVectorInspector();
+    selectVector(newVector.id, false);
 
     if (typeof showNotification === 'function') {
         showNotification('Vector Added', `Added "${asset.name}" to canvas!`, 'success');
@@ -1901,6 +2223,2020 @@ function addVectorFromAsset(asset) {
 }
 
 // ==============================================================================
+// ==============================================================================
+// ==============================================================================
+// PERIMETER FENCE, ENTRANCE GATE & CUSTOM CEMETERY AREAS
+// ==============================================================================
+const ENTRANCE_SEEDED_KEY = 'zion_map_entrance_seeded_v1';
+let fenceRaf = null;
+let areaPrefixTouched = false;
+
+function isLegacyWallLayer(v) {
+    if (window.ZMGFence) return ZMGFence.isLegacyWall(v);
+    return !!v && (v.id === 'group-109' || !!(v.src && /Group 109|boundary|Framework/i.test(v.src)));
+}
+
+function sanitizeBgConfig() {
+    if (bgConfig && bgConfig.src && /cemetery-boundary-bg/i.test(bgConfig.src)) {
+        bgConfig.src = '';
+    }
+}
+
+// Seeds one entrance gate the first time a layout is opened (never re-adds a deleted one)
+function finalizeLoadedVectors(entranceAlreadySeeded) {
+    if (window.ZMGFence) {
+        const hasEntrance = vectorLayers.some(v => v.kind === 'entrance');
+        const seeded = entranceAlreadySeeded || !!localStorage.getItem(ENTRANCE_SEEDED_KEY);
+        if (!hasEntrance && !seeded) {
+            vectorLayers.push(ZMGFence.createEntranceLayer({ id: 'entrance-gate' }));
+        }
+        if (hasEntrance || entranceAlreadySeeded || !seeded) {
+            localStorage.setItem(ENTRANCE_SEEDED_KEY, '1');
+        }
+    }
+    syncCustomAreasFromLayers();
+}
+
+function scheduleFence() {
+    if (fenceRaf) return;
+    fenceRaf = requestAnimationFrame(() => {
+        fenceRaf = null;
+        updateFence();
+    });
+}
+
+function updateFence() {
+    const board = document.getElementById('mapBoard');
+    if (!board || !window.ZMGFence || currentMode !== 'map') return;
+    const result = ZMGFence.render(board, vectorLayers, { fenceConfig });
+    if (result && result.snapped) {
+        localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+        renderLayerSidebar();
+        updateVectorInspector();
+    }
+    updateWallPointsInspector(result && Array.isArray(result.points) ? result.points.length : null);
+}
+
+// ── Polygon Geometry & Point-Editing System (Custom Area Shapes + Perimeter Wall) ──
+function ensureCustomShapePoints(v) {
+    if (!v || !window.ZMGFence) return [];
+    const cols = Number(v.cols) || 20;
+    const rows = Number(v.rows) || 20;
+    const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0)
+        ? Number(v.shapeAspect)
+        : (rows / Math.max(1, cols));
+    v.shapeAspect = parseFloat(aspect.toFixed(4));
+    const clean = ZMGFence.sanitizePolygonPoints(v.points, 3);
+    if (clean) {
+        v.points = clean;
+        return clean;
+    }
+    v.points = ZMGFence.defaultShapePoints(4, aspect);
+    return v.points;
+}
+
+function shapeLayerBoxMetrics(v) {
+    const cols = Number(v.cols) || 20;
+    const rows = Number(v.rows) || 20;
+    const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0)
+        ? Number(v.shapeAspect)
+        : (rows / Math.max(1, cols));
+    const boxW = ((Number(v.width) || 15) / 100) * BOARD_WIDTH;
+    const boxH = boxW * aspect;
+    const cx = ((Number(v.left) || 0) / 100) * BOARD_WIDTH + boxW / 2;
+    const cy = ((Number(v.top) || 0) / 100) * BOARD_HEIGHT + boxH / 2;
+    const rot = ((Number(v.rotate) || 0) * Math.PI) / 180;
+    return { boxW, boxH, cx, cy, rot, aspect };
+}
+
+function shapeLocalPctToBoardPx(v, pt) {
+    const { boxW, boxH, cx, cy, rot } = shapeLayerBoxMetrics(v);
+    const lx = ((Number(pt.x) || 0) / 100 - 0.5) * boxW;
+    const ly = ((Number(pt.y) || 0) / 100 - 0.5) * boxH;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    return {
+        x: cx + lx * cos - ly * sin,
+        y: cy + lx * sin + ly * cos
+    };
+}
+
+// Recompute layer bounding box (left, top, width, shapeAspect) and normalized 0..100 points
+// from absolute board-pixel vertex positions while preserving v.rotate exactly.
+function applyBoardPxPointsToShapeLayer(v, absPts) {
+    if (!v || !Array.isArray(absPts) || absPts.length < 3) return;
+    const rot = ((Number(v.rotate) || 0) * Math.PI) / 180;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+
+    // Transform board points into layer's rotated local coordinates around origin
+    const localPts = absPts.map(p => ({
+        u: p.x * cos + p.y * sin,
+        w: -p.x * sin + p.y * cos
+    }));
+
+    let minU = Infinity, maxU = -Infinity, minW = Infinity, maxW = -Infinity;
+    localPts.forEach(lp => {
+        if (lp.u < minU) minU = lp.u;
+        if (lp.u > maxU) maxU = lp.u;
+        if (lp.w < minW) minW = lp.w;
+        if (lp.w > maxW) maxW = lp.w;
+    });
+
+    const boxW = Math.max(24, maxU - minU);
+    const boxH = Math.max(24, maxW - minW);
+    const midU = (minU + maxU) / 2;
+    const midW = (minW + maxW) / 2;
+
+    // Transform new center back into board pixel space
+    const newCx = midU * cos - midW * sin;
+    const newCy = midU * sin + midW * cos;
+
+    v.left = parseFloat((((newCx - boxW / 2) / BOARD_WIDTH) * 100).toFixed(2));
+    v.top = parseFloat((((newCy - boxH / 2) / BOARD_HEIGHT) * 100).toFixed(2));
+    v.width = parseFloat(((boxW / BOARD_WIDTH) * 100).toFixed(2));
+    v.shapeAspect = parseFloat((boxH / boxW).toFixed(4));
+    v.points = localPts.map(lp => ({
+        x: parseFloat((((lp.u - minU) / boxW) * 100).toFixed(2)),
+        y: parseFloat((((lp.w - minW) / boxH) * 100).toFixed(2))
+    }));
+}
+
+function rebuildCustomShapeSvgAndSync(v) {
+    if (!v || !window.ZMGFence) return;
+    const pts = ensureCustomShapePoints(v);
+    if (v.kind === 'decor') {
+        v.src = ZMGFence.buildPartSvgDataUrl(v);
+        return;
+    }
+    v.src = ZMGFence.buildAreaSvgDataUrl(v.cols || 20, v.rows || 20, v.area, pts, v.shapeAspect);
+    syncCustomAreasFromLayers();
+}
+
+function getAutoFenceRectPct() {
+    const board = document.getElementById('mapBoard');
+    if (board && window.ZMGFence) {
+        const rect = ZMGFence.computeFenceRect(board, vectorLayers);
+        if (rect) {
+            return {
+                x: (rect.x / BOARD_WIDTH) * 100,
+                y: (rect.y / BOARD_HEIGHT) * 100,
+                w: (rect.w / BOARD_WIDTH) * 100,
+                h: (rect.h / BOARD_HEIGHT) * 100
+            };
+        }
+    }
+    return { x: 5, y: 5, w: 90, h: 90 };
+}
+
+function getAutoWrappedFencePointsPct() {
+    const board = document.getElementById('mapBoard');
+    if (board && window.ZMGFence) {
+        const poly = ZMGFence.computeFencePolygon(board, vectorLayers, {
+            fenceConfig: { mode: 'auto', points: [] }
+        });
+        if (poly && Array.isArray(poly.points) && poly.points.length >= 3) {
+            const ptsPct = poly.points.map(p => ({
+                x: (p.x / BOARD_WIDTH) * 100,
+                y: (p.y / BOARD_HEIGHT) * 100
+            }));
+            const clean = ZMGFence.sanitizePolygonPoints(ptsPct, 3);
+            if (clean) return clean;
+        }
+        return ZMGFence.rectToPolygonPoints(getAutoFenceRectPct(), 4, BOARD_WIDTH / BOARD_HEIGHT);
+    }
+    return [];
+}
+
+function getEditableWallPointsPct() {
+    if (fenceConfig && fenceConfig.mode === 'custom' && window.ZMGFence) {
+        const clean = ZMGFence.sanitizePolygonPoints(fenceConfig.points, 3);
+        if (clean) return clean;
+    }
+    return getAutoWrappedFencePointsPct();
+}
+
+function updateWallPointsInspector(knownAutoCount = null) {
+    const badge = document.getElementById('wallModeBadge');
+    const toggleBtn = document.getElementById('btnToggleEditWallPoints');
+    const topBtn = document.getElementById('btnEditWallPoints');
+    const countInput = document.getElementById('wallPointCountInput');
+    const isCustom = !!(fenceConfig && fenceConfig.mode === 'custom' && fenceConfig.points && fenceConfig.points.length >= 3);
+    const isEditing = !!(pointEditState && pointEditState.mode === 'wall');
+    const currentCount = isCustom
+        ? fenceConfig.points.length
+        : (knownAutoCount != null ? knownAutoCount : (getAutoWrappedFencePointsPct().length || 4));
+
+    if (badge) badge.textContent = isCustom ? `Custom (${currentCount} pts)` : `Auto Wrap (${currentCount} pts)`;
+    if (countInput && document.activeElement !== countInput) {
+        countInput.value = currentCount;
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.toggle('me-btn-active-tool', isEditing);
+        toggleBtn.textContent = isEditing ? 'Done Editing Wall Points' : 'Edit Wall Points';
+    }
+    if (topBtn) {
+        topBtn.classList.toggle('me-btn-active-tool', isEditing);
+    }
+}
+
+function commitWallPolygonPct(pts, persistToDb) {
+    if (!window.ZMGFence) return;
+    fenceConfig = ZMGFence.writeStoredFenceConfig({ mode: 'custom', points: pts });
+    updateFence();
+    updateWallPointsInspector();
+    renderPointOverlay();
+    if (persistToDb) {
+        persistEditorVectorsToSupabase();
+    }
+}
+
+function applyWallPointCount(targetCount, forceAutoWrap) {
+    if (!window.ZMGFence) return;
+    const beforeSnap = captureMapSnapshot('wall points');
+    const basePts = forceAutoWrap ? getAutoWrappedFencePointsPct() : getEditableWallPointsPct();
+    let nextPts;
+    if (forceAutoWrap && targetCount == null) {
+        nextPts = basePts;
+    } else {
+        const count = Math.max(3, Math.min(32, Math.round(Number(targetCount) || basePts.length || 4)));
+        nextPts = ZMGFence.resamplePolygonPoints(basePts, count, BOARD_WIDTH / BOARD_HEIGHT);
+    }
+    pointEditState = { mode: 'wall' };
+    commitWallPolygonPct(nextPts, true);
+    commitMapUndo(beforeSnap, 'wall points');
+}
+
+function applyShapePointCount(targetCount) {
+    const v = vectorLayers.find(l => l.id === activeVectorId);
+    if (!isShapeEditableLayer(v) || !window.ZMGFence) return;
+    const beforeSnap = captureMapSnapshot('shape points');
+    const pts = ensureCustomShapePoints(v);
+    const count = Math.max(3, Math.min(32, Math.round(Number(targetCount) || 4)));
+    v.points = ZMGFence.resamplePolygonPoints(pts, count, 1 / (v.shapeAspect || 1));
+    rebuildCustomShapeSvgAndSync(v);
+    pointEditState = { mode: 'shape', layerId: v.id };
+    commitMapUndo(beforeSnap, 'shape points');
+    renderVectorMap();
+    updateVectorInspector();
+    persistMapStateNow();
+}
+
+function resetSelectedShapeToRect() {
+    const v = vectorLayers.find(l => l.id === activeVectorId);
+    if (!isShapeEditableLayer(v) || !window.ZMGFence) return;
+    const beforeSnap = captureMapSnapshot('reset shape rectangle');
+    const cols = Number(v.cols) || 20;
+    const rows = Number(v.rows) || 20;
+    const oldMetrics = shapeLayerBoxMetrics(v);
+    const nextAspect = v.kind === 'decor'
+        ? ((v.shapeAspect && Number(v.shapeAspect) > 0) ? Number(v.shapeAspect) : 1)
+        : (rows / Math.max(1, cols));
+    const nextH = oldMetrics.boxW * nextAspect;
+
+    v.shapeAspect = parseFloat(nextAspect.toFixed(4));
+    v.left = parseFloat((((oldMetrics.cx - oldMetrics.boxW / 2) / BOARD_WIDTH) * 100).toFixed(2));
+    v.top = parseFloat((((oldMetrics.cy - nextH / 2) / BOARD_HEIGHT) * 100).toFixed(2));
+    v.points = ZMGFence.defaultShapePoints(4, nextAspect);
+    rebuildCustomShapeSvgAndSync(v);
+    commitMapUndo(beforeSnap, 'reset shape rectangle');
+    renderVectorMap();
+    updateVectorInspector();
+    persistMapStateNow();
+}
+
+function toggleWallPointEdit() {
+    if (currentMode !== 'map') switchEditorMode('map');
+    if (pointEditState && pointEditState.mode === 'wall') {
+        pointEditState = null;
+    } else {
+        pointEditState = { mode: 'wall' };
+    }
+    renderPointOverlay();
+    updateWallPointsInspector();
+    updateVectorInspector();
+}
+
+function toggleShapePointEdit(layerId) {
+    const targetId = layerId || activeVectorId;
+    const v = vectorLayers.find(l => l.id === targetId);
+    if (!isShapeEditableLayer(v)) return;
+    if (pointEditState && pointEditState.mode === 'shape' && pointEditState.layerId === v.id) {
+        pointEditState = null;
+    } else {
+        ensureCustomShapePoints(v);
+        pointEditState = { mode: 'shape', layerId: v.id };
+    }
+    renderPointOverlay();
+    updateVectorInspector();
+    updateWallPointsInspector();
+}
+
+function clientToBoardPx(clientX, clientY) {
+    const board = document.getElementById('mapBoard');
+    if (!board) return { x: 0, y: 0 };
+    const r = board.getBoundingClientRect();
+    return {
+        x: ((clientX - r.left) / (r.width || 1)) * BOARD_WIDTH,
+        y: ((clientY - r.top) / (r.height || 1)) * BOARD_HEIGHT
+    };
+}
+
+function getOrCreateVertexOverlay(board) {
+    let overlay = document.getElementById('vertexEditorOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'vertexEditorOverlay';
+        overlay.className = 'me-vertex-overlay';
+        board.appendChild(overlay);
+    }
+    return overlay;
+}
+
+function startVertexDrag(e, config) {
+    e.preventDefault();
+    e.stopPropagation();
+    const { mode, index, wallPtsPct, layer, shapeAbsPts, overlay, isNewMidpoint } = config;
+    const beforeSnap = config.beforeSnapshot || captureMapSnapshot(mode === 'wall' ? 'edit wall points' : 'edit shape points');
+    isDraggingVertex = true;
+    let moved = false;
+
+    const imgEl = layer
+        ? document.querySelector(`.me-vec-element[data-vector-id="${layer.id}"]`)
+        : null;
+    if (layer && imgEl) {
+        imgEl.style.opacity = '0.15';
+    }
+
+    const svgEl = overlay.querySelector('.me-vertex-svg');
+    const previewPoly = overlay.querySelector('.me-vertex-preview-poly');
+    const guidePoly = overlay.querySelector('.me-vertex-guide-poly');
+    const vertexHandles = overlay.querySelectorAll('.me-vertex-handle');
+    const midpointHandles = overlay.querySelectorAll('.me-midpoint-handle');
+
+    const activeHandle = overlay.querySelector(`.me-vertex-handle[data-pt-index="${index}"]`);
+    if (activeHandle) activeHandle.classList.add('is-active');
+
+    const updateDomHandles = (ptsPx) => {
+        const attr = ptsPx.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        if (guidePoly) guidePoly.setAttribute('points', attr);
+        if (previewPoly) previewPoly.setAttribute('points', attr);
+        vertexHandles.forEach(h => {
+            const i = parseInt(h.dataset.ptIndex, 10);
+            if (ptsPx[i]) {
+                h.style.left = `${(ptsPx[i].x / BOARD_WIDTH) * 100}%`;
+                h.style.top = `${(ptsPx[i].y / BOARD_HEIGHT) * 100}%`;
+            }
+        });
+        midpointHandles.forEach(m => {
+            const i = parseInt(m.dataset.edgeIndex, 10);
+            const a = ptsPx[i];
+            const b = ptsPx[(i + 1) % ptsPx.length];
+            if (a && b) {
+                m.style.left = `${(((a.x + b.x) / 2) / BOARD_WIDTH) * 100}%`;
+                m.style.top = `${(((a.y + b.y) / 2) / BOARD_HEIGHT) * 100}%`;
+            }
+        });
+    };
+
+    const onMove = (moveEvt) => {
+        moved = true;
+        const pos = clientToBoardPx(moveEvt.clientX, moveEvt.clientY);
+        if (mode === 'wall') {
+            wallPtsPct[index] = {
+                x: Math.round(((pos.x / BOARD_WIDTH) * 100) * 100) / 100,
+                y: Math.round(((pos.y / BOARD_HEIGHT) * 100) * 100) / 100
+            };
+            const ptsPx = wallPtsPct.map(p => ({ x: (p.x / 100) * BOARD_WIDTH, y: (p.y / 100) * BOARD_HEIGHT }));
+            updateDomHandles(ptsPx);
+            fenceConfig = { mode: 'custom', points: wallPtsPct };
+            updateFence();
+            if (svgEl) updateDomHandles(ptsPx);
+        } else if (mode === 'shape' && layer) {
+            shapeAbsPts[index] = pos;
+            if (!previewPoly && svgEl) {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('class', 'me-vertex-preview-poly');
+                poly.setAttribute('fill', '#cfe3c9');
+                poly.setAttribute('fill-opacity', '0.88');
+                poly.setAttribute('stroke', '#2d4a36');
+                poly.setAttribute('stroke-width', '3');
+                svgEl.insertBefore(poly, svgEl.firstChild);
+            }
+            updateDomHandles(shapeAbsPts);
+        }
+    };
+
+    const onUp = () => {
+        isDraggingVertex = false;
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+
+        if (activeHandle) activeHandle.classList.remove('is-active');
+        if (layer && imgEl) {
+            imgEl.style.opacity = `${layer.opacity ?? 1.0}`;
+        }
+
+        if (mode === 'wall') {
+            if (moved || isNewMidpoint) {
+                commitWallPolygonPct(wallPtsPct, true);
+                commitMapUndo(beforeSnap, 'edit wall points');
+            } else {
+                renderPointOverlay();
+            }
+        } else if (mode === 'shape' && layer) {
+            if (moved || isNewMidpoint) {
+                applyBoardPxPointsToShapeLayer(layer, shapeAbsPts);
+                rebuildCustomShapeSvgAndSync(layer);
+                commitMapUndo(beforeSnap, 'edit shape points');
+                renderVectorMap();
+                renderLayerSidebar();
+                updateVectorInspector();
+                persistMapStateNow();
+            } else {
+                renderPointOverlay();
+            }
+        }
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+}
+
+function renderPointOverlay() {
+    const board = document.getElementById('mapBoard');
+    if (!board) return;
+    const overlay = getOrCreateVertexOverlay(board);
+    overlay.innerHTML = '';
+
+    if (currentMode !== 'map' || !pointEditState) return;
+
+    let ptsPx = [];
+    let isWall = false;
+    let targetLayer = null;
+    let wallPtsPct = null;
+
+    if (pointEditState.mode === 'wall') {
+        isWall = true;
+        wallPtsPct = getEditableWallPointsPct().map(p => ({ x: p.x, y: p.y }));
+        ptsPx = wallPtsPct.map(p => ({ x: (p.x / 100) * BOARD_WIDTH, y: (p.y / 100) * BOARD_HEIGHT }));
+    } else if (pointEditState.mode === 'shape') {
+        targetLayer = vectorLayers.find(l => l.id === pointEditState.layerId);
+        if (!isShapeEditableLayer(targetLayer)) {
+            pointEditState = null;
+            return;
+        }
+        const localPts = ensureCustomShapePoints(targetLayer);
+        ptsPx = localPts.map(p => shapeLocalPctToBoardPx(targetLayer, p));
+    }
+
+    if (ptsPx.length < 3) return;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'me-vertex-svg');
+    svg.setAttribute('viewBox', `0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`);
+
+    if (!isWall) {
+        const preview = document.createElementNS(svgNS, 'polygon');
+        preview.setAttribute('class', 'me-vertex-preview-poly');
+        preview.setAttribute('fill', 'none');
+        preview.setAttribute('stroke', 'none');
+        preview.setAttribute('points', ptsPx.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+        svg.appendChild(preview);
+    }
+
+    const guide = document.createElementNS(svgNS, 'polygon');
+    guide.setAttribute('class', 'me-vertex-guide-poly');
+    guide.setAttribute('fill', 'none');
+    guide.setAttribute('stroke', isWall ? '#8c5228' : '#1e6b3d');
+    guide.setAttribute('stroke-width', '2');
+    guide.setAttribute('stroke-dasharray', '6 4');
+    guide.setAttribute('points', ptsPx.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+    svg.appendChild(guide);
+    overlay.appendChild(svg);
+
+    const canAddMore = ptsPx.length < (window.ZMGFence ? ZMGFence.MAX_POLYGON_POINTS : 32);
+    if (canAddMore) {
+        for (let i = 0; i < ptsPx.length; i++) {
+            const a = ptsPx[i];
+            const b = ptsPx[(i + 1) % ptsPx.length];
+            const mid = document.createElement('div');
+            mid.className = `me-midpoint-handle ${isWall ? 'is-wall' : 'is-shape'}`;
+            mid.dataset.edgeIndex = String(i);
+            mid.textContent = '+';
+            mid.title = 'Click or drag to insert a new corner point';
+            mid.style.left = `${(((a.x + b.x) / 2) / BOARD_WIDTH) * 100}%`;
+            mid.style.top = `${(((a.y + b.y) / 2) / BOARD_HEIGHT) * 100}%`;
+            mid.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const beforeSnap = captureMapSnapshot(isWall ? 'add wall point' : 'add shape point');
+                if (isWall) {
+                    const pa = wallPtsPct[i];
+                    const pb = wallPtsPct[(i + 1) % wallPtsPct.length];
+                    wallPtsPct.splice(i + 1, 0, {
+                        x: Math.round(((pa.x + pb.x) / 2) * 100) / 100,
+                        y: Math.round(((pa.y + pb.y) / 2) * 100) / 100
+                    });
+                    fenceConfig = ZMGFence.writeStoredFenceConfig({ mode: 'custom', points: wallPtsPct });
+                    updateFence();
+                    updateWallPointsInspector();
+                    renderPointOverlay();
+                    const freshOverlay = document.getElementById('vertexEditorOverlay');
+                    const freshPts = getEditableWallPointsPct().map(p => ({ x: p.x, y: p.y }));
+                    startVertexDrag(e, { mode: 'wall', index: i + 1, wallPtsPct: freshPts, overlay: freshOverlay, isNewMidpoint: true, beforeSnapshot: beforeSnap });
+                } else if (targetLayer) {
+                    const updatedAbs = ptsPx.map(p => ({ x: p.x, y: p.y }));
+                    updatedAbs.splice(i + 1, 0, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+                    applyBoardPxPointsToShapeLayer(targetLayer, updatedAbs);
+                    rebuildCustomShapeSvgAndSync(targetLayer);
+                    renderVectorMap();
+                    updateVectorInspector();
+                    const freshOverlay = document.getElementById('vertexEditorOverlay');
+                    const freshAbs = ensureCustomShapePoints(targetLayer).map(p => shapeLocalPctToBoardPx(targetLayer, p));
+                    startVertexDrag(e, { mode: 'shape', index: i + 1, layer: targetLayer, shapeAbsPts: freshAbs, overlay: freshOverlay, isNewMidpoint: true, beforeSnapshot: beforeSnap });
+                }
+            });
+            overlay.appendChild(mid);
+        }
+    }
+
+    ptsPx.forEach((pt, idx) => {
+        const handle = document.createElement('div');
+        handle.className = `me-vertex-handle ${isWall ? 'is-wall' : 'is-shape'}`;
+        handle.dataset.ptIndex = String(idx);
+        handle.title = `Point ${idx + 1} (drag to move, right-click or Alt+click to delete)`;
+        handle.style.left = `${(pt.x / BOARD_WIDTH) * 100}%`;
+        handle.style.top = `${(pt.y / BOARD_HEIGHT) * 100}%`;
+
+        const removeThisPoint = () => {
+            if (ptsPx.length <= 3) {
+                notifyArea('Minimum Points Reached', 'A polygon shape needs at least 3 corner points.', 'warning');
+                return;
+            }
+            const beforeSnap = captureMapSnapshot(isWall ? 'remove wall point' : 'remove shape point');
+            if (isWall) {
+                wallPtsPct.splice(idx, 1);
+                commitWallPolygonPct(wallPtsPct, true);
+                commitMapUndo(beforeSnap, 'remove wall point');
+            } else if (targetLayer) {
+                const remaining = ptsPx.filter((_, j) => j !== idx);
+                applyBoardPxPointsToShapeLayer(targetLayer, remaining);
+                rebuildCustomShapeSvgAndSync(targetLayer);
+                commitMapUndo(beforeSnap, 'remove shape point');
+                renderVectorMap();
+                updateVectorInspector();
+                persistMapStateNow();
+            }
+        };
+
+        handle.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removeThisPoint();
+        });
+
+        handle.addEventListener('mousedown', (e) => {
+            if (e.button === 2) {
+                e.preventDefault();
+                e.stopPropagation();
+                removeThisPoint();
+                return;
+            }
+            if (e.button !== 0) return;
+            if (e.altKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                removeThisPoint();
+                return;
+            }
+            startVertexDrag(e, {
+                mode: isWall ? 'wall' : 'shape',
+                index: idx,
+                wallPtsPct: wallPtsPct ? wallPtsPct.map(p => ({ x: p.x, y: p.y })) : null,
+                layer: targetLayer,
+                shapeAbsPts: !isWall ? ptsPx.map(p => ({ x: p.x, y: p.y })) : null,
+                overlay
+            });
+        });
+
+        overlay.appendChild(handle);
+    });
+}
+
+function initFenceSystem() {
+    if (window.ZMGFence) {
+        fenceConfig = ZMGFence.readStoredFenceConfig();
+    }
+
+    const board = document.getElementById('mapBoard');
+    if (board && window.MutationObserver) {
+        // Any move / resize / rotate of a map layer redraws the fence live
+        const observer = new MutationObserver((mutations) => {
+            const relevant = mutations.some(m => m.target && m.target.classList && m.target.classList.contains('me-vec-element'));
+            if (relevant) scheduleFence();
+        });
+        observer.observe(board, { subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+
+    const bindClick = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', fn);
+    };
+
+    bindClick('btnAddEntranceTop', addEntranceLayer);
+    bindClick('btnEditWallPoints', toggleWallPointEdit);
+    bindClick('btnToggleEditWallPoints', toggleWallPointEdit);
+    bindClick('btnApplyWallPointCount', () => {
+        const val = parseInt(document.getElementById('wallPointCountInput')?.value, 10) || 4;
+        applyWallPointCount(val, false);
+    });
+    bindClick('btnAddWallPoint', () => {
+        const pts = getEditableWallPointsPct();
+        applyWallPointCount(Math.min(32, pts.length + 1), false);
+    });
+    bindClick('btnRemoveWallPoint', () => {
+        const pts = getEditableWallPointsPct();
+        applyWallPointCount(Math.max(3, pts.length - 1), false);
+    });
+    bindClick('btnAutoFitWall', () => {
+        applyWallPointCount(null, true);
+    });
+    bindClick('btnResetAutoWall', () => {
+        if (!window.ZMGFence) return;
+        const beforeSnap = captureMapSnapshot('reset auto wall');
+        fenceConfig = ZMGFence.writeStoredFenceConfig({ ...DEFAULT_FENCE_CONFIG });
+        commitMapUndo(beforeSnap, 'reset auto wall');
+        updateFence();
+        updateWallPointsInspector();
+        renderPointOverlay();
+        persistEditorVectorsToSupabase();
+    });
+
+    bindClick('btnToggleEditShapePoints', () => toggleShapePointEdit(activeVectorId));
+    bindClick('btnApplyShapePointCount', () => {
+        const val = parseInt(document.getElementById('shapePointCountInput')?.value, 10) || 4;
+        applyShapePointCount(val);
+    });
+    bindClick('btnAddShapePoint', () => {
+        const v = vectorLayers.find(l => l.id === activeVectorId);
+        if (!isShapeEditableLayer(v)) return;
+        const pts = ensureCustomShapePoints(v);
+        applyShapePointCount(Math.min(32, pts.length + 1));
+    });
+    bindClick('btnRemoveShapePoint', () => {
+        const v = vectorLayers.find(l => l.id === activeVectorId);
+        if (!isShapeEditableLayer(v)) return;
+        const pts = ensureCustomShapePoints(v);
+        applyShapePointCount(Math.max(3, pts.length - 1));
+    });
+    bindClick('btnResetShapePoints', resetSelectedShapeToRect);
+    bindClick('btnOpenModalShapeEditor', () => {
+        const v = vectorLayers.find(l => l.id === activeVectorId);
+        if (!v) return;
+        if (v.kind === 'decor') openEditPartModal(v.id);
+        else openEditAreaModal(v.id);
+    });
+
+    updateWallPointsInspector();
+    scheduleFence();
+}
+
+function snapEntranceLayer(v) {
+    const board = document.getElementById('mapBoard');
+    if (!board || !window.ZMGFence || !v) return;
+    const poly = ZMGFence.computeFencePolygon(board, vectorLayers, { fenceConfig });
+    if (!poly) return;
+    ZMGFence.snapEntrance(board, v, poly.points);
+    const el = document.querySelector('.me-vec-element[data-vector-id="' + v.id + '"]');
+    if (el) {
+        el.style.left = v.left + '%';
+        el.style.top = v.top + '%';
+        el.style.transform = 'rotate(' + v.rotate + 'deg)';
+    }
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+    renderLayerSidebar();
+    updateVectorInspector();
+    scheduleFence();
+}
+
+function addEntranceLayer() {
+    if (!window.ZMGFence) return;
+    const beforeSnap = captureMapSnapshot('add entrance');
+    const maxZ = Math.max(...vectorLayers.map(l => Number(l.zIndex) || 0), 5);
+    const layer = ZMGFence.createEntranceLayer({ id: 'entrance-' + Date.now(), zIndex: Math.max(9, maxZ) });
+    vectorLayers.push(layer);
+    localStorage.setItem(ENTRANCE_SEEDED_KEY, '1');
+    commitMapUndo(beforeSnap, 'add entrance');
+    renderVectorMap();
+    renderLayerSidebar();
+    selectVector(layer.id, false);
+    persistMapStateNow();
+    if (typeof showNotification === 'function') {
+        showNotification('Entrance Added', 'The entrance gate snaps onto the fence. Drag it along any edge to reposition it.', 'success');
+    }
+}
+
+async function persistMapStateNow() {
+    try {
+        localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+        if (window.ZMGFence) {
+            fenceConfig = ZMGFence.writeStoredFenceConfig(fenceConfig);
+        }
+        await persistEditorVectorsToSupabase();
+    } catch (err) {
+        console.warn('Map state persist notice:', err);
+    }
+}
+
+// ── Custom areas ──
+function allUsedAreaNumbers() {
+    const used = new Set();
+    Object.values(SECTION_SHAPE_MAP).forEach(s => { if (s.area != null) used.add(parseInt(s.area, 10)); });
+    document.querySelectorAll('#editorSectionSelect option').forEach(o => {
+        const m = /^Area\s+(\d+)/i.exec(o.value);
+        if (m) used.add(parseInt(m[1], 10));
+    });
+    vectorLayers.forEach(v => { if (v.area != null && !isNaN(parseInt(v.area, 10))) used.add(parseInt(v.area, 10)); });
+    return used;
+}
+
+function nextFreeAreaNumber() {
+    const used = allUsedAreaNumbers();
+    let n = 13;
+    while (used.has(n)) n++;
+    return n;
+}
+
+function allUsedPrefixes() {
+    return new Set(Object.values(SECTION_SHAPE_MAP).map(s => String(s.prefix || '').toUpperCase()));
+}
+
+function suggestPrefix(name) {
+    const words = String(name || '').replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+    let base = words.map(w => w[0]).join('').toUpperCase().slice(0, 4);
+    if (base.length < 2) base = (words[0] || 'AR').slice(0, 3).toUpperCase();
+    if (!base) base = 'AR';
+    const used = allUsedPrefixes();
+    let candidate = base;
+    let i = 2;
+    while (used.has(candidate)) candidate = base + i++;
+    return candidate;
+}
+
+// Registers every custom-area layer in SECTION_SHAPE_MAP and the area dropdown
+function syncCustomAreasFromLayers() {
+    if (!window.ZMGFence || typeof SECTION_SHAPE_MAP === 'undefined') return;
+    const select = document.getElementById('editorSectionSelect');
+    const wanted = ZMGFence.customShapeEntries(vectorLayers);
+
+    Object.keys(SECTION_SHAPE_MAP).forEach(name => {
+        if (SECTION_SHAPE_MAP[name].custom && !wanted[name]) {
+            delete SECTION_SHAPE_MAP[name];
+            if (select) Array.from(select.options).forEach(o => { if (o.value === name) o.remove(); });
+        }
+    });
+
+    Object.keys(wanted).forEach(name => {
+        SECTION_SHAPE_MAP[name] = wanted[name];
+        if (select && !Array.from(select.options).some(o => o.value === name)) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name + ' (Custom)';
+            select.appendChild(opt);
+        }
+    });
+
+    updateAreaActionButtons();
+}
+
+function updateAreaActionButtons() {
+    const select = document.getElementById('editorSectionSelect');
+    const delBtn = document.getElementById('btnDeleteAreaSidebar');
+    if (!delBtn || !select) return;
+    const shape = SECTION_SHAPE_MAP[select.value];
+    delBtn.style.display = (shape && shape.custom) ? 'inline-flex' : 'none';
+}
+
+function findFreeMapSpot(wPx, hPx) {
+    const margin = 24;
+    const boxes = [];
+    vectorLayers.forEach(v => {
+        if (v.visible === false) return;
+        const el = document.querySelector('.me-vec-element[data-vector-id="' + v.id + '"]');
+        if (!el) return;
+        const w = el.offsetWidth || ((Number(v.width) || 10) / 100 * BOARD_WIDTH);
+        const h = el.offsetHeight || w;
+        const left = (Number(v.left) || 0) / 100 * BOARD_WIDTH;
+        const top = (Number(v.top) || 0) / 100 * BOARD_HEIGHT;
+        boxes.push({ l: left, t: top, r: left + w, b: top + h });
+    });
+
+    const free = (x, y) => !boxes.some(b => x < b.r + margin && x + wPx > b.l - margin && y < b.b + margin && y + hPx > b.t - margin);
+
+    for (let y = 40; y <= BOARD_HEIGHT - hPx - 40; y += 20) {
+        for (let x = 40; x <= BOARD_WIDTH - wPx - 40; x += 20) {
+            if (free(x, y)) {
+                return { left: parseFloat((x / BOARD_WIDTH * 100).toFixed(1)), top: parseFloat((y / BOARD_HEIGHT * 100).toFixed(1)) };
+            }
+        }
+    }
+    const maxRight = boxes.reduce((m, b) => Math.max(m, b.r), 0);
+    return { left: parseFloat(((maxRight + 60) / BOARD_WIDTH * 100).toFixed(1)), top: 8.0 };
+}
+
+let modalShapeState = {
+    editingLayerId: null,
+    points: [],
+    activeIdx: 0,
+    lockedIdentity: false
+};
+
+function isPointInPolygonPct(x, y, poly) {
+    if (!Array.isArray(poly) || poly.length < 3) return true;
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = Number(poly[i].x), yi = Number(poly[i].y);
+        const xj = Number(poly[j].x), yj = Number(poly[j].y);
+        const intersect = ((yi > y) !== (yj > y)) &&
+            (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function getShapePresetPoints(preset, cols, rows) {
+    switch (preset) {
+        case 'triangle':
+            return [
+                { x: 50, y: 0 },
+                { x: 100, y: 100 },
+                { x: 0, y: 100 }
+            ];
+        case 'l-shape':
+            return [
+                { x: 0, y: 0 },
+                { x: 50, y: 0 },
+                { x: 50, y: 50 },
+                { x: 100, y: 50 },
+                { x: 100, y: 100 },
+                { x: 0, y: 100 }
+            ];
+        case 'chamfer':
+            return [
+                { x: 15, y: 0 },
+                { x: 85, y: 0 },
+                { x: 100, y: 15 },
+                { x: 100, y: 85 },
+                { x: 85, y: 100 },
+                { x: 15, y: 100 },
+                { x: 0, y: 85 },
+                { x: 0, y: 15 }
+            ];
+        case 'hex':
+            return [
+                { x: 50, y: 0 },
+                { x: 100, y: 25 },
+                { x: 100, y: 75 },
+                { x: 50, y: 100 },
+                { x: 0, y: 75 },
+                { x: 0, y: 25 }
+            ];
+        case 'octagon':
+            return [
+                { x: 30, y: 0 },
+                { x: 70, y: 0 },
+                { x: 100, y: 30 },
+                { x: 100, y: 70 },
+                { x: 70, y: 100 },
+                { x: 30, y: 100 },
+                { x: 0, y: 70 },
+                { x: 0, y: 30 }
+            ];
+        case 'rect':
+        default:
+            return window.ZMGFence
+                ? ZMGFence.defaultShapePoints(4, (rows || 20) / Math.max(1, cols || 20))
+                : [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+    }
+}
+
+function normalizeModalGridPoint(xPct, yPct, cols, rows, snapEnabled) {
+    let x = Math.max(0, Math.min(100, xPct));
+    let y = Math.max(0, Math.min(100, yPct));
+    if (snapEnabled && cols >= 4 && rows >= 4) {
+        x = (Math.round((x / 100) * cols) / cols) * 100;
+        y = (Math.round((y / 100) * rows) / rows) * 100;
+    }
+    return {
+        x: Math.round(x * 100) / 100,
+        y: Math.round(y * 100) / 100
+    };
+}
+
+function countUsableCellsInPolygon(cols, rows, pts) {
+    let count = 0;
+    for (let r = 0; r < rows; r++) {
+        const cy = ((r + 0.5) / rows) * 100;
+        for (let c = 0; c < cols; c++) {
+            const cx = ((c + 0.5) / cols) * 100;
+            if (isPointInPolygonPct(cx, cy, pts)) count++;
+        }
+    }
+    return count;
+}
+
+function updateModalAreaReadout(pts) {
+    const readout = document.getElementById('newAreaActivePtReadout');
+    if (!readout) return;
+    const idx = Math.max(0, Math.min(pts.length - 1, modalShapeState.activeIdx || 0));
+    const pt = pts[idx];
+    readout.textContent = pt
+        ? `Pt ${idx + 1}/${pts.length}: ${Math.round(pt.x)}%, ${Math.round(pt.y)}%`
+        : `${pts.length} pts`;
+}
+
+function renderModalAreaEditorSvgOnly() {
+    const svg = document.getElementById('newAreaEditorSvg');
+    const board = document.getElementById('newAreaEditorBoard');
+    if (!svg || !board) return;
+
+    const cols = Math.max(4, Math.min(60, parseInt(document.getElementById('newAreaCols')?.value, 10) || 20));
+    const rows = Math.max(4, Math.min(60, parseInt(document.getElementById('newAreaRows')?.value, 10) || 20));
+    const num = (document.getElementById('newAreaNumber')?.value || '').replace(/[^0-9A-Za-z]/g, '');
+    const pts = modalShapeState.points;
+
+    const maxW = 340;
+    const maxH = 236;
+    const scale = Math.min(maxW / cols, maxH / rows);
+    const W = Math.max(96, Math.round(cols * scale));
+    const H = Math.max(96, Math.round(rows * scale));
+    board.style.width = `${W}px`;
+    board.style.height = `${H}px`;
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const cellW = W / cols;
+    const cellH = H / rows;
+
+    // 1. Single compound path highlighting plot slots inside the custom polygon
+    let insidePath = '';
+    for (let r = 0; r < rows; r++) {
+        const cy = ((r + 0.5) / rows) * 100;
+        const py = (r * cellH).toFixed(2);
+        const hStr = cellH.toFixed(2);
+        for (let c = 0; c < cols; c++) {
+            const cx = ((c + 0.5) / cols) * 100;
+            if (isPointInPolygonPct(cx, cy, pts)) {
+                insidePath += `M${(c * cellW).toFixed(2)},${py}h${cellW.toFixed(2)}v${hStr}h-${cellW.toFixed(2)}z`;
+            }
+        }
+    }
+    if (insidePath) {
+        const insideEl = document.createElementNS(svgNS, 'path');
+        insideEl.setAttribute('d', insidePath);
+        insideEl.setAttribute('fill', '#d5e6d8');
+        svg.appendChild(insideEl);
+    }
+
+    // 2. Single compound path for crisp gridlines across cols x rows
+    let gridPath = '';
+    for (let c = 0; c <= cols; c++) {
+        const x = (c * cellW).toFixed(2);
+        gridPath += `M${x},0V${H}`;
+    }
+    for (let r = 0; r <= rows; r++) {
+        const y = (r * cellH).toFixed(2);
+        gridPath += `M0,${y}H${W}`;
+    }
+    const gridEl = document.createElementNS(svgNS, 'path');
+    gridEl.setAttribute('d', gridPath);
+    gridEl.setAttribute('stroke', '#c2d1c5');
+    gridEl.setAttribute('stroke-width', '0.7');
+    gridEl.setAttribute('fill', 'none');
+    svg.appendChild(gridEl);
+
+    // 3. Area shape polygon preview + label
+    if (pts.length >= 3) {
+        const ptStr = pts.map(p => `${((p.x / 100) * W).toFixed(1)},${((p.y / 100) * H).toFixed(1)}`).join(' ');
+        const polyEl = document.createElementNS(svgNS, 'polygon');
+        polyEl.setAttribute('points', ptStr);
+        polyEl.setAttribute('fill', '#8fb897');
+        polyEl.setAttribute('fill-opacity', '0.32');
+        polyEl.setAttribute('stroke', '#1e4a2f');
+        polyEl.setAttribute('stroke-width', '2.5');
+        polyEl.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(polyEl);
+
+        const sum = pts.reduce((acc, p) => ({ x: acc.x + (p.x / 100) * W, y: acc.y + (p.y / 100) * H }), { x: 0, y: 0 });
+        const fontSize = Math.max(11, Math.min(20, Math.round(Math.min(W, H) * 0.11)));
+        const txt = document.createElementNS(svgNS, 'text');
+        txt.setAttribute('x', (sum.x / pts.length).toFixed(1));
+        txt.setAttribute('y', ((sum.y / pts.length) + fontSize * 0.35).toFixed(1));
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('font-family', 'Arial, sans-serif');
+        txt.setAttribute('font-weight', '700');
+        txt.setAttribute('font-size', String(fontSize));
+        txt.setAttribute('fill', '#173823');
+        txt.textContent = 'AREA ' + (num || '');
+        svg.appendChild(txt);
+    }
+
+    updateModalAreaReadout(pts);
+}
+
+// Shared polygon handle/midpoint renderer & drag handler used by modal shape editors
+function startModalPolyDrag(e, idx, opts) {
+    e.preventDefault();
+    e.stopPropagation();
+    const board = document.getElementById(opts.boardId);
+    const handlesLayer = document.getElementById(opts.handlesId);
+    if (!board || !handlesLayer) return;
+
+    opts.state.activeIdx = idx;
+    const handleEls = handlesLayer.querySelectorAll('.me-vertex-handle');
+    const midpointEls = handlesLayer.querySelectorAll('.me-midpoint-handle');
+    handleEls.forEach(h => h.classList.toggle('is-active', parseInt(h.dataset.ptIndex, 10) === idx));
+
+    const updateHandlePositions = () => {
+        const pts = opts.state.points;
+        handleEls.forEach(h => {
+            const i = parseInt(h.dataset.ptIndex, 10);
+            if (pts[i]) {
+                h.style.left = `${pts[i].x}%`;
+                h.style.top = `${pts[i].y}%`;
+            }
+        });
+        midpointEls.forEach(m => {
+            const i = parseInt(m.dataset.edgeIndex, 10);
+            const a = pts[i];
+            const b = pts[(i + 1) % pts.length];
+            if (a && b) {
+                m.style.left = `${(a.x + b.x) / 2}%`;
+                m.style.top = `${(a.y + b.y) / 2}%`;
+            }
+        });
+    };
+
+    const onMove = (moveEvt) => {
+        const r = board.getBoundingClientRect();
+        const rawX = ((moveEvt.clientX - r.left) / (r.width || 1)) * 100;
+        const rawY = ((moveEvt.clientY - r.top) / (r.height || 1)) * 100;
+        opts.state.points[idx] = opts.normalizePt(rawX, rawY, moveEvt);
+        updateHandlePositions();
+        opts.onSvgUpdate();
+    };
+
+    const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        opts.onCommit();
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+}
+
+function renderModalPolyHandles(opts) {
+    const handlesLayer = document.getElementById(opts.handlesId);
+    if (!handlesLayer) return;
+    handlesLayer.innerHTML = '';
+
+    const pts = opts.state.points;
+    const ptsInput = document.getElementById(opts.ptsInputId);
+    if (ptsInput && document.activeElement !== ptsInput) {
+        ptsInput.value = pts.length;
+    }
+
+    const canAdd = pts.length < (window.ZMGFence ? ZMGFence.MAX_POLYGON_POINTS : 32);
+    if (canAdd) {
+        for (let i = 0; i < pts.length; i++) {
+            const a = pts[i];
+            const b = pts[(i + 1) % pts.length];
+            const mid = document.createElement('div');
+            mid.className = 'me-midpoint-handle is-shape';
+            mid.dataset.edgeIndex = String(i);
+            mid.textContent = '+';
+            mid.title = 'Click or drag to split this side with a new corner';
+            mid.style.left = `${(a.x + b.x) / 2}%`;
+            mid.style.top = `${(a.y + b.y) / 2}%`;
+            mid.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+                pts.splice(i + 1, 0, {
+                    x: Math.round(((a.x + b.x) / 2) * 100) / 100,
+                    y: Math.round(((a.y + b.y) / 2) * 100) / 100
+                });
+                opts.state.activeIdx = i + 1;
+                opts.onCommit();
+                startModalPolyDrag(e, i + 1, opts);
+            });
+            handlesLayer.appendChild(mid);
+        }
+    }
+
+    pts.forEach((pt, idx) => {
+        const handle = document.createElement('div');
+        handle.className = `me-vertex-handle is-shape ${opts.state.activeIdx === idx ? 'is-active' : ''}`;
+        handle.dataset.ptIndex = String(idx);
+        handle.title = `Point ${idx + 1} (drag to move, right-click or Alt+click to delete)`;
+        handle.style.left = `${pt.x}%`;
+        handle.style.top = `${pt.y}%`;
+
+        const removePt = () => {
+            if (pts.length <= 3) {
+                notifyArea('Minimum Points Reached', opts.minPointsMessage || 'A custom shape requires at least 3 corner points.', 'warning');
+                return;
+            }
+            pts.splice(idx, 1);
+            opts.state.activeIdx = Math.max(0, Math.min(pts.length - 1, idx));
+            opts.onCommit();
+        };
+
+        handle.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removePt();
+        });
+
+        handle.addEventListener('mousedown', (e) => {
+            if (e.button === 2 || (e.button === 0 && e.altKey)) {
+                e.preventDefault();
+                e.stopPropagation();
+                removePt();
+                return;
+            }
+            if (e.button !== 0) return;
+            startModalPolyDrag(e, idx, opts);
+        });
+
+        handlesLayer.appendChild(handle);
+    });
+}
+
+function getNewAreaModalPolyOpts() {
+    return {
+        boardId: 'newAreaEditorBoard',
+        handlesId: 'newAreaEditorHandles',
+        ptsInputId: 'newAreaPoints',
+        state: modalShapeState,
+        minPointsMessage: 'A polygon area requires at least 3 corner points.',
+        normalizePt: (rawX, rawY, moveEvt) => {
+            const cols = Math.max(4, Math.min(60, parseInt(document.getElementById('newAreaCols')?.value, 10) || 20));
+            const rows = Math.max(4, Math.min(60, parseInt(document.getElementById('newAreaRows')?.value, 10) || 20));
+            const snapChk = document.getElementById('newAreaSnapGrid');
+            const snapEnabled = snapChk ? (snapChk.checked && !moveEvt.shiftKey) : !moveEvt.shiftKey;
+            return normalizeModalGridPoint(rawX, rawY, cols, rows, snapEnabled);
+        },
+        onSvgUpdate: () => {
+            renderModalAreaEditorSvgOnly();
+            updateNewAreaHintOnly();
+        },
+        onCommit: () => {
+            renderModalAreaEditor();
+            updateNewAreaHintOnly();
+        }
+    };
+}
+
+function renderModalAreaEditor() {
+    renderModalAreaEditorSvgOnly();
+    renderModalPolyHandles(getNewAreaModalPolyOpts());
+}
+
+function updateNewAreaHintOnly() {
+    const cols = Math.max(4, parseInt(document.getElementById('newAreaCols')?.value, 10) || 20);
+    const rows = Math.max(4, parseInt(document.getElementById('newAreaRows')?.value, 10) || 20);
+    const pts = modalShapeState.points || [];
+    const num = document.getElementById('newAreaNumber')?.value || '';
+    const name = (document.getElementById('newAreaName')?.value || '').trim();
+    const usable = countUsableCellsInPolygon(cols, rows, pts);
+    const hint = document.getElementById('newAreaHint');
+    if (hint) {
+        const lockNote = modalShapeState.lockedIdentity
+            ? ' (Area name and number are locked because plots already exist here.)'
+            : '';
+        hint.textContent = `${cols} x ${rows} grid -> ~${usable} plot slots inside this ${pts.length}-point shape. Saves as "Area ${num} - ${name || 'Name'}".${lockNote}`;
+    }
+}
+
+function updateNewAreaPreview() {
+    renderModalAreaEditor();
+    updateNewAreaHintOnly();
+}
+
+function applyModalPointCount(targetCount) {
+    if (!window.ZMGFence) return;
+    const cols = Math.max(4, parseInt(document.getElementById('newAreaCols')?.value, 10) || 20);
+    const rows = Math.max(4, parseInt(document.getElementById('newAreaRows')?.value, 10) || 20);
+    const count = Math.max(3, Math.min(32, Math.round(Number(targetCount) || 4)));
+    modalShapeState.points = ZMGFence.resamplePolygonPoints(modalShapeState.points, count, cols / rows);
+    modalShapeState.activeIdx = Math.min(modalShapeState.activeIdx, modalShapeState.points.length - 1);
+    renderModalAreaEditor();
+    updateNewAreaHintOnly();
+}
+
+function applyModalShapePreset(preset) {
+    const cols = Math.max(4, parseInt(document.getElementById('newAreaCols')?.value, 10) || 20);
+    const rows = Math.max(4, parseInt(document.getElementById('newAreaRows')?.value, 10) || 20);
+    modalShapeState.points = getShapePresetPoints(preset, cols, rows);
+    modalShapeState.activeIdx = 0;
+    renderModalAreaEditor();
+    updateNewAreaHintOnly();
+}
+
+function setModalIdentityLock(locked) {
+    modalShapeState.lockedIdentity = !!locked;
+    const nameEl = document.getElementById('newAreaName');
+    const numEl = document.getElementById('newAreaNumber');
+    if (nameEl) nameEl.readOnly = !!locked;
+    if (numEl) numEl.readOnly = !!locked;
+}
+
+function openNewAreaModal() {
+    const modal = document.getElementById('newAreaModal');
+    if (!modal) return;
+    areaPrefixTouched = false;
+    modalShapeState = {
+        editingLayerId: null,
+        points: getShapePresetPoints('rect', 20, 20),
+        activeIdx: 0,
+        lockedIdentity: false
+    };
+    setModalIdentityLock(false);
+
+    const titleEl = document.getElementById('newAreaModalTitle');
+    const subEl = document.getElementById('newAreaModalSub');
+    const submitBtn = document.getElementById('btnSubmitNewArea');
+    if (titleEl) titleEl.textContent = 'Create New Cemetery Area';
+    if (subEl) subEl.textContent = 'Design the custom polygon outline and plot grid for this area. Drag points or click edge + markers to reshape.';
+    if (submitBtn) submitBtn.textContent = 'Create Area';
+
+    const setVal2 = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setVal2('newAreaName', '');
+    setVal2('newAreaNumber', nextFreeAreaNumber());
+    setVal2('newAreaPrefix', '');
+    setVal2('newAreaCols', 20);
+    setVal2('newAreaRows', 20);
+    setVal2('newAreaPoints', 4);
+    setVal2('newAreaCategory', 'Supreme');
+    modal.classList.add('open');
+    updateNewAreaPreview();
+    const nameInput = document.getElementById('newAreaName');
+    if (nameInput) setTimeout(() => nameInput.focus(), 50);
+}
+
+async function openEditAreaModal(layerId) {
+    const v = vectorLayers.find(l => l.id === layerId && isShapeEditableLayer(l));
+    const modal = document.getElementById('newAreaModal');
+    if (!v || !modal) return;
+
+    areaPrefixTouched = true;
+    const existingPts = ensureCustomShapePoints(v).map(p => ({ x: p.x, y: p.y }));
+    const plotCount = await countPlotsInSection(v.name);
+
+    modalShapeState = {
+        editingLayerId: v.id,
+        points: existingPts,
+        activeIdx: 0,
+        lockedIdentity: plotCount > 0
+    };
+    setModalIdentityLock(plotCount > 0);
+
+    const titleEl = document.getElementById('newAreaModalTitle');
+    const subEl = document.getElementById('newAreaModalSub');
+    const submitBtn = document.getElementById('btnSubmitNewArea');
+    if (titleEl) titleEl.textContent = `Edit Area Shape: ${v.name}`;
+    if (subEl) subEl.textContent = 'Reshape polygon points, insert corners on any edge, or update grid dimensions.';
+    if (submitBtn) submitBtn.textContent = 'Save Area Changes';
+
+    const strippedName = String(v.name || '').replace(/^Area\s+\d+\s*-\s*/i, '').trim();
+    const setVal2 = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal2('newAreaName', strippedName || v.name || '');
+    setVal2('newAreaNumber', parseInt(v.area, 10) || 13);
+    setVal2('newAreaPrefix', v.prefix || suggestPrefix(strippedName));
+    setVal2('newAreaCols', Number(v.cols) || 20);
+    setVal2('newAreaRows', Number(v.rows) || 20);
+    setVal2('newAreaPoints', existingPts.length);
+    setVal2('newAreaCategory', v.category || 'Supreme');
+
+    modal.classList.add('open');
+    updateNewAreaPreview();
+}
+
+function closeNewAreaModal() {
+    const modal = document.getElementById('newAreaModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function notifyArea(title, message, type) {
+    if (typeof showNotification === 'function') showNotification(title, message, type || 'info');
+    else alert(title + ': ' + message);
+}
+
+async function createCustomAreaFromForm() {
+    if (!window.ZMGFence) return;
+    const editingLayer = modalShapeState.editingLayerId
+        ? vectorLayers.find(l => l.id === modalShapeState.editingLayerId)
+        : null;
+
+    const name = (document.getElementById('newAreaName')?.value || '').trim().replace(/\s+/g, ' ');
+    const num = parseInt(document.getElementById('newAreaNumber')?.value, 10);
+    const category = document.getElementById('newAreaCategory')?.value || 'Supreme';
+    let prefix = (document.getElementById('newAreaPrefix')?.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cols = parseInt(document.getElementById('newAreaCols')?.value, 10);
+    const rows = parseInt(document.getElementById('newAreaRows')?.value, 10);
+    const pts = ZMGFence.sanitizePolygonPoints(modalShapeState.points, 3);
+
+    if (!name || name.length > 40 || !/^[A-Za-z0-9 ()&'.-]+$/.test(name)) {
+        notifyArea('Invalid Area Name', 'Enter a name up to 40 characters (letters, numbers, spaces and ( ) & . - only).', 'warning');
+        return;
+    }
+    if (!Number.isInteger(num) || num < 1 || num > 999) {
+        notifyArea('Invalid Area Number', 'Area number must be a whole number between 1 and 999.', 'warning');
+        return;
+    }
+    if (!editingLayer || String(num) !== String(editingLayer.area)) {
+        if (allUsedAreaNumbers().has(num)) {
+            notifyArea('Area Number In Use', 'Area ' + num + ' already exists. Choose a different number.', 'warning');
+            return;
+        }
+    }
+    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 4 || cols > 60 || rows < 4 || rows > 60) {
+        notifyArea('Invalid Grid Size', 'Columns and rows must each be between 4 and 60.', 'warning');
+        return;
+    }
+    if (!pts || pts.length < 3) {
+        notifyArea('Invalid Shape', 'Define at least 3 polygon points.', 'warning');
+        return;
+    }
+    if (!prefix) prefix = suggestPrefix(name);
+    if (!editingLayer || prefix !== String(editingLayer.prefix || '').toUpperCase()) {
+        if (allUsedPrefixes().has(prefix)) {
+            notifyArea('Plot Prefix In Use', 'The plot ID prefix "' + prefix + '" is used by another area. Choose a unique prefix.', 'warning');
+            return;
+        }
+    }
+
+    const fullName = (editingLayer && modalShapeState.lockedIdentity)
+        ? editingLayer.name
+        : ('Area ' + num + ' - ' + name);
+    const finalNum = (editingLayer && modalShapeState.lockedIdentity)
+        ? String(editingLayer.area)
+        : String(num);
+
+    if ((!editingLayer || fullName !== editingLayer.name) && SECTION_SHAPE_MAP[fullName]) {
+        notifyArea('Area Exists', '"' + fullName + '" already exists.', 'warning');
+        return;
+    }
+
+    const shapeAspect = parseFloat((rows / Math.max(1, cols)).toFixed(4));
+    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect);
+
+    if (editingLayer) {
+        const beforeSnap = captureMapSnapshot(`edit ${fullName}`);
+        editingLayer.area = finalNum;
+        editingLayer.name = fullName;
+        editingLayer.desc = fullName + ' memorial section';
+        editingLayer.category = category;
+        editingLayer.tab = ZMGFence.CATEGORY_TABS[category] || 'supreme';
+        editingLayer.prefix = prefix;
+        editingLayer.cols = cols;
+        editingLayer.rows = rows;
+        editingLayer.shapeAspect = shapeAspect;
+        editingLayer.points = pts;
+        editingLayer.src = svgUrl;
+
+        commitMapUndo(beforeSnap, `edit ${fullName}`);
+        syncCustomAreasFromLayers();
+        closeNewAreaModal();
+        renderVectorMap();
+        renderLayerSidebar();
+        selectVector(editingLayer.id, false);
+        await persistMapStateNow();
+        if (currentMode === 'plots') {
+            const select = document.getElementById('editorSectionSelect');
+            if (select) {
+                select.value = fullName;
+                updateAreaActionButtons();
+                loadPlotSectionData();
+            }
+        }
+        notifyArea('Area Updated', '"' + fullName + '" shape and grid settings were updated.', 'success');
+        return;
+    }
+
+    const widthPct = parseFloat(Math.max(8, Math.min(26, 14 * Math.sqrt((cols * rows) / (24 * 24)))).toFixed(1));
+    const wPx = widthPct / 100 * BOARD_WIDTH;
+    const hPx = wPx * rows / cols;
+    const spot = findFreeMapSpot(wPx, hPx);
+    const maxAreaZ = Math.max(...vectorLayers.filter(l => l.kind !== 'entrance').map(l => Number(l.zIndex) || 0), 5);
+
+    const beforeSnap = captureMapSnapshot(`create ${fullName}`);
+    const layer = {
+        id: 'area-custom-' + finalNum + '-' + Date.now(),
+        kind: 'area',
+        custom: true,
+        area: finalNum,
+        name: fullName,
+        desc: fullName + ' memorial section',
+        category: category,
+        tab: ZMGFence.CATEGORY_TABS[category] || 'supreme',
+        prefix: prefix,
+        cols: cols,
+        rows: rows,
+        shapeAspect: shapeAspect,
+        points: pts,
+        src: svgUrl,
+        left: spot.left,
+        top: spot.top,
+        width: widthPct,
+        rotate: 0,
+        opacity: 0.95,
+        zIndex: Math.min(20, maxAreaZ + 1),
+        visible: true
+    };
+
+    vectorLayers.push(layer);
+    commitMapUndo(beforeSnap, `create ${fullName}`);
+    syncCustomAreasFromLayers();
+    closeNewAreaModal();
+
+    if (currentMode === 'plots') {
+        selectedVectorIds = new Set([layer.id]);
+        activeVectorId = layer.id;
+        activeSelectionType = 'vector';
+        const select = document.getElementById('editorSectionSelect');
+        if (select) {
+            select.value = fullName;
+            updateAreaActionButtons();
+            loadPlotSectionData();
+        }
+    } else {
+        renderVectorMap();
+        renderLayerSidebar();
+        selectVector(layer.id, false);
+    }
+
+    await persistMapStateNow();
+    notifyArea('Area Created', '"' + fullName + '" was placed on the map with its custom ' + pts.length + '-point shape.', 'success');
+}
+
+async function countPlotsInSection(sectionName) {
+    try {
+        const { count, error } = await supabaseClient
+            .from('memorial_spaces')
+            .select('id', { count: 'exact', head: true })
+            .eq('section_name', sectionName);
+        if (error) throw error;
+        return count || 0;
+    } catch (e) {
+        console.warn('Plot count notice:', e);
+        return -1;
+    }
+}
+
+async function canRemoveCustomArea(sectionName) {
+    const count = await countPlotsInSection(sectionName);
+    if (count > 0) {
+        notifyArea('Area Still Has Plots', '"' + sectionName + '" still contains ' + count + ' plot(s). Clear all plots in this area first (Plot Layouts - Clear), then delete the area.', 'warning');
+        return false;
+    }
+    if (count < 0) {
+        notifyArea('Could Not Verify Plots', 'Unable to check this area for plots right now. Try again once you are online.', 'warning');
+        return false;
+    }
+    return true;
+}
+
+async function deleteSelectedCustomArea() {
+    const select = document.getElementById('editorSectionSelect');
+    if (!select) return;
+    const name = select.value;
+    const shape = SECTION_SHAPE_MAP[name];
+    if (!shape || !shape.custom) return;
+    if (!(await canRemoveCustomArea(name))) return;
+
+    if (!await showConfirmModal({ title: 'Delete Custom Area', message: 'Delete "' + name + '" from the map? Its blueprint layer will be removed.', confirmText: 'Delete Area', cancelText: 'Cancel', type: 'warning', danger: true })) return;
+
+    const beforeSnap = captureMapSnapshot(`delete ${name}`);
+    const removedIds = new Set(vectorLayers.filter(v => v.custom && v.name === name).map(v => v.id));
+    if (pointEditState && pointEditState.mode === 'shape' && removedIds.has(pointEditState.layerId)) {
+        pointEditState = null;
+    }
+    vectorLayers = vectorLayers.filter(v => !(v.custom && v.name === name));
+    commitMapUndo(beforeSnap, `delete ${name}`);
+    selectedVectorIds.clear();
+    activeVectorId = vectorLayers[0]?.id || null;
+    syncCustomAreasFromLayers();
+    if (select.options.length > 0) select.selectedIndex = 0;
+    updateAreaActionButtons();
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    renderPointOverlay();
+    await persistMapStateNow();
+    if (currentMode === 'plots') loadPlotSectionData();
+    notifyArea('Area Deleted', '"' + name + '" was removed.', 'info');
+}
+
+function openAreaInPlotEditor(v) {
+    const select = document.getElementById('editorSectionSelect');
+    if (!select || !v) return;
+    const exists = Array.from(select.options).some(o => o.value === v.name);
+    if (!exists) {
+        notifyArea('No Plot Grid', 'This layer is not linked to a plot area.', 'info');
+        return;
+    }
+    select.value = v.name;
+    switchEditorMode('plots');
+    updateAreaActionButtons();
+}
+
+function initNewAreaSystem() {
+    const bind = (id, evt, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(evt, fn); };
+    bind('btnNewAreaTop', 'click', openNewAreaModal);
+    bind('btnNewAreaSidebar', 'click', openNewAreaModal);
+    bind('btnCreateAreaFromGallery', 'click', () => { closeVectorAssetModal(); openNewAreaModal(); });
+    bind('btnDeleteAreaSidebar', 'click', deleteSelectedCustomArea);
+    bind('btnCloseNewAreaModal', 'click', closeNewAreaModal);
+    bind('btnCancelNewArea', 'click', closeNewAreaModal);
+    bind('editorSectionSelect', 'change', updateAreaActionButtons);
+
+    const modal = document.getElementById('newAreaModal');
+    let modalMouseDownTarget = null;
+    if (modal) {
+        modal.addEventListener('mousedown', (e) => { modalMouseDownTarget = e.target; });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal && modalMouseDownTarget === modal) closeNewAreaModal();
+        });
+    }
+
+    const form = document.getElementById('newAreaForm');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); createCustomAreaFromForm(); });
+
+    ['newAreaName', 'newAreaNumber', 'newAreaCols', 'newAreaRows'].forEach(id => bind(id, 'input', updateNewAreaPreview));
+    bind('newAreaPoints', 'change', () => {
+        const val = parseInt(document.getElementById('newAreaPoints')?.value, 10) || 4;
+        applyModalPointCount(val);
+    });
+    bind('btnModalApplyPoints', 'click', () => {
+        const val = parseInt(document.getElementById('newAreaPoints')?.value, 10) || 4;
+        applyModalPointCount(val);
+    });
+    bind('btnModalAddPoint', 'click', () => {
+        const cur = (modalShapeState.points || []).length || 4;
+        applyModalPointCount(Math.min(32, cur + 1));
+    });
+    bind('btnModalRemovePoint', 'click', () => {
+        const cur = (modalShapeState.points || []).length || 4;
+        applyModalPointCount(Math.max(3, cur - 1));
+    });
+    bind('btnModalResetShape', 'click', () => applyModalShapePreset('rect'));
+
+    document.querySelectorAll('#newAreaPresetBar .me-shape-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            applyModalShapePreset(btn.dataset.shapePreset || 'rect');
+        });
+    });
+
+    bind('newAreaName', 'input', () => {
+        if (areaPrefixTouched || modalShapeState.lockedIdentity) return;
+        const prefixEl = document.getElementById('newAreaPrefix');
+        if (prefixEl) prefixEl.value = suggestPrefix(document.getElementById('newAreaName').value);
+    });
+    bind('newAreaPrefix', 'input', () => { areaPrefixTouched = true; });
+}
+
+// ==============================================================================
+// CUSTOM NON-PLOT MAP PARTS SYSTEM (WALLS, SIDE BLOCKS, LANDMARKS)
+// ==============================================================================
+let partModalState = {
+    editingLayerId: null,
+    points: [],
+    activeIdx: 0,
+    aspect: 1,
+    defaultWidth: 16
+};
+
+function readPartModalStyleValues() {
+    const aspectPct = Math.max(15, Math.min(300, parseFloat(document.getElementById('partAspectPct')?.value) || 100));
+    const sw = parseFloat(document.getElementById('partStrokeWidth')?.value);
+    return {
+        name: (document.getElementById('partName')?.value || '').trim(),
+        label: (document.getElementById('partLabel')?.value || '').trim().slice(0, 24),
+        fill: normalizeHex6(document.getElementById('partFillColor')?.value, '#f3ecd8'),
+        stroke: normalizeHex6(document.getElementById('partStrokeColor')?.value, '#2f332e'),
+        strokeWidth: Number.isFinite(sw) ? Math.max(0, Math.min(12, sw)) : 2.5,
+        aspect: parseFloat((aspectPct / 100).toFixed(4)),
+        dashed: !!document.getElementById('partDashed')?.checked,
+        fenceInclude: document.getElementById('partFenceInclude') ? !!document.getElementById('partFenceInclude').checked : true,
+        fenceExclude: document.getElementById('partFenceInclude') ? !document.getElementById('partFenceInclude').checked : false
+    };
+}
+
+function syncPartPresetHighlight(presetKey) {
+    document.querySelectorAll('#mapPartPresetBar .me-shape-preset-btn').forEach(btn => {
+        btn.classList.toggle('is-active', !!presetKey && btn.dataset.partPreset === presetKey);
+    });
+}
+
+function syncPartSwatchHighlight() {
+    const fill = normalizeHex6(document.getElementById('partFillColor')?.value, '');
+    const stroke = normalizeHex6(document.getElementById('partStrokeColor')?.value, '');
+    document.querySelectorAll('#partColorSwatches .me-swatch-btn').forEach(btn => {
+        const match = normalizeHex6(btn.dataset.fill, '') === fill && normalizeHex6(btn.dataset.stroke, '') === stroke;
+        btn.classList.toggle('is-active', match);
+    });
+}
+
+function renderMapPartSvgOnly() {
+    const svg = document.getElementById('mapPartEditorSvg');
+    const board = document.getElementById('mapPartEditorBoard');
+    if (!svg || !board) return;
+
+    const style = readPartModalStyleValues();
+    partModalState.aspect = style.aspect;
+    const pts = partModalState.points;
+
+    const maxW = 340;
+    const maxH = 236;
+    const scale = Math.min(maxW / 100, maxH / (100 * style.aspect));
+    const W = Math.max(72, Math.round(100 * scale));
+    const H = Math.max(48, Math.round(100 * style.aspect * scale));
+    board.style.width = `${W}px`;
+    board.style.height = `${H}px`;
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    let gridPath = '';
+    for (let x = 20; x < 100; x += 20) {
+        const px = ((x / 100) * W).toFixed(1);
+        gridPath += `M${px},0V${H}`;
+    }
+    for (let y = 20; y < 100; y += 20) {
+        const py = ((y / 100) * H).toFixed(1);
+        gridPath += `M0,${py}H${W}`;
+    }
+    if (gridPath) {
+        const gridEl = document.createElementNS(svgNS, 'path');
+        gridEl.setAttribute('d', gridPath);
+        gridEl.setAttribute('stroke', '#dde5de');
+        gridEl.setAttribute('stroke-width', '0.8');
+        gridEl.setAttribute('fill', 'none');
+        svg.appendChild(gridEl);
+    }
+
+    if (pts.length >= 3) {
+        const ptStr = pts.map(p => `${((p.x / 100) * W).toFixed(1)},${((p.y / 100) * H).toFixed(1)}`).join(' ');
+        const polyEl = document.createElementNS(svgNS, 'polygon');
+        polyEl.setAttribute('points', ptStr);
+        polyEl.setAttribute('fill', style.fill);
+        polyEl.setAttribute('stroke', style.strokeWidth > 0 ? style.stroke : 'none');
+        polyEl.setAttribute('stroke-width', String(style.strokeWidth));
+        polyEl.setAttribute('stroke-linejoin', 'round');
+        if (style.dashed && style.strokeWidth > 0) {
+            polyEl.setAttribute('stroke-dasharray', '6 4');
+        }
+        svg.appendChild(polyEl);
+
+        if (style.label) {
+            const sum = pts.reduce((acc, p) => ({ x: acc.x + (p.x / 100) * W, y: acc.y + (p.y / 100) * H }), { x: 0, y: 0 });
+            const fontSize = Math.max(10, Math.min(18, Math.round(Math.min(W, H) * 0.14)));
+            const txt = document.createElementNS(svgNS, 'text');
+            txt.setAttribute('x', (sum.x / pts.length).toFixed(1));
+            txt.setAttribute('y', ((sum.y / pts.length) + fontSize * 0.35).toFixed(1));
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('font-family', 'Arial, sans-serif');
+            txt.setAttribute('font-weight', '700');
+            txt.setAttribute('font-size', String(fontSize));
+            txt.setAttribute('fill', '#232822');
+            txt.textContent = style.label;
+            svg.appendChild(txt);
+        }
+    }
+
+    const readout = document.getElementById('mapPartActivePtReadout');
+    if (readout) {
+        const idx = Math.max(0, Math.min(pts.length - 1, partModalState.activeIdx || 0));
+        const pt = pts[idx];
+        readout.textContent = pt
+            ? `Pt ${idx + 1}/${pts.length}: ${Math.round(pt.x)}%, ${Math.round(pt.y)}%`
+            : `${pts.length} pts`;
+    }
+}
+
+function getMapPartModalPolyOpts() {
+    return {
+        boardId: 'mapPartEditorBoard',
+        handlesId: 'mapPartEditorHandles',
+        ptsInputId: 'mapPartPoints',
+        state: partModalState,
+        minPointsMessage: 'A custom map part requires at least 3 corner points.',
+        normalizePt: (rawX, rawY, moveEvt) => {
+            const x = Math.max(0, Math.min(100, rawX));
+            const y = Math.max(0, Math.min(100, rawY));
+            const snapChk = document.getElementById('mapPartSnapGrid');
+            const snapEnabled = snapChk ? (snapChk.checked && !moveEvt.shiftKey) : false;
+            if (snapEnabled) {
+                return {
+                    x: Math.max(0, Math.min(100, Math.round(x / 5) * 5)),
+                    y: Math.max(0, Math.min(100, Math.round(y / 5) * 5))
+                };
+            }
+            return {
+                x: Math.round(x * 2) / 2,
+                y: Math.round(y * 2) / 2
+            };
+        },
+        onSvgUpdate: renderMapPartSvgOnly,
+        onCommit: renderMapPartModal
+    };
+}
+
+function renderMapPartModal() {
+    renderMapPartSvgOnly();
+    renderModalPolyHandles(getMapPartModalPolyOpts());
+}
+
+function applyPartModalPointCount(nextCount) {
+    if (!window.ZMGFence) return;
+    const minP = ZMGFence.MIN_POLYGON_POINTS || 3;
+    const maxP = ZMGFence.MAX_POLYGON_POINTS || 32;
+    const count = Math.max(minP, Math.min(maxP, parseInt(nextCount, 10) || 4));
+    partModalState.points = ZMGFence.resamplePolygonPoints(partModalState.points, count, partModalState.aspect || 1);
+    partModalState.activeIdx = Math.min(partModalState.activeIdx, partModalState.points.length - 1);
+    renderMapPartModal();
+}
+
+function applyPartPreset(presetKey) {
+    if (!window.ZMGFence || !ZMGFence.PART_PRESETS) return;
+    const preset = ZMGFence.PART_PRESETS[presetKey] || ZMGFence.PART_PRESETS.block;
+    const setElVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+    setElVal('partName', preset.name);
+    setElVal('partLabel', preset.label || '');
+    setElVal('partFillColor', normalizeHex6(preset.fill, '#f3ecd8'));
+    setElVal('partStrokeColor', normalizeHex6(preset.stroke, '#2f332e'));
+    setElVal('partStrokeWidth', preset.strokeWidth ?? 2.5);
+    setElVal('partAspectPct', Math.round((preset.shapeAspect || 1) * 100));
+    const dashedEl = document.getElementById('partDashed');
+    if (dashedEl) dashedEl.checked = !!preset.dashed;
+    const fenceEl = document.getElementById('partFenceInclude');
+    if (fenceEl) fenceEl.checked = preset.fenceInclude !== false;
+
+    partModalState.points = preset.points.map(p => ({ x: p.x, y: p.y }));
+    partModalState.activeIdx = 0;
+    partModalState.aspect = preset.shapeAspect || 1;
+    partModalState.defaultWidth = preset.width || 16;
+
+    syncPartPresetHighlight(presetKey);
+    syncPartSwatchHighlight();
+    renderMapPartModal();
+}
+
+function openNewPartModal(presetKey = 'block') {
+    const modal = document.getElementById('mapPartModal');
+    if (!modal || !window.ZMGFence) return;
+
+    partModalState.editingLayerId = null;
+    const titleEl = document.getElementById('mapPartModalTitle');
+    const subEl = document.getElementById('mapPartModalSub');
+    const submitBtn = document.getElementById('btnSubmitMapPart');
+    if (titleEl) titleEl.textContent = 'Add Custom Map Part';
+    if (subEl) subEl.textContent = 'Create structural blocks, entrance wing walls, borders, roundabouts, or custom non-plot shapes. Drag points or click edge + markers to reshape.';
+    if (submitBtn) submitBtn.textContent = 'Add Part to Map';
+
+    applyPartPreset(presetKey);
+    modal.classList.add('open');
+    const nameInput = document.getElementById('partName');
+    if (nameInput) setTimeout(() => nameInput.focus(), 50);
+}
+
+function openEditPartModal(layerId) {
+    const v = vectorLayers.find(l => l.id === layerId && l.kind === 'decor');
+    const modal = document.getElementById('mapPartModal');
+    if (!v || !modal || !window.ZMGFence) return;
+
+    const existingPts = ensureCustomShapePoints(v).map(p => ({ x: p.x, y: p.y }));
+    const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0) ? Number(v.shapeAspect) : 1;
+
+    partModalState = {
+        editingLayerId: v.id,
+        points: existingPts,
+        activeIdx: 0,
+        aspect,
+        defaultWidth: Number(v.width) || 16
+    };
+
+    const titleEl = document.getElementById('mapPartModalTitle');
+    const subEl = document.getElementById('mapPartModalSub');
+    const submitBtn = document.getElementById('btnSubmitMapPart');
+    if (titleEl) titleEl.textContent = `Edit Map Part: ${v.name}`;
+    if (subEl) subEl.textContent = 'Update polygon corners, proportions, colors, border thickness, or fence wrapping.';
+    if (submitBtn) submitBtn.textContent = 'Save Part Changes';
+
+    const setElVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setElVal('partName', v.name || 'Custom Map Part');
+    setElVal('partLabel', v.label || '');
+    setElVal('partFillColor', normalizeHex6(v.fill, '#f3ecd8'));
+    setElVal('partStrokeColor', normalizeHex6(v.stroke, '#2f332e'));
+    setElVal('partStrokeWidth', v.strokeWidth ?? 2.5);
+    setElVal('partAspectPct', Math.round(aspect * 100));
+    setElVal('mapPartPoints', existingPts.length);
+    const dashedEl = document.getElementById('partDashed');
+    if (dashedEl) dashedEl.checked = !!v.dashed;
+    const fenceEl = document.getElementById('partFenceInclude');
+    if (fenceEl) fenceEl.checked = v.fenceExclude !== true;
+
+    syncPartPresetHighlight(null);
+    syncPartSwatchHighlight();
+    modal.classList.add('open');
+    renderMapPartModal();
+}
+
+function closeMapPartModal() {
+    const modal = document.getElementById('mapPartModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function saveCustomPartFromForm() {
+    if (!window.ZMGFence) return;
+    const style = readPartModalStyleValues();
+    if (!style.name) {
+        notifyArea('Missing Name', 'Please enter a layer name for this map part.', 'warning');
+        return;
+    }
+
+    const pts = ZMGFence.sanitizePolygonPoints(partModalState.points, 3);
+    if (!pts || pts.length < 3) {
+        notifyArea('Invalid Shape', 'Please define at least 3 corner points for the part shape.', 'warning');
+        return;
+    }
+
+    const editingLayer = partModalState.editingLayerId
+        ? vectorLayers.find(l => l.id === partModalState.editingLayerId && l.kind === 'decor')
+        : null;
+
+    if (editingLayer) {
+        const beforeSnap = captureMapSnapshot(`edit ${style.name}`);
+        const oldMetrics = shapeLayerBoxMetrics(editingLayer);
+        const nextH = oldMetrics.boxW * style.aspect;
+        editingLayer.top = parseFloat((((oldMetrics.cy - nextH / 2) / BOARD_HEIGHT) * 100).toFixed(2));
+        editingLayer.name = style.name;
+        editingLayer.label = style.label;
+        editingLayer.desc = style.label ? `${style.name} (${style.label})` : `${style.name} map structure`;
+        editingLayer.fill = style.fill;
+        editingLayer.stroke = style.stroke;
+        editingLayer.strokeWidth = style.strokeWidth;
+        editingLayer.dashed = style.dashed;
+        editingLayer.fenceInclude = style.fenceInclude;
+        editingLayer.fenceExclude = style.fenceExclude;
+        editingLayer.shapeAspect = style.aspect;
+        editingLayer.points = pts;
+        editingLayer.src = ZMGFence.buildPartSvgDataUrl(editingLayer);
+
+        commitMapUndo(beforeSnap, `edit ${style.name}`);
+        closeMapPartModal();
+        if (currentMode !== 'map') switchEditorMode('map');
+        renderVectorMap();
+        renderLayerSidebar();
+        selectVector(editingLayer.id, false);
+        renderPointOverlay();
+        scheduleFence();
+        await persistMapStateNow();
+        notifyArea('Map Part Updated', `"${style.name}" was updated on the map.`, 'success');
+        return;
+    }
+
+    const beforeSnap = captureMapSnapshot(`add ${style.name}`);
+    const widthPct = Math.max(4, Math.min(85, Number(partModalState.defaultWidth) || 16));
+    const wPx = (widthPct / 100) * BOARD_WIDTH;
+    const hPx = wPx * style.aspect;
+    const spot = findFreeMapSpot(wPx, hPx);
+    const maxNonEntranceZ = Math.max(...vectorLayers.filter(l => l.kind !== 'entrance').map(l => Number(l.zIndex) || 0), 5);
+
+    const layer = {
+        id: `part-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        kind: 'decor',
+        custom: false,
+        area: null,
+        tab: null,
+        name: style.name,
+        desc: style.label ? `${style.name} (${style.label})` : `${style.name} map structure`,
+        label: style.label,
+        src: '',
+        left: spot.left,
+        top: spot.top,
+        width: widthPct,
+        rotate: 0,
+        opacity: 1.0,
+        zIndex: Math.min(8, maxNonEntranceZ + 1),
+        visible: true,
+        shapeAspect: style.aspect,
+        points: pts,
+        fill: style.fill,
+        stroke: style.stroke,
+        strokeWidth: style.strokeWidth,
+        dashed: style.dashed,
+        fenceInclude: style.fenceInclude,
+        fenceExclude: style.fenceExclude
+    };
+    layer.src = ZMGFence.buildPartSvgDataUrl(layer);
+
+    vectorLayers.push(layer);
+    commitMapUndo(beforeSnap, `add ${style.name}`);
+    closeMapPartModal();
+    if (currentMode !== 'map') switchEditorMode('map');
+    pointEditState = null;
+    renderVectorMap();
+    renderLayerSidebar();
+    selectVector(layer.id, false);
+    renderPointOverlay();
+    scheduleFence();
+    await persistMapStateNow();
+    notifyArea('Map Part Added', `"${style.name}" was added. Drag into position or press P to reshape corners over the map.`, 'success');
+}
+
+function initMapPartSystem() {
+    const bind = (id, evt, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(evt, fn); };
+
+    bind('btnAddPartTop', 'click', () => openNewPartModal('block'));
+    bind('btnCreatePartFromGallery', 'click', () => {
+        closeVectorAssetModal();
+        openNewPartModal('block');
+    });
+    bind('btnCloseMapPartModal', 'click', closeMapPartModal);
+    bind('btnCancelMapPart', 'click', closeMapPartModal);
+
+    const modal = document.getElementById('mapPartModal');
+    let modalMouseDownTarget = null;
+    if (modal) {
+        modal.addEventListener('mousedown', (e) => { modalMouseDownTarget = e.target; });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal && modalMouseDownTarget === modal) closeMapPartModal();
+        });
+    }
+
+    const form = document.getElementById('mapPartForm');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); saveCustomPartFromForm(); });
+
+    document.querySelectorAll('#mapPartPresetBar .me-shape-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            applyPartPreset(btn.dataset.partPreset || 'block');
+        });
+    });
+
+    document.querySelectorAll('#partColorSwatches .me-swatch-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const fillEl = document.getElementById('partFillColor');
+            const strokeEl = document.getElementById('partStrokeColor');
+            if (fillEl && btn.dataset.fill) fillEl.value = btn.dataset.fill;
+            if (strokeEl && btn.dataset.stroke) strokeEl.value = btn.dataset.stroke;
+            syncPartSwatchHighlight();
+            renderMapPartSvgOnly();
+        });
+    });
+
+    ['partLabel', 'partFillColor', 'partStrokeColor', 'partStrokeWidth', 'partAspectPct'].forEach(id => {
+        bind(id, 'input', () => {
+            syncPartSwatchHighlight();
+            renderMapPartSvgOnly();
+        });
+    });
+    bind('partDashed', 'change', renderMapPartSvgOnly);
+
+    bind('mapPartPoints', 'change', () => {
+        const val = parseInt(document.getElementById('mapPartPoints')?.value, 10) || 4;
+        applyPartModalPointCount(val);
+    });
+    bind('btnPartApplyPoints', 'click', () => {
+        const val = parseInt(document.getElementById('mapPartPoints')?.value, 10) || 4;
+        applyPartModalPointCount(val);
+    });
+    bind('btnPartAddPoint', 'click', () => {
+        const cur = (partModalState.points || []).length || 4;
+        applyPartModalPointCount(Math.min(32, cur + 1));
+    });
+    bind('btnPartRemovePoint', 'click', () => {
+        const cur = (partModalState.points || []).length || 4;
+        applyPartModalPointCount(Math.max(3, cur - 1));
+    });
+    bind('btnPartResetShape', 'click', () => {
+        if (!window.ZMGFence) return;
+        partModalState.points = ZMGFence.defaultShapePoints(4, partModalState.aspect || 1);
+        partModalState.activeIdx = 0;
+        renderMapPartModal();
+    });
+}
+
 // ==============================================================================
 // 2. UNTILTED AREA SHAPE PLOT BLUEPRINT & MULTI-SIZE BUILDER SYSTEM
 // ==============================================================================
@@ -3331,13 +5667,16 @@ function initCanvasPanHandlers() {
     viewport.addEventListener('mousedown', (e) => {
         if (currentMode !== 'map') return;
 
+        if (isDraggingVertex || e.target.closest('.me-vertex-overlay')) return;
+
         const isMiddleClick = e.button === 1;
         const isLeftClick = e.button === 0;
         const hitVector = e.target.closest('.me-vec-element');
+        const hitPointUI = e.target.closest('.me-vertex-overlay');
         const hitUnlockedBp = blueprintConfig.unlocked && e.target.id === 'blueprintImg';
 
         // Pan if middle click, spacebar held, OR clicking on empty canvas/stage/locked blueprint
-        if (isMiddleClick || spacebarPressed || (isLeftClick && !hitVector && !hitUnlockedBp)) {
+        if (isMiddleClick || spacebarPressed || (isLeftClick && !hitVector && !hitPointUI && !hitUnlockedBp)) {
             e.preventDefault();
             isPanning = true;
             panHasMoved = false;
@@ -3366,7 +5705,7 @@ function initCanvasPanHandlers() {
                 window.removeEventListener('mouseup', onPanUp);
 
                 // Deselect active vector or blueprint only if pure click without panning
-                if (!panHasMoved && isLeftClick && !hitVector && !hitUnlockedBp) {
+                if (!panHasMoved && isLeftClick && !hitVector && !hitPointUI && !hitUnlockedBp) {
                     deselectAll();
                 }
             };
@@ -3450,6 +5789,8 @@ function applyCanvasTransform() {
 
     if (stage) {
         stage.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+        const invZoom = Math.max(0.7, Math.min(2.2, 1 / Math.max(0.35, currentZoom || 1)));
+        stage.style.setProperty('--me-inv-zoom', invZoom.toFixed(3));
     }
 
     if (viewport) {
@@ -3500,59 +5841,544 @@ function autoFitCanvas() {
 }
 
 // ==============================================================================
-// 4. KEYBOARD SHORTCUTS
+// 4. MAP HISTORY (UNDO / REDO), CLIPBOARD, Z-ORDER & SHORTCUTS
 // ==============================================================================
+let mapClipboardFromCut = false;
+
+function captureMapSnapshot(label = '') {
+    return {
+        label,
+        vectorsJson: JSON.stringify(vectorLayers),
+        fenceJson: JSON.stringify(fenceConfig),
+        selectedIds: Array.from(selectedVectorIds),
+        activeId: activeVectorId,
+        pointEdit: pointEditState ? { ...pointEditState } : null
+    };
+}
+
+function snapshotsEqual(a, b) {
+    return !!a && !!b && a.vectorsJson === b.vectorsJson && a.fenceJson === b.fenceJson;
+}
+
+function updateMapHistoryButtons() {
+    const undoBtn = document.getElementById('btnUndoMap');
+    const redoBtn = document.getElementById('btnRedoMap');
+    if (undoBtn) {
+        undoBtn.disabled = mapUndoStack.length === 0;
+        const lastLabel = mapUndoStack.length > 0 ? mapUndoStack[mapUndoStack.length - 1].label : '';
+        undoBtn.title = lastLabel ? `Undo ${lastLabel} (Ctrl+Z)` : 'Undo (Ctrl+Z)';
+    }
+    if (redoBtn) {
+        redoBtn.disabled = mapRedoStack.length === 0;
+        const nextLabel = mapRedoStack.length > 0 ? mapRedoStack[mapRedoStack.length - 1].label : '';
+        redoBtn.title = nextLabel ? `Redo ${nextLabel} (Ctrl+Y / Ctrl+Shift+Z)` : 'Redo (Ctrl+Y / Ctrl+Shift+Z)';
+    }
+}
+
+function resetMapUndoHistory() {
+    mapUndoStack.length = 0;
+    mapRedoStack.length = 0;
+    mapUndoLastCoalesceKey = '';
+    mapUndoLastCoalesceAt = 0;
+    updateMapHistoryButtons();
+}
+
+function commitMapUndo(beforeSnap, label = '', coalesceKey = null, coalesceMs = 800) {
+    if (!beforeSnap) return;
+    const afterSnap = captureMapSnapshot(label);
+    if (snapshotsEqual(beforeSnap, afterSnap)) return;
+
+    const now = Date.now();
+    if (coalesceKey && mapUndoLastCoalesceKey === coalesceKey && (now - mapUndoLastCoalesceAt) < coalesceMs && mapUndoStack.length > 0) {
+        mapUndoLastCoalesceAt = now;
+        mapRedoStack.length = 0;
+        updateMapHistoryButtons();
+        return;
+    }
+
+    mapUndoStack.push({
+        ...beforeSnap,
+        label: label || beforeSnap.label || 'change'
+    });
+    if (mapUndoStack.length > MAX_MAP_HISTORY) mapUndoStack.shift();
+    mapRedoStack.length = 0;
+    mapUndoLastCoalesceKey = coalesceKey || '';
+    mapUndoLastCoalesceAt = coalesceKey ? now : 0;
+    updateMapHistoryButtons();
+}
+
+function restoreMapSnapshot(snap) {
+    if (!snap) return;
+    try {
+        const parsedVectors = JSON.parse(snap.vectorsJson);
+        if (Array.isArray(parsedVectors)) {
+            vectorLayers = parsedVectors
+                .filter(v => v && !isLegacyWallLayer(v))
+                .map(v => normalizeEditorVector({ visible: true, ...v }));
+        }
+        const parsedFence = JSON.parse(snap.fenceJson || '{"mode":"auto","points":[]}');
+        fenceConfig = window.ZMGFence ? ZMGFence.writeStoredFenceConfig(parsedFence) : parsedFence;
+    } catch (err) {
+        console.warn('Could not restore map history snapshot:', err);
+        return;
+    }
+
+    const validIds = new Set(vectorLayers.map(l => l.id));
+    selectedVectorIds = new Set((snap.selectedIds || []).filter(id => validIds.has(id)));
+    activeVectorId = (snap.activeId && validIds.has(snap.activeId))
+        ? snap.activeId
+        : (Array.from(selectedVectorIds)[0] || null);
+    activeSelectionType = selectedVectorIds.size > 0 ? 'vector' : null;
+
+    if (snap.pointEdit && snap.pointEdit.mode === 'wall') {
+        pointEditState = { mode: 'wall' };
+    } else if (snap.pointEdit && snap.pointEdit.mode === 'shape' && validIds.has(snap.pointEdit.layerId)) {
+        pointEditState = { mode: 'shape', layerId: snap.pointEdit.layerId };
+    } else {
+        pointEditState = null;
+    }
+
+    syncCustomAreasFromLayers();
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    updateWallPointsInspector();
+    renderPointOverlay();
+    updateFence();
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+    updateMapHistoryButtons();
+}
+
+function undoMapAction() {
+    if (mapUndoStack.length === 0) {
+        if (typeof showNotification === 'function') showNotification('Undo', 'Nothing to undo', 'info');
+        return;
+    }
+    const prevSnap = mapUndoStack.pop();
+    mapRedoStack.push(captureMapSnapshot(prevSnap.label));
+    mapUndoLastCoalesceKey = '';
+    mapUndoLastCoalesceAt = 0;
+    restoreMapSnapshot(prevSnap);
+    if (typeof showNotification === 'function') {
+        showNotification('Undo', `Undid ${prevSnap.label || 'map change'}`, 'info');
+    }
+}
+
+function redoMapAction() {
+    if (mapRedoStack.length === 0) {
+        if (typeof showNotification === 'function') showNotification('Redo', 'Nothing to redo', 'info');
+        return;
+    }
+    const nextSnap = mapRedoStack.pop();
+    mapUndoStack.push(captureMapSnapshot(nextSnap.label));
+    mapUndoLastCoalesceKey = '';
+    mapUndoLastCoalesceAt = 0;
+    restoreMapSnapshot(nextSnap);
+    if (typeof showNotification === 'function') {
+        showNotification('Redo', `Redid ${nextSnap.label || 'map change'}`, 'info');
+    }
+}
+
+function getActionableSelectedVectors() {
+    if (selectedVectorIds.size === 0 && activeVectorId) {
+        selectedVectorIds.add(activeVectorId);
+    }
+    return vectorLayers.filter(l => selectedVectorIds.has(l.id) && !isLegacyWallLayer(l));
+}
+
+function makeUniqueLayerCopyName(baseName, existingNames) {
+    const clean = String(baseName || 'Vector Layer').replace(/\s*\(Copy(?:\s+\d+)?\)$/i, '').trim() || 'Vector Layer';
+    let candidate = `${clean} (Copy)`;
+    let idx = 2;
+    while (existingNames.has(candidate.toLowerCase())) {
+        candidate = `${clean} (Copy ${idx++})`;
+    }
+    existingNames.add(candidate.toLowerCase());
+    return candidate;
+}
+
+function cloneVectorForInsertion(src, stepIdx, usedAreaNums, usedPrefixes, existingNames, batchIdx, preserveCutArea) {
+    const copy = JSON.parse(JSON.stringify(src));
+    const offset = 2.5 * Math.max(1, stepIdx || 1);
+    let nextLeft = parseFloat(((Number(src.left) || 20) + offset).toFixed(1));
+    let nextTop = parseFloat(((Number(src.top) || 20) + offset).toFixed(1));
+    if (nextLeft > 92) nextLeft = parseFloat(((Number(src.left) || 20) - 8).toFixed(1));
+    if (nextTop > 92) nextTop = parseFloat(((Number(src.top) || 20) - 8).toFixed(1));
+
+    const maxZ = Math.max(...vectorLayers.map(l => Number(l.zIndex) || 0), 5);
+    copy.left = nextLeft;
+    copy.top = nextTop;
+    copy.zIndex = Math.min(99, maxZ + 1 + batchIdx);
+    copy.visible = true;
+
+    const uid = `${Date.now()}-${batchIdx}-${Math.floor(Math.random() * 1000)}`;
+    if (copy.custom) {
+        const origNum = parseInt(src.area, 10);
+        const origPrefix = String(src.prefix || '').toUpperCase();
+        const canReuseOrig = preserveCutArea
+            && Number.isInteger(origNum)
+            && !usedAreaNums.has(origNum)
+            && (!origPrefix || !usedPrefixes.has(origPrefix))
+            && (typeof SECTION_SHAPE_MAP === 'undefined' || !SECTION_SHAPE_MAP[src.name]);
+
+        if (canReuseOrig) {
+            usedAreaNums.add(origNum);
+            if (origPrefix) usedPrefixes.add(origPrefix);
+            copy.id = `area-custom-${origNum}-${uid}`;
+            existingNames.add(String(copy.name || '').toLowerCase());
+        } else {
+            let n = 13;
+            while (usedAreaNums.has(n)) n++;
+            usedAreaNums.add(n);
+
+            const stripped = String(src.name || 'Custom Area')
+                .replace(/^Area\s+\d+\s*-\s*/i, '')
+                .replace(/\s*\(Copy(?:\s+\d+)?\)$/i, '')
+                .trim() || 'Section';
+            const copyLabel = `${stripped.slice(0, 31).trim()} (Copy)`;
+            let fullName = `Area ${n} - ${copyLabel}`;
+            while (existingNames.has(fullName.toLowerCase())) {
+                n++;
+                while (usedAreaNums.has(n)) n++;
+                usedAreaNums.add(n);
+                fullName = `Area ${n} - ${copyLabel}`;
+            }
+            existingNames.add(fullName.toLowerCase());
+
+            const basePrefix = (origPrefix || suggestPrefix(stripped)).replace(/[0-9]+$/, '') || 'AR';
+            let nextPrefix = origPrefix && !usedPrefixes.has(origPrefix) ? origPrefix : `${basePrefix}${n}`;
+            let pCounter = 2;
+            while (usedPrefixes.has(nextPrefix)) nextPrefix = `${basePrefix}${pCounter++}`;
+            usedPrefixes.add(nextPrefix);
+
+            copy.area = String(n);
+            copy.prefix = nextPrefix;
+            copy.name = fullName;
+            copy.desc = `${fullName} memorial section`;
+            copy.id = `area-custom-${n}-${uid}`;
+            if (window.ZMGFence) {
+                copy.src = ZMGFence.buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect);
+            }
+        }
+    } else if (copy.kind === 'decor') {
+        copy.id = `part-${uid}`;
+        if (existingNames.has(String(copy.name || '').toLowerCase())) {
+            copy.name = makeUniqueLayerCopyName(copy.name || 'Custom Map Part', existingNames);
+        } else {
+            existingNames.add(String(copy.name || '').toLowerCase());
+        }
+        if (window.ZMGFence) {
+            copy.src = ZMGFence.buildPartSvgDataUrl(copy);
+        }
+    } else if (copy.kind === 'entrance') {
+        copy.id = `entrance-${uid}`;
+        if (existingNames.has(String(copy.name || '').toLowerCase())) {
+            copy.name = makeUniqueLayerCopyName(copy.name || 'Entrance Gate', existingNames);
+        } else {
+            existingNames.add(String(copy.name || '').toLowerCase());
+        }
+    } else {
+        copy.id = `vec-${uid}`;
+        if (existingNames.has(String(copy.name || '').toLowerCase())) {
+            copy.name = makeUniqueLayerCopyName(copy.name || 'Vector Layer', existingNames);
+        } else {
+            existingNames.add(String(copy.name || '').toLowerCase());
+        }
+    }
+    return copy;
+}
+
+function insertClonedVectors(sourceItems, stepOffset, label, preserveCutArea = false) {
+    if (!sourceItems || sourceItems.length === 0) return [];
+    const beforeSnap = captureMapSnapshot(label);
+    const usedAreaNums = allUsedAreaNumbers();
+    const usedPrefixes = allUsedPrefixes();
+    const existingNames = new Set(vectorLayers.map(l => String(l.name || '').toLowerCase()));
+
+    const inserted = [];
+    sourceItems.forEach((src, idx) => {
+        if (!src || isLegacyWallLayer(src)) return;
+        const copy = cloneVectorForInsertion(src, stepOffset, usedAreaNums, usedPrefixes, existingNames, idx, preserveCutArea);
+        vectorLayers.push(copy);
+        if (copy.kind === 'entrance') snapEntranceLayer(copy);
+        inserted.push(copy);
+    });
+
+    if (inserted.length === 0) return [];
+
+    selectedVectorIds = new Set(inserted.map(l => l.id));
+    activeVectorId = inserted[inserted.length - 1].id;
+    activeSelectionType = 'vector';
+    if (pointEditState && pointEditState.mode === 'shape') pointEditState = null;
+
+    syncCustomAreasFromLayers();
+    commitMapUndo(beforeSnap, label);
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    updateWallPointsInspector();
+    renderPointOverlay();
+    scheduleFence();
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+    return inserted;
+}
+
+function copySelectedVectors() {
+    const items = getActionableSelectedVectors();
+    if (items.length === 0) return;
+    mapClipboard = items.map(v => JSON.parse(JSON.stringify(v)));
+    mapPasteCounter = 0;
+    mapClipboardFromCut = false;
+    if (typeof showNotification === 'function') {
+        showNotification('Copied', `Copied ${items.length} layer${items.length === 1 ? '' : 's'} to clipboard.`, 'info');
+    }
+}
+
+async function cutSelectedVectors() {
+    const items = getActionableSelectedVectors();
+    if (items.length === 0) return;
+
+    const customItems = items.filter(v => v.custom);
+    for (const cv of customItems) {
+        if (!(await canRemoveCustomArea(cv.name))) return;
+    }
+
+    const beforeSnap = captureMapSnapshot(`cut ${items.length === 1 ? items[0].name : `${items.length} layers`}`);
+    mapClipboard = items.map(v => JSON.parse(JSON.stringify(v)));
+    mapPasteCounter = 0;
+    mapClipboardFromCut = true;
+
+    const cutIds = new Set(items.map(v => v.id));
+    vectorLayers = vectorLayers.filter(l => !cutIds.has(l.id));
+    if (pointEditState && pointEditState.mode === 'shape' && cutIds.has(pointEditState.layerId)) {
+        pointEditState = null;
+    }
+
+    syncCustomAreasFromLayers();
+    deselectAll();
+    commitMapUndo(beforeSnap, items.length === 1 ? `cut ${items[0].name}` : `cut ${items.length} layers`);
+    renderVectorMap();
+    renderLayerSidebar();
+    updateWallPointsInspector();
+    scheduleFence();
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+    if (typeof showNotification === 'function') {
+        showNotification('Cut', `Cut ${items.length} layer${items.length === 1 ? '' : 's'} (Ctrl+V to paste, Ctrl+Z to undo).`, 'info');
+    }
+}
+
+function pasteClipboardVectors() {
+    if (!mapClipboard || mapClipboard.length === 0) {
+        if (typeof showNotification === 'function') {
+            showNotification('Clipboard Empty', 'Select a vector layer and press Ctrl+C or Ctrl+X first.', 'info');
+        }
+        return;
+    }
+    const useCutReuse = mapClipboardFromCut && mapPasteCounter === 0;
+    mapPasteCounter++;
+    mapClipboardFromCut = false;
+    const step = useCutReuse ? 0 : mapPasteCounter;
+    const inserted = insertClonedVectors(mapClipboard, step, `paste ${mapClipboard.length} layer${mapClipboard.length === 1 ? '' : 's'}`, useCutReuse);
+    if (inserted.length > 0 && typeof showNotification === 'function') {
+        showNotification('Pasted', `Pasted ${inserted.length} layer${inserted.length === 1 ? '' : 's'} onto canvas.`, 'success');
+    }
+}
+
+function duplicateSelectedVectors() {
+    const items = getActionableSelectedVectors();
+    if (items.length === 0) return;
+    const inserted = insertClonedVectors(items, 1, items.length === 1 ? `duplicate ${items[0].name}` : `duplicate ${items.length} layers`, false);
+    if (inserted.length > 0 && typeof showNotification === 'function') {
+        showNotification('Duplicated', `Duplicated ${inserted.length} layer${inserted.length === 1 ? '' : 's'}.`, 'success');
+    }
+}
+
+function reorderSelectedVectors(mode) {
+    const items = getActionableSelectedVectors();
+    if (items.length === 0) return;
+
+    const beforeSnap = captureMapSnapshot(`reorder (${mode})`);
+    const selectedSet = new Set(items.map(v => v.id));
+    const sortedSel = [...items].sort((a, b) => (Number(a.zIndex) || 5) - (Number(b.zIndex) || 5));
+
+    if (mode === 'front') {
+        const others = vectorLayers.filter(l => !selectedSet.has(l.id));
+        const maxOther = others.length > 0 ? Math.max(...others.map(l => Number(l.zIndex) || 5)) : 5;
+        let nextZ = maxOther + 1;
+        if (nextZ + sortedSel.length - 1 > 99) {
+            const overflow = (nextZ + sortedSel.length - 1) - 99;
+            others.forEach(l => { l.zIndex = Math.max(1, (Number(l.zIndex) || 5) - overflow); });
+            nextZ = Math.max(1, 99 - sortedSel.length + 1);
+        }
+        sortedSel.forEach((v, idx) => { v.zIndex = Math.min(99, nextZ + idx); });
+    } else if (mode === 'back') {
+        const others = vectorLayers.filter(l => !selectedSet.has(l.id));
+        const minOther = others.length > 0 ? Math.min(...others.map(l => Number(l.zIndex) || 5)) : 5;
+        if (minOther > sortedSel.length) {
+            const startZ = Math.max(1, minOther - sortedSel.length);
+            sortedSel.forEach((v, idx) => { v.zIndex = startZ + idx; });
+        } else {
+            const shift = sortedSel.length + 1 - minOther;
+            others.forEach(l => { l.zIndex = Math.min(99, (Number(l.zIndex) || 5) + shift); });
+            sortedSel.forEach((v, idx) => { v.zIndex = 1 + idx; });
+        }
+    } else if (mode === 'forward') {
+        sortedSel.forEach(v => { v.zIndex = Math.min(99, (Number(v.zIndex) || 5) + 1); });
+    } else if (mode === 'backward') {
+        sortedSel.forEach(v => { v.zIndex = Math.max(1, (Number(v.zIndex) || 5) - 1); });
+    }
+
+    commitMapUndo(beforeSnap, `reorder (${mode})`, `z-${mode}`);
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    renderPointOverlay();
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+}
+
+function toggleVectorVisibility(explicitIds = null, forceVisible = null) {
+    const ids = (Array.isArray(explicitIds) && explicitIds.length > 0)
+        ? explicitIds
+        : getActionableSelectedVectors().map(l => l.id);
+    if (ids.length === 0) return;
+
+    const beforeSnap = captureMapSnapshot('toggle visibility');
+    let changed = false;
+    ids.forEach(id => {
+        const v = vectorLayers.find(l => l.id === id);
+        if (!v) return;
+        const nextVis = forceVisible === null ? !v.visible : !!forceVisible;
+        if (v.visible !== nextVis) {
+            v.visible = nextVis;
+            changed = true;
+        }
+    });
+    if (!changed) return;
+
+    commitMapUndo(beforeSnap, 'toggle visibility');
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    renderPointOverlay();
+    scheduleFence();
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+    persistEditorVectorsToSupabase();
+}
+
+function openShortcutsModal() {
+    const modal = document.getElementById('shortcutsModal');
+    if (modal) modal.classList.add('open');
+}
+
+function closeShortcutsModal() {
+    const modal = document.getElementById('shortcutsModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function toggleShortcutsModal() {
+    const modal = document.getElementById('shortcutsModal');
+    if (modal) modal.classList.toggle('open');
+}
+
+function isEditableKeyboardTarget(target) {
+    if (!target) return false;
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return true;
+    if (target.isContentEditable) return true;
+    if (typeof target.closest === 'function' && target.closest('[contenteditable="true"]')) return true;
+    return false;
+}
+
+function closeTopOpenEditorOverlay() {
+    const overlayIds = ['shortcutsModal', 'mapPartModal', 'newAreaModal', 'addVectorModal', 'addPlotModal'];
+    for (const id of overlayIds) {
+        const el = document.getElementById(id);
+        if (el && el.classList.contains('open')) {
+            el.classList.remove('open');
+            return true;
+        }
+    }
+    return false;
+}
+
 function initKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
+        // 1. Escape always closes open editor overlays cleanly (even when an input inside is focused)
+        if (e.key === 'Escape' && closeTopOpenEditorOverlay()) {
+            e.preventDefault();
+            return;
+        }
+
+        // Ignore shortcuts behind open dialogs/modals
+        if (document.querySelector('.me-overlay.open, .modal-overlay.open')) return;
+
         // Ignore typing in input fields
-        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+        if (isEditableKeyboardTarget(e.target) || isEditableKeyboardTarget(document.activeElement)) return;
+
+        const key = String(e.key || '').toLowerCase();
+        const hasPrimaryMod = (e.ctrlKey || e.metaKey) && !e.altKey;
+        const noMods = !e.ctrlKey && !e.metaKey && !e.altKey;
+
+        // Help Modal Toggle (?)
+        if (noMods && e.key === '?') {
+            e.preventDefault();
+            toggleShortcutsModal();
+            return;
+        }
+
+        // Ctrl + S: Save layout or plots
+        if (hasPrimaryMod && !e.shiftKey && key === 's') {
+            e.preventDefault();
+            if (currentMode === 'map') {
+                saveVectorLayout();
+            } else {
+                saveCurrentPlotLayoutToDatabase();
+            }
+            return;
+        }
 
         // ── PLOT MODE SHORTCUTS ──
         if (currentMode === 'plots') {
             // Undo: Ctrl+Z / Cmd+Z
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            if (hasPrimaryMod && !e.shiftKey && key === 'z') {
                 e.preventDefault();
                 undoPlotAction();
                 return;
             }
 
             // Redo: Ctrl+Y or Ctrl+Shift+Z
-            if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
-                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+            if ((hasPrimaryMod && !e.shiftKey && key === 'y') || (hasPrimaryMod && e.shiftKey && key === 'z')) {
                 e.preventDefault();
                 redoPlotAction();
                 return;
             }
 
             // Delete selected plot: Delete / Backspace
-            if ((e.key === 'Delete' || e.key === 'Backspace') && activePlotId) {
+            if (noMods && !e.shiftKey && (e.key === 'Delete' || e.key === 'Backspace') && activePlotId) {
                 e.preventDefault();
                 const plot = currentPlotsList.find(p => p.id === activePlotId);
-                if (plot) {
-                    deletePlotDirectly(plot);
-                }
+                if (plot) deletePlotDirectly(plot);
                 return;
             }
 
             // Tool switching: 1 or 'v' (Select), 2 or 'p' (Place), 3 or 'e' (Erase)
-            if (e.key === '1' || e.key.toLowerCase() === 'v') {
+            if (noMods && !e.shiftKey && (e.key === '1' || key === 'v')) {
                 e.preventDefault();
                 setBuilderTool('select');
                 return;
             }
-            if (e.key === '2' || e.key.toLowerCase() === 'p') {
+            if (noMods && !e.shiftKey && (e.key === '2' || key === 'p')) {
                 e.preventDefault();
                 setBuilderTool('place');
                 return;
             }
-            if (e.key === '3' || e.key.toLowerCase() === 'e') {
+            if (noMods && !e.shiftKey && (e.key === '3' || key === 'e')) {
                 e.preventDefault();
                 setBuilderTool('erase');
                 return;
             }
 
             // Deselect with Escape
-            if (e.key === 'Escape') {
+            if (noMods && e.key === 'Escape') {
                 e.preventDefault();
                 selectPlot(null);
                 setBuilderTool('select');
@@ -3560,7 +6386,7 @@ function initKeyboardShortcuts() {
             }
 
             // Arrow key nudge for selected plot
-            if (activePlotId && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            if (noMods && activePlotId && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
                 e.preventDefault();
                 const plot = currentPlotsList.find(p => p.id === activePlotId);
                 if (plot) {
@@ -3600,78 +6426,153 @@ function initKeyboardShortcuts() {
             }
         }
 
-        // Spacebar panning handled in initCanvasPanHandlers
-
-        // Center canvas with Home or '0'
-        if (e.key === 'Home' || e.key === '0') {
-            e.preventDefault();
-            centerCanvas();
-            return;
-        }
-
-        // Fit canvas with 'f' or 'F'
-        if (e.key.toLowerCase() === 'f') {
-            e.preventDefault();
-            autoFitCanvas();
-            return;
-        }
-
-        // Select All visible layers with Ctrl+A / Cmd+A
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && currentMode === 'map') {
-            e.preventDefault();
-            selectedVectorIds = new Set(vectorLayers.filter(l => l.visible).map(l => l.id));
-            activeVectorId = Array.from(selectedVectorIds)[0] || null;
-            activeSelectionType = 'vector';
-            syncSelectionUI();
-            updateVectorInspector();
-            return;
-        }
-
-        // Quick Action: Rotate Left Counter-Clockwise with 'k' / 'K'
-        if (e.key.toLowerCase() === 'k' && currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
-            e.preventDefault();
-            quickRotateSelected(e.shiftKey ? -15 : -5, true);
-            return;
-        }
-
-        // Quick Action: Rotate Right Clockwise with 'l' / 'L'
-        if (e.key.toLowerCase() === 'l' && currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
-            e.preventDefault();
-            quickRotateSelected(e.shiftKey ? 15 : 5, true);
-            return;
-        }
-
-        // Quick Action: Scale / Size (+) with '+' or '='
-        if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
-            e.preventDefault();
-            if (currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
-                quickResizeSelected(e.shiftKey ? 2.0 : 0.5);
+        // ── MAP MODE SHORTCUTS ──
+        if (currentMode === 'map') {
+            // Undo: Ctrl+Z / Cmd+Z
+            if (hasPrimaryMod && !e.shiftKey && key === 'z') {
+                e.preventDefault();
+                undoMapAction();
                 return;
             }
-            applyZoom(currentZoom + 0.15);
-            return;
-        }
 
-        // Quick Action: Scale / Size (-) with '-' or '_'
-        if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
-            e.preventDefault();
-            if (currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
-                quickResizeSelected(e.shiftKey ? -2.0 : -0.5);
+            // Redo: Ctrl+Y or Ctrl+Shift+Z / Cmd+Shift+Z
+            if ((hasPrimaryMod && !e.shiftKey && key === 'y') || (hasPrimaryMod && e.shiftKey && key === 'z')) {
+                e.preventDefault();
+                redoMapAction();
                 return;
             }
-            applyZoom(currentZoom - 0.15);
-            return;
-        }
 
-        // Deselect with Escape
-        if (e.key === 'Escape') {
-            deselectAll();
-            return;
-        }
+            // Duplicate: Ctrl+D / Cmd+D
+            if (hasPrimaryMod && !e.shiftKey && key === 'd') {
+                e.preventDefault();
+                duplicateSelectedVectors();
+                return;
+            }
 
-        // Arrow key nudge for Blueprint Reference
-        if (currentMode === 'map' && activeSelectionType === 'blueprint') {
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            // Select All visible layers: Ctrl+A / Cmd+A
+            if (hasPrimaryMod && !e.shiftKey && key === 'a') {
+                e.preventDefault();
+                selectedVectorIds = new Set(vectorLayers.filter(l => l.visible && !isLegacyWallLayer(l)).map(l => l.id));
+                activeVectorId = Array.from(selectedVectorIds)[0] || null;
+                activeSelectionType = selectedVectorIds.size > 0 ? 'vector' : null;
+                syncSelectionUI();
+                updateVectorInspector();
+                focusVectorInspector();
+                return;
+            }
+
+            const hasNativeTextSel = window.getSelection && String(window.getSelection()).trim().length > 0;
+
+            // Copy: Ctrl+C / Cmd+C
+            if (hasPrimaryMod && !e.shiftKey && key === 'c' && !hasNativeTextSel) {
+                if (getActionableSelectedVectors().length > 0) {
+                    e.preventDefault();
+                    copySelectedVectors();
+                    return;
+                }
+            }
+
+            // Cut: Ctrl+X / Cmd+X
+            if (hasPrimaryMod && !e.shiftKey && key === 'x' && !hasNativeTextSel) {
+                if (getActionableSelectedVectors().length > 0) {
+                    e.preventDefault();
+                    cutSelectedVectors();
+                    return;
+                }
+            }
+
+            // Paste: Ctrl+V / Cmd+V
+            if (hasPrimaryMod && !e.shiftKey && key === 'v') {
+                e.preventDefault();
+                pasteClipboardVectors();
+                return;
+            }
+
+            // Layer Z-Order: Ctrl+[ (Send to Back), Ctrl+] (Bring to Front), [ (Backward), ] (Forward)
+            if (hasPrimaryMod && (e.key === ']' || e.code === 'BracketRight')) {
+                e.preventDefault();
+                reorderSelectedVectors('front');
+                return;
+            }
+            if (hasPrimaryMod && (e.key === '[' || e.code === 'BracketLeft')) {
+                e.preventDefault();
+                reorderSelectedVectors('back');
+                return;
+            }
+            if (noMods && !e.shiftKey && (e.key === ']' || e.code === 'BracketRight')) {
+                e.preventDefault();
+                reorderSelectedVectors('forward');
+                return;
+            }
+            if (noMods && !e.shiftKey && (e.key === '[' || e.code === 'BracketLeft')) {
+                e.preventDefault();
+                reorderSelectedVectors('backward');
+                return;
+            }
+
+            // Toggle Visibility: H
+            if (noMods && !e.shiftKey && key === 'h' && getActionableSelectedVectors().length > 0) {
+                e.preventDefault();
+                toggleVectorVisibility(null, null);
+                return;
+            }
+
+            // Toggle Wall Points Editing: W
+            if (noMods && !e.shiftKey && key === 'w') {
+                e.preventDefault();
+                toggleWallPointEdit();
+                return;
+            }
+
+            // Toggle Shape Points Editing: P
+            if (noMods && !e.shiftKey && key === 'p') {
+                e.preventDefault();
+                const targetLayer = vectorLayers.find(l => l.id === activeVectorId);
+                if (isShapeEditableLayer(targetLayer)) {
+                    toggleShapePointEdit(targetLayer.id);
+                } else if (typeof showNotification === 'function') {
+                    showNotification('Shape Points', 'Select a custom cemetery area first to edit its polygon corner points.', 'info');
+                }
+                return;
+            }
+
+            // Quick Action: Rotate Left (-5° / -15°) with K
+            if (noMods && key === 'k' && (selectedVectorIds.size > 0 || activeVectorId)) {
+                e.preventDefault();
+                quickRotateSelected(e.shiftKey ? -15 : -5, true);
+                return;
+            }
+
+            // Quick Action: Rotate Right (+5° / +15°) with L
+            if (noMods && key === 'l' && (selectedVectorIds.size > 0 || activeVectorId)) {
+                e.preventDefault();
+                quickRotateSelected(e.shiftKey ? 15 : 5, true);
+                return;
+            }
+
+            // Quick Action: Reset Rotation to 0° with R
+            if (noMods && !e.shiftKey && key === 'r' && (selectedVectorIds.size > 0 || activeVectorId)) {
+                e.preventDefault();
+                quickRotateSelected(0, false);
+                return;
+            }
+
+            // Escape: Exit Point Edit mode first, then Deselect
+            if (noMods && e.key === 'Escape') {
+                e.preventDefault();
+                if (pointEditState) {
+                    pointEditState = null;
+                    renderPointOverlay();
+                    updateWallPointsInspector();
+                    updateVectorInspector();
+                } else {
+                    deselectAll();
+                }
+                return;
+            }
+
+            // Arrow key nudge for Blueprint Reference
+            if (noMods && activeSelectionType === 'blueprint' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
                 e.preventDefault();
                 const step = e.shiftKey ? 10 : 2;
                 if (e.key === 'ArrowLeft')  blueprintConfig.x -= step;
@@ -3690,11 +6591,9 @@ function initKeyboardShortcuts() {
                 saveBlueprintConfig();
                 return;
             }
-        }
 
-        // Arrow key nudge for Background Image
-        if (currentMode === 'map' && activeSelectionType === 'bg') {
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            // Arrow key nudge for Background Image
+            if (noMods && activeSelectionType === 'bg' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
                 e.preventDefault();
                 const step = e.shiftKey ? 10 : 2;
                 if (e.key === 'ArrowLeft')  bgConfig.x -= step;
@@ -3714,53 +6613,88 @@ function initKeyboardShortcuts() {
                 publishBgToDashboard();
                 return;
             }
-        }
 
-        // Delete active vector(s) in map mode
-        if (currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                e.preventDefault();
-                deleteSelectedVectors();
-                return;
-            }
-
-            // Arrow key nudge for all selected vectors
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                e.preventDefault();
-                const step = e.shiftKey ? 2.0 : 0.5;
-                if (selectedVectorIds.size === 0 && activeVectorId) {
-                    selectedVectorIds.add(activeVectorId);
+            // Delete & Arrow nudge for Selected Vector(s)
+            if (selectedVectorIds.size > 0 || activeVectorId) {
+                if (noMods && !e.shiftKey && (e.key === 'Delete' || e.key === 'Backspace')) {
+                    e.preventDefault();
+                    deleteSelectedVectors();
+                    return;
                 }
-                selectedVectorIds.forEach(id => {
-                    const v = vectorLayers.find(l => l.id === id);
-                    if (!v || !v.visible) return;
-                    if (e.key === 'ArrowLeft')  v.left = parseFloat((v.left - step).toFixed(1));
-                    if (e.key === 'ArrowRight') v.left = parseFloat((v.left + step).toFixed(1));
-                    if (e.key === 'ArrowUp')    v.top  = parseFloat((v.top - step).toFixed(1));
-                    if (e.key === 'ArrowDown')  v.top  = parseFloat((v.top + step).toFixed(1));
 
-                    const targetEl = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
-                    if (targetEl) {
-                        targetEl.style.left = `${v.left}%`;
-                        targetEl.style.top  = `${v.top}%`;
+                if (noMods && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                    e.preventDefault();
+                    const step = e.shiftKey ? 2.0 : 0.5;
+                    if (selectedVectorIds.size === 0 && activeVectorId) {
+                        selectedVectorIds.add(activeVectorId);
                     }
-                });
+                    const beforeSnap = captureMapSnapshot('nudge layer');
+                    let movedAny = false;
+                    selectedVectorIds.forEach(id => {
+                        const v = vectorLayers.find(l => l.id === id);
+                        if (!v || !v.visible) return;
+                        if (e.key === 'ArrowLeft')  v.left = parseFloat((v.left - step).toFixed(1));
+                        if (e.key === 'ArrowRight') v.left = parseFloat((v.left + step).toFixed(1));
+                        if (e.key === 'ArrowUp')    v.top  = parseFloat((v.top - step).toFixed(1));
+                        if (e.key === 'ArrowDown')  v.top  = parseFloat((v.top + step).toFixed(1));
+                        movedAny = true;
 
-                renderLayerSidebar();
-                updateVectorInspector();
-                localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-                return;
+                        const targetEl = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
+                        if (targetEl) {
+                            targetEl.style.left = `${v.left}%`;
+                            targetEl.style.top  = `${v.top}%`;
+                        }
+                    });
+
+                    if (movedAny) {
+                        commitMapUndo(beforeSnap, 'nudge layer', 'kbd-nudge');
+                        renderLayerSidebar();
+                        updateVectorInspector();
+                        renderPointOverlay();
+                        localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+                    }
+                    return;
+                }
             }
         }
 
-        // Ctrl + S: Save layout or plots
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        // ── GLOBAL CANVAS / VIEW SHORTCUTS ──
+        // Spacebar panning handled in initCanvasPanHandlers
+
+        // Center canvas with Home or '0'
+        if (noMods && (e.key === 'Home' || (e.key === '0' && !e.shiftKey))) {
             e.preventDefault();
-            if (currentMode === 'map') {
-                saveVectorLayout();
-            } else {
-                saveCurrentPlotLayoutToDatabase();
+            centerCanvas();
+            return;
+        }
+
+        // Fit canvas with 'f' or 'F' (never hijacks Ctrl+F)
+        if (noMods && !e.shiftKey && key === 'f') {
+            e.preventDefault();
+            autoFitCanvas();
+            return;
+        }
+
+        // Quick Action: Scale / Size (+) or Canvas Zoom In
+        if (noMods && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd')) {
+            e.preventDefault();
+            if (currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
+                quickResizeSelected(e.shiftKey ? 2.0 : 0.5);
+                return;
             }
+            applyZoom(currentZoom + 0.15);
+            return;
+        }
+
+        // Quick Action: Scale / Size (-) or Canvas Zoom Out
+        if (noMods && (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract')) {
+            e.preventDefault();
+            if (currentMode === 'map' && (selectedVectorIds.size > 0 || activeVectorId)) {
+                quickResizeSelected(e.shiftKey ? -2.0 : -0.5);
+                return;
+            }
+            applyZoom(currentZoom - 0.15);
+            return;
         }
     });
 

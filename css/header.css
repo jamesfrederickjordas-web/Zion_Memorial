@@ -45,7 +45,7 @@ nav a {
     color: #333;
     font-weight: bold;
     padding: 8px 15px;
-    border-radius: 30px;
+    border-radius: 4px;
 }
 
 nav a.active-nav {
@@ -55,7 +55,7 @@ nav a.active-nav {
 
 .header-buttons .btn {
     padding: 8px 20px;
-    border-radius: 30px;
+    border-radius: 4px;
     margin-left: 10px;
     text-decoration: none;
     font-weight: bold;

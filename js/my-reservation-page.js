@@ -99,6 +99,7 @@ function initMyReservationPage() {
 
     // Setup Reservation Details Modal actions
     setupReservationDetailsModal();
+    setupTransferModalListeners();
 
     // Setup Client Manage Deceased Modal actions
     setupClientManageDeceasedModal();
@@ -310,6 +311,18 @@ async function loadMyReservations() {
             const subInfo = subsMap[res.reservation_number];
             const isGcashLinked = Boolean(subInfo?.gcashAutoDebitLinked || String(res.notes || '').toUpperCase().includes('GCASH'));
             const nextDueStr = subInfo?.nextDueDate || (typeof window.computeNextMonthlyDueDate === 'function' ? window.computeNextMonthlyDueDate(res.reservation_date, 1) : '');
+            let isOverdue = false;
+            let overduePenalty = 0;
+            if (nextDueStr) {
+                const dueDateObj = new Date(nextDueStr);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (!isNaN(dueDateObj.getTime()) && dueDateObj < today) {
+                    isOverdue = true;
+                    const monthlyAmt = Number(res.monthly_amortization || 0);
+                    overduePenalty = Math.round(monthlyAmt * 0.05);
+                }
+            }
 
             return `
                 <tr data-reservation-id="${res.id}">
@@ -364,10 +377,10 @@ async function loadMyReservations() {
                                 <button type="button" class="btn-action-details" style="background:#047857;color:#fff;border-color:#047857;border-radius:3px;" onclick="handleRunMonthlyBankPay(${res.id})" title="Pay 1 Month via Direct Bank Transfer">Bank Pay</button>
                                 <button type="button" class="btn-action-details" style="background:#0f766e;color:#fff;border-color:#0f766e;border-radius:3px;" onclick="handleSend3DayNotice(${res.id})" title="Send 3-Day Pre-Due Email Notice Now">3-Day Notice</button>
                             ` : ''}
-                            ${canCancel ? `
-                                <button type="button" class="btn-action-delete" style="border-radius: 3px;" onclick="handleCancelReservation(${res.id}, '${escapeHtml(plotCode)}')">Delete</button>
+                            ${(res.status !== 'CANCELLED' && res.status !== 'REJECTED') ? `
+                                <button type="button" class="btn-action-transfer" style="border-radius: 4px;" onclick="openTransferReservationModal(${res.id}, '${escapeHtml(plotCode)}', ${res.space_id || 'null'})" title="Transfer Rights or Relocate Plot">Transfer</button>
                             ` : `
-                                <button type="button" class="btn-action-details" style="opacity: 0.5; cursor: not-allowed; border-radius: 3px;" disabled title="Reservation is ${res.status}">Delete</button>
+                                <button type="button" class="btn-action-details" style="opacity: 0.5; cursor: not-allowed; border-radius: 4px;" disabled title="Reservation is ${res.status}">Transfer</button>
                             `}
                         </div>
                     </td>
@@ -926,6 +939,7 @@ function setupClientManageDeceasedModal() {
             const middleName = document.getElementById('cmdMiddleName')?.value?.trim() || '';
             const lastName = document.getElementById('cmdLastName')?.value?.trim() || '';
             const gender = document.getElementById('cmdGender')?.value || null;
+            const birthDate = document.getElementById('cmdBirthDate')?.value || null;
             const deathDate = document.getElementById('cmdDeathDate')?.value || null;
             const burialDate = document.getElementById('cmdBurialDate')?.value || null;
             const epitaph = document.getElementById('cmdEpitaph')?.value?.trim() || null;
@@ -933,6 +947,22 @@ function setupClientManageDeceasedModal() {
             if (!firstName || !lastName) {
                 alert('Please enter both First Name and Last Name of the deceased.');
                 return;
+            }
+
+            // Chronological Date Validation
+            if (typeof checkDateChronology === 'function') {
+                const dateCheck = checkDateChronology(birthDate, deathDate, burialDate);
+                if (!dateCheck.valid) {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = recordId ? 'Update Deceased Record' : 'Save Deceased Record';
+                    }
+                    alert('Invalid Date Chronology:\n\n' + dateCheck.message);
+                    if (dateCheck.field === 'birth') document.getElementById('cmdBirthDate')?.focus();
+                    else if (dateCheck.field === 'death') document.getElementById('cmdDeathDate')?.focus();
+                    else if (dateCheck.field === 'burial') document.getElementById('cmdBurialDate')?.focus();
+                    return;
+                }
             }
 
             const fullName = combineFullName(firstName, middleName, lastName);
@@ -953,6 +983,7 @@ function setupClientManageDeceasedModal() {
                         .update({
                             deceased_name: fullName,
                             gender: gender,
+                            birth_date: birthDate,
                             death_date: deathDate,
                             burial_date: burialDate,
                             epitaph: epitaph,
@@ -980,6 +1011,7 @@ function setupClientManageDeceasedModal() {
                             family_contact_id: user.id,
                             deceased_name: fullName,
                             gender: gender,
+                            birth_date: birthDate,
                             death_date: deathDate,
                             burial_date: burialDate,
                             epitaph: epitaph
@@ -1124,9 +1156,20 @@ window.openManageDeceasedModal = async function(reservationId, spaceId, editReco
             document.getElementById('cmdMiddleName').value = parsed.middle || '';
             document.getElementById('cmdLastName').value = parsed.last || '';
             document.getElementById('cmdGender').value = rec.gender || '';
+            const bInput = document.getElementById('cmdBirthDate');
+            if (bInput) bInput.value = rec.birth_date || '';
             document.getElementById('cmdDeathDate').value = rec.death_date || '';
             document.getElementById('cmdBurialDate').value = rec.burial_date || '';
             document.getElementById('cmdEpitaph').value = rec.epitaph || '';
+
+            if (typeof setupChronologicalDateValidation === 'function') {
+                setupChronologicalDateValidation({
+                    birthInput: 'cmdBirthDate',
+                    deathInput: 'cmdDeathDate',
+                    burialInput: 'cmdBurialDate',
+                    errorContainer: 'cmdDeceasedDateError'
+                });
+            }
 
             if (formTitle) formTitle.textContent = `Edit Deceased Record: ${rec.deceased_name}`;
             if (submitBtn) submitBtn.textContent = 'Update Deceased Record';
@@ -1141,9 +1184,20 @@ window.openManageDeceasedModal = async function(reservationId, spaceId, editReco
         document.getElementById('cmdMiddleName').value = '';
         document.getElementById('cmdLastName').value = '';
         document.getElementById('cmdGender').value = '';
+        const bInput = document.getElementById('cmdBirthDate');
+        if (bInput) bInput.value = '';
         document.getElementById('cmdDeathDate').value = '';
         document.getElementById('cmdBurialDate').value = '';
         document.getElementById('cmdEpitaph').value = '';
+
+        if (typeof setupChronologicalDateValidation === 'function') {
+            setupChronologicalDateValidation({
+                birthInput: 'cmdBirthDate',
+                deathInput: 'cmdDeathDate',
+                burialInput: 'cmdBurialDate',
+                errorContainer: 'cmdDeceasedDateError'
+            });
+        }
 
         if (cancelEditBtn) cancelEditBtn.style.display = 'none';
         if (submitBtn) submitBtn.textContent = 'Save Deceased Record';
@@ -1163,3 +1217,244 @@ window.openManageDeceasedModal = async function(reservationId, spaceId, editReco
 
     modal.classList.add('active');
 };
+
+
+// ==============================================================================
+// TRANSFER RESERVATION (Replacing Delete with Transfer)
+// ==============================================================================
+window.openTransferReservationModal = async function(reservationId, plotCode, spaceId) {
+    const modal = document.getElementById('transferReservationModal');
+    if (!modal) return;
+
+    const resIdInput = document.getElementById('transferResId');
+    const oldPlotInput = document.getElementById('transferOldPlotCode');
+    const oldSpaceInput = document.getElementById('transferOldSpaceId');
+    const subtitle = document.getElementById('transferPlotCodeSubtitle');
+
+    if (resIdInput) resIdInput.value = reservationId;
+    if (oldPlotInput) oldPlotInput.value = plotCode || '';
+    if (oldSpaceInput) oldSpaceInput.value = spaceId || '';
+    if (subtitle) subtitle.textContent = 'Plot: ' + (plotCode || '-');
+
+    const nameInput = document.getElementById('transferBeneficiaryName');
+    const phoneInput = document.getElementById('transferBeneficiaryPhone');
+    const relInput = document.getElementById('transferRelationship');
+    const notesInput = document.getElementById('transferNotes');
+
+    if (nameInput) nameInput.value = '';
+    if (phoneInput) phoneInput.value = '';
+    if (relInput) relInput.value = '';
+    if (notesInput) notesInput.value = '';
+
+    const typeSelect = document.getElementById('transferTypeSelect');
+    if (typeSelect) {
+        typeSelect.value = 'BENEFICIARY';
+        toggleTransferTypeFields('BENEFICIARY');
+    }
+
+    modal.style.display = 'flex';
+    loadAvailablePlotsForTransfer(spaceId);
+};
+
+function toggleTransferTypeFields(type) {
+    const benFields = document.getElementById('transferBeneficiaryFields');
+    const plotFields = document.getElementById('transferPlotFields');
+    const relFields = document.getElementById('transferReleaseFields');
+
+    if (benFields) benFields.style.display = (type === 'BENEFICIARY') ? 'block' : 'none';
+    if (plotFields) plotFields.style.display = (type === 'RELOCATE_PLOT') ? 'block' : 'none';
+    if (relFields) relFields.style.display = (type === 'RELEASE_INVENTORY') ? 'block' : 'none';
+}
+
+async function loadAvailablePlotsForTransfer(currentSpaceId) {
+    const plotSelect = document.getElementById('transferTargetPlotSelect');
+    if (!plotSelect) return;
+    plotSelect.innerHTML = '<option value="">Loading available plots...</option>';
+
+    try {
+        const { data: spaces, error } = await supabaseClient
+            .from('memorial_spaces')
+            .select('id, plot_identifier, section_name, category, price')
+            .eq('status', 'available')
+            .order('plot_identifier', { ascending: true })
+            .limit(100);
+
+        if (error || !spaces || spaces.length === 0) {
+            plotSelect.innerHTML = '<option value="">No available plots found</option>';
+            return;
+        }
+
+        const filtered = spaces.filter(s => s.id !== currentSpaceId);
+        plotSelect.innerHTML = '<option value="">-- Choose target plot --</option>' + 
+            filtered.map(s => `<option value="${s.id}" data-code="${escapeHtml(s.plot_identifier)}">${escapeHtml(s.plot_identifier)} - ${escapeHtml(s.section_name)} (${escapeHtml(s.category)})</option>`).join('');
+    } catch (err) {
+        console.error('Failed to load available plots for transfer:', err);
+        plotSelect.innerHTML = '<option value="">Error loading plots</option>';
+    }
+}
+
+function setupTransferModalListeners() {
+    const modal = document.getElementById('transferReservationModal');
+    const closeBtn = document.getElementById('closeTransferModalBtn');
+    const cancelBtn = document.getElementById('cancelTransferBtn');
+    const typeSelect = document.getElementById('transferTypeSelect');
+    const form = document.getElementById('transferReservationForm');
+
+    const closeModal = () => {
+        if (modal) modal.style.display = 'none';
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', (e) => {
+            toggleTransferTypeFields(e.target.value);
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resId = Number(document.getElementById('transferResId').value);
+            const oldPlotCode = document.getElementById('transferOldPlotCode').value;
+            const oldSpaceId = Number(document.getElementById('transferOldSpaceId').value);
+            const transferType = document.getElementById('transferTypeSelect').value;
+            const notes = (document.getElementById('transferNotes').value || '').trim();
+            const submitBtn = document.getElementById('submitTransferBtn');
+
+            if (!resId) return;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            try {
+                const now = new Date().toISOString();
+
+                if (transferType === 'BENEFICIARY') {
+                    const benName = (document.getElementById('transferBeneficiaryName').value || '').trim();
+                    const benPhone = (document.getElementById('transferBeneficiaryPhone').value || '').trim();
+                    const benRel = (document.getElementById('transferRelationship').value || '').trim();
+
+                    if (!benName) {
+                        alert('Please enter the recipient / beneficiary full name.');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Confirm Transfer';
+                        return;
+                    }
+
+                    const transferLog = `[TRANSFERRED TO BENEFICIARY: ${benName} | Phone: ${benPhone || 'N/A'} | Relationship: ${benRel || 'N/A'} | Date: ${new Date().toLocaleDateString()} | Remarks: ${notes || 'None'}]`;
+
+                    const { error } = await supabaseClient
+                        .from('reservations')
+                        .update({
+                            notes: notes ? `${notes} ${transferLog}` : transferLog,
+                            updated_at: now
+                        })
+                        .eq('id', resId);
+
+                    if (error) throw error;
+
+                    if (typeof showSuccessModal === 'function') {
+                        showSuccessModal('Transfer Completed', `Reservation for plot ${oldPlotCode} has been officially transferred to ${benName}.`);
+                    } else {
+                        alert(`Reservation for plot ${oldPlotCode} has been transferred to ${benName}.`);
+                    }
+
+                } else if (transferType === 'RELOCATE_PLOT') {
+                    const plotSelect = document.getElementById('transferTargetPlotSelect');
+                    const targetSpaceId = Number(plotSelect.value);
+                    const selectedOpt = plotSelect.options[plotSelect.selectedIndex];
+                    const targetPlotCode = selectedOpt ? selectedOpt.dataset.code : 'Target Plot';
+
+                    if (!targetSpaceId) {
+                        alert('Please choose an available target plot to relocate to.');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Confirm Transfer';
+                        return;
+                    }
+
+                    // 1. Mark target plot as reserved
+                    const { error: errTarget } = await supabaseClient
+                        .from('memorial_spaces')
+                        .update({ status: 'reserved', updated_at: now })
+                        .eq('id', targetSpaceId);
+                    if (errTarget) throw errTarget;
+
+                    // 2. Mark old plot as available
+                    if (oldSpaceId) {
+                        await supabaseClient
+                            .from('memorial_spaces')
+                            .update({ status: 'available', updated_at: now })
+                            .eq('id', oldSpaceId);
+                    }
+
+                    // 3. Update reservation space_id
+                    const transferLog = `[PLOT RELOCATED: From ${oldPlotCode} to ${targetPlotCode} | Date: ${new Date().toLocaleDateString()} | Remarks: ${notes || 'None'}]`;
+                    const { error: errRes } = await supabaseClient
+                        .from('reservations')
+                        .update({
+                            space_id: targetSpaceId,
+                            notes: notes ? `${notes} ${transferLog}` : transferLog,
+                            updated_at: now
+                        })
+                        .eq('id', resId);
+
+                    if (errRes) throw errRes;
+
+                    if (typeof showSuccessModal === 'function') {
+                        showSuccessModal('Plot Relocated', `Reservation successfully transferred from ${oldPlotCode} to ${targetPlotCode}.`);
+                    } else {
+                        alert(`Reservation successfully transferred from ${oldPlotCode} to ${targetPlotCode}.`);
+                    }
+
+                } else if (transferType === 'RELEASE_INVENTORY') {
+                    const transferLog = `[RELINQUISHED TO INVENTORY | Reason: ${notes || 'Client requested transfer'} | Date: ${new Date().toLocaleDateString()}]`;
+
+                    // 1. Cancel reservation
+                    const { error: errRes } = await supabaseClient
+                        .from('reservations')
+                        .update({
+                            status: 'CANCELLED',
+                            notes: notes ? `${notes} ${transferLog}` : transferLog,
+                            updated_at: now
+                        })
+                        .eq('id', resId);
+
+                    if (errRes) throw errRes;
+
+                    // 2. Release space back to available
+                    if (oldSpaceId) {
+                        await supabaseClient
+                            .from('memorial_spaces')
+                            .update({ status: 'available', updated_at: now })
+                            .eq('id', oldSpaceId);
+                    }
+
+                    if (typeof showSuccessModal === 'function') {
+                        showSuccessModal('Plot Relinquished', `Plot ${oldPlotCode} has been relinquished and transferred back to park inventory.`);
+                    } else {
+                        alert(`Plot ${oldPlotCode} transferred back to park inventory.`);
+                    }
+                }
+
+                closeModal();
+                await loadMyReservations();
+                if (typeof window.refreshDashboardKPIs === 'function') {
+                    window.refreshDashboardKPIs();
+                }
+
+            } catch (err) {
+                console.error('Transfer execution error:', err);
+                if (typeof showErrorModal === 'function') {
+                    showErrorModal('Transfer Error', err.message);
+                } else {
+                    alert('Transfer failed: ' + err.message);
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Transfer';
+            }
+        });
+    }
+}

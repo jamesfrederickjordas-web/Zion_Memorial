@@ -270,7 +270,28 @@ function generateArea5ExactBlueprintLayout() {
     return plots;
 }
 
+function syncCustomAreasToDashboard(layersOverride) {
+    if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') return;
+    const layers = Array.isArray(layersOverride)
+        ? layersOverride
+        : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
+    const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.entries(entries).forEach(([secName, meta]) => {
+        RES_SECTION_SHAPE_MAP[secName] = meta;
+        const tabKey = meta.tab || (window.ZMGFence.CATEGORY_TABS && window.ZMGFence.CATEGORY_TABS[meta.category]) || 'special-supreme';
+        if (!LAWN_TAB_TO_SECTIONS[tabKey]) LAWN_TAB_TO_SECTIONS[tabKey] = [];
+        if (!LAWN_TAB_TO_SECTIONS[tabKey].includes(secName)) {
+            LAWN_TAB_TO_SECTIONS[tabKey].push(secName);
+        }
+    });
+}
+window.syncCustomAreasToDashboard = syncCustomAreasToDashboard;
+window.addEventListener('zmg:vector-layout-updated', (e) => {
+    syncCustomAreasToDashboard(e && e.detail ? e.detail : null);
+});
+
 async function initializeDashboard() {
+    syncCustomAreasToDashboard();
     // =========================================
     // 1. SUPABASE AUTH & SESSION CHECK
     // =========================================
@@ -792,6 +813,7 @@ async function initializeDashboard() {
 
     lawnTabs.forEach(tab => {
         tab.addEventListener('click', () => {
+            syncCustomAreasToDashboard();
             lawnTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
@@ -822,7 +844,11 @@ async function initializeDashboard() {
                 'family-estate': ['3'],
                 'mausoleum': ['12']
             };
-            const activeAreas = tabToAreas[lawnType] || [];
+            const baseAreas = tabToAreas[lawnType] || [];
+            const customAreasForTab = Object.values(RES_SECTION_SHAPE_MAP)
+                .filter(item => item && item.tab === lawnType && item.area)
+                .map(item => String(item.area));
+            const activeAreas = Array.from(new Set([...baseAreas, ...customAreasForTab]));
             const modalMap = document.getElementById('modalVectorMapCanvas');
             const targetEls = modalMap ? modalMap.querySelectorAll('.map-vector-element') : document.querySelectorAll('#modalVectorMapCanvas .map-vector-element');
             targetEls.forEach(el => {
@@ -913,7 +939,15 @@ function setupInteractiveCemeteryMap() {
     };
 
     function selectArea(areaId) {
-        const meta = areaMeta[areaId];
+        syncCustomAreasToDashboard();
+        let meta = areaMeta[areaId] || areaMeta[String(areaId)];
+        if (!meta) {
+            const shapeMatch = Object.entries(RES_SECTION_SHAPE_MAP).find(([, s]) => s && String(s.area) === String(areaId));
+            if (shapeMatch) {
+                meta = { name: shapeMatch[0], category: shapeMatch[1].category, tab: shapeMatch[1].tab };
+                areaMeta[String(areaId)] = meta;
+            }
+        }
         if (!meta) return;
 
         currentResAreaSectionName = meta.name;
@@ -1386,10 +1420,17 @@ function setupBookingModalAndAmortization(user) {
             const isGcashQr = isGcash && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
             const gcashQrRef = document.getElementById('zmgGcashQrRefNumber')?.value?.trim();
 
+            if (isGcashQr && !window.stagedGcashReceiptProofUrl) {
+                alert('Please attach your GCash payment screenshot to proceed. Screenshot is required for GCash reservations.');
+                if (submitBtn) submitBtn.disabled = false;
+                document.getElementById('zmgGcashReceiptUpload')?.focus();
+                return;
+            }
+
             const linkedAcct = typeof window.getLinkedGcashAccount === 'function' ? window.getLinkedGcashAccount() : null;
             let paymentTag = (isStaffCashPaid || isBankTestPaid || isGcashQr) ? 'PAID' : 'UNPAID';
             const gcashSender = isGcash ? (isGcashQr ? (gcashQrRef || 'GCash QR') : (linkedAcct?.mobileNumber || document.getElementById('zmgGcashSenderNumber')?.value?.trim() || '')) : '';
-            let gcashRef = isGcash ? (isGcashQr ? (gcashQrRef || `GCASH-QR-${Date.now().toString(36).toUpperCase()}`) : '') : '';
+            let gcashRef = isGcash ? (isGcashQr ? (gcashQrRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`) : '') : '';
 
             let termMonths = 60;
             let downPayment = 0;
@@ -2178,6 +2219,7 @@ async function loadClientMaintenanceVisits() {
                 scheduled_date,
                 status,
                 notes,
+                proof_image_url,
                 completed_at,
                 space_id,
                 memorial_spaces (id, plot_identifier, section_name, category)
@@ -2235,6 +2277,13 @@ async function loadClientMaintenanceVisits() {
                             ${v.notes ? `
                                 <div style="font-size: 0.78rem; color: #475569; margin-top: 4px; font-style: italic;">
                                     Notes: ${v.notes}
+                                </div>
+                            ` : ''}
+                            ${v.proof_image_url ? `
+                                <div style="margin-top: 6px;">
+                                    <button type="button" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 0.75rem; color: #0284c7; border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 4px; cursor: pointer; font-weight: 700;" onclick="window.open('${v.proof_image_url}', '_blank')">
+                                        View Work Proof Photo
+                                    </button>
                                 </div>
                             ` : ''}
                         </div>
@@ -2351,7 +2400,7 @@ function setupSupportTicketsModalEvents() {
             e.preventDefault();
             const subject = document.getElementById('clientTicketSubjectInput')?.value.trim();
             const category = document.getElementById('clientTicketCategorySelect')?.value;
-            const priority = document.getElementById('clientTicketPrioritySelect')?.value;
+            const priority = document.getElementById('clientTicketPrioritySelect')?.value || 'normal';
             const message = document.getElementById('clientTicketMessageInput')?.value.trim();
             const submitBtn = document.getElementById('btnSubmitTicketForm');
 
@@ -2378,7 +2427,7 @@ function setupSupportTicketsModalEvents() {
                         user_id: user.id,
                         subject: subject,
                         category: category,
-                        priority: priority,
+                        priority: 'normal',
                         message: message,
                         status: 'open'
                     }]);
@@ -2464,7 +2513,6 @@ async function loadClientSupportTickets() {
                         </div>
                         <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">
                             <span>Category: <strong>${t.category}</strong></span> &bull; 
-                            <span>Priority: <strong style="text-transform: capitalize;">${t.priority}</strong></span> &bull; 
                             <span>Date: ${new Date(t.created_at).toLocaleDateString()}</span>
                         </div>
                         <div style="font-size: 0.85rem; color: #334155; background: #f8fafc; border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; white-space: pre-wrap;">${t.message}</div>

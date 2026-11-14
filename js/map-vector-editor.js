@@ -34,9 +34,7 @@ const VECTOR_FILE_TO_AREA = {
     'Vector (11).png': { area: '9',  name: 'Area 9 - Lawn of Serenity', category: 'Special Supreme', tab: 'special-supreme', desc: 'Area 9 - Lawn of Serenity memorial section' },
     'Vector (14).png': { area: '10', name: 'Area 10 - Condominium Block A', category: 'Condominium', tab: 'condominium', desc: 'Area 10 - Condominium Block A lawn & niches' },
     'Vector (3).png':  { area: '11', name: 'Area 11 - Lawn of Memories', category: 'Special Supreme', tab: 'special-supreme', desc: 'Area 11 - Lawn of Memories memorial section' },
-    'Vector (4).png':  { area: '12', name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum', desc: 'Area 12 - Mausoleum Court memorial section' },
-    'Group 109.png':   { area: null, name: 'Group 109 (Base Framework & Pathways)', category: 'Framework', tab: null, desc: 'Master cemetery boundary and pathways framework' },
-    'cemetery-boundary-bg.png': { area: null, name: 'Cemetery Boundary & Pathways (Full)', category: 'Framework', tab: null, desc: 'Master cemetery boundary and road framework' }
+    'Vector (4).png':  { area: '12', name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum', desc: 'Area 12 - Mausoleum Court memorial section' }
 };
 
 // Default layout coordinates calibrated for Zion Memorial Garden vector assets (ZERO OVERLAPS)
@@ -210,16 +208,53 @@ let initialVectorLeft = 0;
 let initialVectorTop = 0;
 
 // Helper: Normalize vector item metadata to ensure accurate Area names
+function isLegacyWallVector(v) {
+    if (!v) return true;
+    if (window.ZMGFence && typeof window.ZMGFence.isLegacyWall === 'function') {
+        return window.ZMGFence.isLegacyWall(v);
+    }
+    const src = String(v.src || '').toLowerCase();
+    return v.id === 'group-109' || (!src.startsWith('data:') && (src.includes('group 109') || src.includes('cemetery-boundary')));
+}
+
 function normalizeVectorItem(v) {
     if (!v) return v;
-    const fileName = v.src ? v.src.split('/').pop() : '';
-    const meta = VECTOR_FILE_TO_AREA[fileName];
+    if (window.ZMGFence && typeof window.ZMGFence.isEntrance === 'function' && window.ZMGFence.isEntrance(v)) {
+        v.kind = 'entrance';
+        v.area = null;
+        v.tab = null;
+        if (!v.src) v.src = window.ZMGFence.entranceSvgDataUrl();
+        return v;
+    }
+    if (window.ZMGFence && typeof window.ZMGFence.isDecorPart === 'function' && window.ZMGFence.isDecorPart(v)) {
+        v.kind = 'decor';
+        v.custom = false;
+        v.area = null;
+        v.tab = null;
+        v.fenceExclude = !!v.fenceExclude;
+        v.fenceInclude = !v.fenceExclude;
+        if (Array.isArray(v.points) && v.points.length >= 3) {
+            v.src = window.ZMGFence.buildPartSvgDataUrl(v);
+        }
+        return v;
+    }
+    const fileName = (v.src && !String(v.src).startsWith('data:')) ? v.src.split('/').pop() : '';
+    const meta = fileName ? VECTOR_FILE_TO_AREA[fileName] : null;
     if (meta) {
         v.name = meta.name;
         v.desc = meta.desc;
         v.area = meta.area;
         v.category = meta.category;
         v.tab = meta.tab;
+    } else if (v.custom && window.ZMGFence) {
+        if (!v.tab && v.category && window.ZMGFence.CATEGORY_TABS) {
+            v.tab = window.ZMGFence.CATEGORY_TABS[v.category] || 'special-supreme';
+        }
+        if (Array.isArray(v.points) && v.points.length >= 3) {
+            v.src = window.ZMGFence.buildAreaSvgDataUrl(v.cols || 20, v.rows || 20, v.area, v.points, v.shapeAspect);
+        } else if (!v.src) {
+            v.src = window.ZMGFence.buildAreaSvgDataUrl(v.cols || 6, v.rows || 5, v.area);
+        }
     }
     return v;
 }
@@ -257,7 +292,7 @@ async function syncMapVectorLayoutWithSupabase() {
 
         if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
             const dbVectors = row.coordinates.vectorLayers
-                .filter(v => v && v.id !== 'group-109' && !(v.src && v.src.includes('Group 109')))
+                .filter(v => !isLegacyWallVector(v))
                 .map(normalizeVectorItem);
             currentVectorLayout = dbVectors;
             localStorage.setItem(MAP_VECTOR_STORAGE_KEY, JSON.stringify(currentVectorLayout));
@@ -266,6 +301,10 @@ async function syncMapVectorLayoutWithSupabase() {
                 localStorage.setItem('zion_cemetery_dashboard_bg_v1', JSON.stringify(row.coordinates.bgConfig));
                 localStorage.setItem('zion_cemetery_map_bg_v1', JSON.stringify(row.coordinates.bgConfig));
             }
+            if (row.coordinates.fenceConfig && window.ZMGFence) {
+                window.ZMGFence.writeStoredFenceConfig(row.coordinates.fenceConfig);
+            }
+            window.dispatchEvent(new CustomEvent('zmg:vector-layout-updated', { detail: currentVectorLayout }));
             renderVectorMapElements();
             return;
         }
@@ -288,6 +327,7 @@ async function persistMapVectorLayoutToSupabase(vectorsToSave) {
             const rawBg = localStorage.getItem('zion_cemetery_dashboard_bg_v1') || localStorage.getItem('zion_cemetery_map_bg_v1');
             if (rawBg) bgCfg = JSON.parse(rawBg);
         } catch (_) {}
+        const fenceCfg = window.ZMGFence ? window.ZMGFence.readStoredFenceConfig() : null;
 
         await supabaseClient
             .from('memorial_spaces')
@@ -303,6 +343,7 @@ async function persistMapVectorLayoutToSupabase(vectorsToSave) {
                 coordinates: {
                     vectorLayers: vectorsToSave,
                     bgConfig: bgCfg,
+                    fenceConfig: fenceCfg,
                     updatedAt: new Date().toISOString()
                 }
             }], { onConflict: 'plot_identifier' });
@@ -321,6 +362,9 @@ window.addEventListener('storage', (e) => {
         loadSavedVectorLayout();
         renderVectorMapElements();
     }
+    if (e.key === 'zion_cemetery_fence_config_v1') {
+        renderVectorMapElements();
+    }
     if (e.key === 'zion_cemetery_dashboard_bg_v1' || e.key === 'zion_cemetery_map_bg_v1') {
         renderDashboardBg();
     }
@@ -335,7 +379,7 @@ function loadSavedVectorLayout() {
             if (Array.isArray(parsed) && parsed.length > 0) {
                 // Filter out legacy Group 109 red/green pixel grid and normalize area names
                 currentVectorLayout = parsed
-                    .filter(v => v && v.id !== 'group-109' && !(v.src && v.src.includes('Group 109')))
+                    .filter(v => !isLegacyWallVector(v))
                     .map(normalizeVectorItem);
                 if (currentVectorLayout.length > 0) return;
             }
@@ -352,9 +396,18 @@ function loadSavedVectorLayout() {
 const STRUCTURAL_VECTOR_IDS = new Set(['group-109']);
 
 // Returns true if this vector is an interactive plot area (clickable on dashboard)
-function isPlotVector(vectorId, src = '') {
+function isPlotVector(vectorOrId, src = '') {
+    const v = (vectorOrId && typeof vectorOrId === 'object') ? vectorOrId : { id: vectorOrId, src };
+    if (window.ZMGFence) {
+        if (ZMGFence.isEntrance(v) || ZMGFence.isStructural(v) || ZMGFence.isLegacyWall(v)) return false;
+        if (v.kind === 'decor') return false;
+        return true;
+    }
+    const vectorId = String(v.id || '');
+    const vSrc = String(v.src || src || '');
     if (STRUCTURAL_VECTOR_IDS.has(vectorId)) return false;
-    if (src && (src.includes('Group 109') || src.includes('boundary') || src.includes('Framework') || src.includes('cemetery-boundary'))) return false;
+    if (v.kind === 'entrance' || v.kind === 'decor') return false;
+    if (vSrc && !vSrc.startsWith('data:') && (vSrc.includes('Group 109') || vSrc.includes('boundary') || vSrc.includes('Framework') || vSrc.includes('cemetery-boundary'))) return false;
     return true;
 }
 
@@ -373,9 +426,10 @@ function renderDashboardBg(targetCanvas = null, bgImgId = null) {
         console.warn('Dashboard BG render error:', e);
     }
 
-    // Default to the official cemetery boundary image if not customized or empty
-    const defaultBgSrc = 'assets/images/backgrounds/cemetery-boundary-bg.png';
-    const src = (cfg && cfg.src && cfg.src !== '') ? cfg.src : defaultBgSrc;
+    // Walls/boundary default background removed — perimeter fence is rendered dynamically around active areas.
+    const defaultBgSrc = '';
+    const rawBgSrc = (cfg && cfg.src) ? String(cfg.src) : '';
+    const src = (rawBgSrc && !rawBgSrc.includes('cemetery-boundary') && !rawBgSrc.includes('Group 109')) ? rawBgSrc : defaultBgSrc;
     const opacity = (cfg && cfg.opacity !== undefined) ? cfg.opacity : 1.0;
     const visible = (cfg && cfg.visible !== undefined) ? cfg.visible : true;
     const x = (cfg && cfg.x) ? cfg.x : 0;
@@ -391,9 +445,9 @@ function renderDashboardBg(targetCanvas = null, bgImgId = null) {
         bgEl.alt = 'Cemetery Map Background';
     }
 
-    // If the vector layout already includes a base framework/boundary vector layer, hide standalone bg
-    const hasVectorBg = currentVectorLayout && currentVectorLayout.some(v => v.src && (v.src.includes('Group 109') || v.src.includes('cemetery-boundary') || v.src.includes('boundary')));
-    if (hasVectorBg) {
+    // Hide standalone bg unless a custom non-boundary background was explicitly set
+    const hasVectorBg = currentVectorLayout && currentVectorLayout.some(v => v.src && !String(v.src).startsWith('data:') && (v.src.includes('Group 109') || v.src.includes('cemetery-boundary') || v.src.includes('boundary')));
+    if (!src || hasVectorBg) {
         bgEl.style.display = 'none';
         return;
     }
@@ -453,6 +507,7 @@ function renderVectorMapElements() {
         renderDashboardBg(canvas, bgImgId);
 
         currentVectorLayout.forEach(v => {
+            if (v.visible === false && !(isMapEditorActive && !isModal)) return;
             const fileName = v.src ? v.src.split('/').pop() : '';
             const meta = VECTOR_FILE_TO_AREA[fileName];
             const areaId = (meta && meta.area) ? meta.area : (v.area || null);
@@ -495,9 +550,9 @@ function renderVectorMapElements() {
                     startVectorDrag(e, v);
                 });
             } else {
-                // Client view — only plot vectors are interactive (Areas 1 to 12)
-                if (isPlotVector(v.id, v.src)) {
-                    img.title = `${v.name} - ${v.desc} [Click to select this lawn category]`;
+                // Client view — only plot vectors are interactive (default + custom areas)
+                if (isPlotVector(v, v.src)) {
+                    img.title = `${v.name} - ${v.desc || v.name} [Click to select this lawn category]`;
                     img.style.cursor = 'pointer';
                     img.style.pointerEvents = 'auto';
 
@@ -514,15 +569,25 @@ function renderVectorMapElements() {
                         }
                     });
                 } else {
-                    // Structural base framework — pass-through clicks
-                    img.title = '';
+                    // Structural / entrance elements — pass-through clicks
+                    img.title = (window.ZMGFence && window.ZMGFence.isEntrance(v)) ? (v.name || 'Main Entrance Gate') : '';
                     img.style.cursor = 'default';
                     img.style.pointerEvents = 'none';
                 }
             }
 
+            if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
+                img.addEventListener('load', () => {
+                    window.ZMGFence.render(canvas, currentVectorLayout, { clamp: true });
+                });
+            }
+
             canvas.appendChild(img);
         });
+
+        if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
+            window.ZMGFence.render(canvas, currentVectorLayout, { clamp: true });
+        }
     });
 
     updateInspectorValues();
@@ -530,18 +595,23 @@ function renderVectorMapElements() {
 
 // Client click on vector opens reservation modal pre-populated with area info via smooth map transition
 function handleClientVectorClick(vector, clickEvent = null) {
-    const fileName = vector.src ? vector.src.split('/').pop() : '';
-    const meta = VECTOR_FILE_TO_AREA[fileName];
+    const fileName = (vector.src && !String(vector.src).startsWith('data:')) ? vector.src.split('/').pop() : '';
+    const meta = fileName ? VECTOR_FILE_TO_AREA[fileName] : null;
     const areaId = (meta && meta.area) ? meta.area : (vector.area || null);
     const areaName = meta ? meta.name : (vector.name || `Area ${areaId}`);
+    const resolvedCategory = (meta && meta.category) ? meta.category : (vector.category || '');
+    const resolvedTab = (meta && meta.tab)
+        ? meta.tab
+        : (vector.tab || (window.ZMGFence && window.ZMGFence.CATEGORY_TABS && window.ZMGFence.CATEGORY_TABS[resolvedCategory]) || null);
 
     // Persist selected area in sessionStorage for cross-component access
     sessionStorage.setItem('selectedMapArea', JSON.stringify({
-        id:   vector.id,
-        area: areaId,
-        name: areaName,
-        desc: vector.desc || areaName,
-        tab:  meta ? meta.tab : null
+        id:       vector.id,
+        area:     areaId,
+        name:     areaName,
+        category: resolvedCategory,
+        desc:     vector.desc || areaName,
+        tab:      resolvedTab
     }));
 
     // If dashboard loader's selectCemeteryArea is available, switch lawn tab, filter plots & run map animation transition

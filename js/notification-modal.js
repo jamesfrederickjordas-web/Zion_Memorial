@@ -573,6 +573,231 @@
         });
     }
 
+    // ==============================================================================
+    // CHRONOLOGICAL DATE VALIDATION SYSTEM (DOB <= DOD <= Burial <= Today/Future)
+    // ==============================================================================
+    function getTodayDateString() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function checkDateChronology(birthStr, deathStr, burialStr) {
+        const todayStr = getTodayDateString();
+
+        // 1. Birth Date cannot be in the future
+        if (birthStr && birthStr > todayStr) {
+            return {
+                valid: false,
+                field: 'birth',
+                message: 'Date of Birth cannot be in the future.'
+            };
+        }
+
+        // 2. Death Date cannot be in the future
+        if (deathStr && deathStr > todayStr) {
+            return {
+                valid: false,
+                field: 'death',
+                message: 'Date of Death cannot be in the future.'
+            };
+        }
+
+        // 3. Birth Date cannot be after Death Date
+        if (birthStr && deathStr && birthStr > deathStr) {
+            return {
+                valid: false,
+                field: 'birth',
+                relatedField: 'death',
+                message: 'Date of Birth cannot be after Date of Death.'
+            };
+        }
+
+        // 4. Death Date cannot be after Burial Date
+        if (deathStr && burialStr && deathStr > burialStr) {
+            return {
+                valid: false,
+                field: 'burial',
+                relatedField: 'death',
+                message: 'Date of Burial cannot be earlier than Date of Death.'
+            };
+        }
+
+        // 5. Birth Date cannot be after Burial Date
+        if (birthStr && burialStr && birthStr > burialStr) {
+            return {
+                valid: false,
+                field: 'burial',
+                relatedField: 'birth',
+                message: 'Date of Burial cannot be earlier than Date of Birth.'
+            };
+        }
+
+        return { valid: true };
+    }
+
+    function setupChronologicalDateValidation({ birthInput, deathInput, burialInput, errorContainer }) {
+        const getEl = el => (typeof el === 'string' ? document.getElementById(el) : el);
+        const bInput = getEl(birthInput);
+        const dInput = getEl(deathInput);
+        const uInput = getEl(burialInput);
+        const errBox = getEl(errorContainer);
+
+        const todayStr = getTodayDateString();
+
+        const setInvalidStyle = (input, isInvalid) => {
+            if (!input) return;
+            if (isInvalid) {
+                input.style.borderColor = '#dc2626';
+                input.style.backgroundColor = '#fef2f2';
+                input.setAttribute('aria-invalid', 'true');
+            } else {
+                input.style.borderColor = '';
+                input.style.backgroundColor = '';
+                input.removeAttribute('aria-invalid');
+            }
+        };
+
+        const runValidation = (shouldShowAlert = false) => {
+            const bVal = bInput?.value || null;
+            const dVal = dInput?.value || null;
+            const uVal = uInput?.value || null;
+
+            // Dynamic attribute constraints for native pickers
+            if (bInput) {
+                bInput.max = dVal ? (dVal < todayStr ? dVal : todayStr) : todayStr;
+            }
+            if (dInput) {
+                dInput.max = (uVal && uVal < todayStr) ? uVal : todayStr;
+                dInput.min = bVal || '';
+            }
+            if (uInput) {
+                uInput.min = dVal || bVal || '';
+            }
+
+            const res = checkDateChronology(bVal, dVal, uVal);
+
+            // Reset visual highlights
+            setInvalidStyle(bInput, false);
+            setInvalidStyle(dInput, false);
+            setInvalidStyle(uInput, false);
+
+            if (!res.valid) {
+                if (res.field === 'birth' || res.relatedField === 'birth') setInvalidStyle(bInput, true);
+                if (res.field === 'death' || res.relatedField === 'death') setInvalidStyle(dInput, true);
+                if (res.field === 'burial' || res.relatedField === 'burial') setInvalidStyle(uInput, true);
+
+                if (errBox) {
+                    errBox.textContent = res.message;
+                    errBox.style.display = 'block';
+                }
+                if (shouldShowAlert) {
+                    if (typeof window.showErrorModal === 'function') {
+                        window.showErrorModal({
+                            title: 'Invalid Date Chronology',
+                            message: res.message
+                        });
+                    } else {
+                        alert('Invalid Date Chronology: ' + res.message);
+                    }
+                    if (res.field === 'birth' && bInput) bInput.focus();
+                    else if (res.field === 'death' && dInput) dInput.focus();
+                    else if (res.field === 'burial' && uInput) uInput.focus();
+                }
+                return false;
+            } else {
+                if (errBox) {
+                    errBox.textContent = '';
+                    errBox.style.display = 'none';
+                }
+                return true;
+            }
+        };
+
+        // Attach listeners idempotently
+        [bInput, dInput, uInput].forEach(inp => {
+            if (!inp || inp.dataset.chronologyBound) return;
+            inp.dataset.chronologyBound = 'true';
+            inp.addEventListener('input', () => runValidation(false));
+            inp.addEventListener('change', () => runValidation(false));
+            inp.addEventListener('focus', () => {
+                // Refresh bounds on focus
+                const curB = bInput?.value || null;
+                const curD = dInput?.value || null;
+                const curU = uInput?.value || null;
+                if (bInput) bInput.max = curD ? (curD < todayStr ? curD : todayStr) : todayStr;
+                if (dInput) {
+                    dInput.max = (curU && curU < todayStr) ? curU : todayStr;
+                    dInput.min = curB || '';
+                }
+                if (uInput) uInput.min = curD || curB || '';
+            });
+        });
+
+        // Run initial setup to set max constraints on birth & death
+        runValidation(false);
+
+        return {
+            validate: () => runValidation(true),
+            reset: () => {
+                if (bInput) { bInput.value = ''; setInvalidStyle(bInput, false); }
+                if (dInput) { dInput.value = ''; setInvalidStyle(dInput, false); }
+                if (uInput) { uInput.value = ''; setInvalidStyle(uInput, false); }
+                if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; }
+                runValidation(false);
+            }
+        };
+    }
+
+    function autoInitChronologicalDateValidation() {
+        if (typeof document === 'undefined') return;
+
+        // 1. Client plot reservation modal
+        if (document.getElementById('bookDeceasedDeathDate') || document.getElementById('bookDeceasedBurialDate')) {
+            setupChronologicalDateValidation({
+                birthInput: 'bookDeceasedBirthDate',
+                deathInput: 'bookDeceasedDeathDate',
+                burialInput: 'bookDeceasedBurialDate',
+                errorContainer: 'bookDeceasedDateError'
+            });
+        }
+        // 2. Admin walk-in modal
+        if (document.getElementById('walkInDeceasedDOD') || document.getElementById('walkInDeceasedBurial')) {
+            setupChronologicalDateValidation({
+                birthInput: 'walkInDeceasedDOB',
+                deathInput: 'walkInDeceasedDOD',
+                burialInput: 'walkInDeceasedBurial',
+                errorContainer: 'walkInDeceasedDateError'
+            });
+        }
+        // 3. Admin record deceased modal
+        if (document.getElementById('deceasedDeathDate') || document.getElementById('deceasedBurialDate')) {
+            setupChronologicalDateValidation({
+                birthInput: 'deceasedBirthDate',
+                deathInput: 'deceasedDeathDate',
+                burialInput: 'deceasedBurialDate',
+                errorContainer: 'adminDeceasedDateError'
+            });
+        }
+        // 4. Client complete memorial modal
+        if (document.getElementById('cmdDeathDate') || document.getElementById('cmdBurialDate')) {
+            setupChronologicalDateValidation({
+                birthInput: 'cmdBirthDate',
+                deathInput: 'cmdDeathDate',
+                burialInput: 'cmdBurialDate',
+                errorContainer: 'cmdDeceasedDateError'
+            });
+        }
+    }
+
+    if (typeof document !== 'undefined') {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', autoInitChronologicalDateValidation);
+        } else {
+            autoInitChronologicalDateValidation();
+        }
+    }
+
     // Preserve native alert and install smart modal override
     if (typeof window !== 'undefined') {
         window._nativeAlert = window.alert;
@@ -594,5 +819,10 @@
         window.customPrompt = customPrompt;
         window.showEmailVerificationModal = showEmailVerificationModal;
         window.closeNotificationModal = closeModal;
+
+        // Date chronology API
+        window.checkDateChronology = checkDateChronology;
+        window.setupChronologicalDateValidation = setupChronologicalDateValidation;
+        window.autoInitChronologicalDateValidation = autoInitChronologicalDateValidation;
     }
 })();

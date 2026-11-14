@@ -111,7 +111,6 @@
                             <th>TICKET #</th>
                             <th>CATEGORY</th>
                             <th>SUBJECT</th>
-                            <th>PRIORITY</th>
                             <th>DATE CREATED</th>
                             <th>STATUS</th>
                             <th>STAFF RESPONSE</th>
@@ -144,7 +143,7 @@
                         <input type="text" id="ticketSubjectInput" class="subpage-form-control" placeholder="E.g., Request for certified copy of Deed of Sale for Plot SPEC5-04..." required>
                     </div>
 
-                    <div class="subpage-form-group">
+                    <div class="subpage-form-group full-width">
                         <label for="ticketCategorySelect">Category *</label>
                         <select id="ticketCategorySelect" class="subpage-form-control" required>
                             <option value="Reservation Inquiry">Reservation &amp; Booking Inquiry</option>
@@ -152,16 +151,6 @@
                             <option value="Plot Maintenance">Plot Maintenance &amp; Grounds Care</option>
                             <option value="Burial Record">Burial &amp; Deceased Record Update</option>
                             <option value="General Support">General Support &amp; Legal Docs</option>
-                        </select>
-                    </div>
-
-                    <div class="subpage-form-group">
-                        <label for="ticketPrioritySelect">Priority Level *</label>
-                        <select id="ticketPrioritySelect" class="subpage-form-control" required>
-                            <option value="normal" selected>Normal Priority</option>
-                            <option value="high">High Priority</option>
-                            <option value="urgent">Urgent</option>
-                            <option value="low">Low Priority</option>
                         </select>
                     </div>
 
@@ -191,8 +180,6 @@
 
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; font-size: 0.8rem; color: #475569;">
                     <div>Category: <strong id="modalTicketCategory"></strong></div>
-                    <div>&bull;</div>
-                    <div>Priority: <strong id="modalTicketPriority" style="text-transform: capitalize;"></strong></div>
                     <div>&bull;</div>
                     <div>Status: <span id="modalTicketStatusBadge" class="subpage-badge"></span></div>
                     <div>&bull;</div>

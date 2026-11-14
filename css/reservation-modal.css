@@ -264,7 +264,7 @@
 .legend-card {
     background: transparent;
     border: none;
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 25px;
     box-shadow: none;
 }
@@ -449,10 +449,10 @@
 
 .location-card {
     background: white;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     padding: 30px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
 }
@@ -719,35 +719,47 @@
     background: #ffffff;
     width: 100%;
     max-width: 680px;
-    border-radius: 16px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
     overflow: hidden;
-    animation: modalBounceIn 0.25s ease-out;
+    animation: modalFadeIn 0.2s ease-out;
 }
 
-@keyframes modalBounceIn {
-    from { opacity: 0; transform: scale(0.94); }
-    to { opacity: 1; transform: scale(1); }
+.booking-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    margin: 0;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .booking-modal-header {
     background: #2d4a36;
     color: white;
-    padding: 20px 28px;
+    padding: 18px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .booking-modal-header h2 {
-    font-size: 1.45rem;
-    font-weight: 800;
+    font-size: 1.35rem;
+    font-weight: 700;
     margin: 0 0 4px 0;
 }
 
 .booking-subtitle {
-    font-size: 0.85rem;
-    opacity: 0.85;
+    font-size: 0.82rem;
+    opacity: 0.9;
     margin: 0;
 }
 
@@ -755,32 +767,32 @@
     background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
-    font-size: 1.8rem;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+    font-size: 1.6rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    transition: background 0.15s ease;
 }
 
 .booking-close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .booking-form-body {
     padding: 22px 28px;
-    max-height: 68vh;
     overflow-y: auto;
+    flex: 1;
 }
 
 /* Chosen Plot Banner */
 .chosen-plot-banner {
-    background: #f5f6f4;
-    border: 1.5px solid #d4dfd2;
-    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     padding: 16px 20px;
     display: flex;
     justify-content: space-between;
@@ -848,7 +860,7 @@
 
 .radio-card {
     border: 1.5px solid #dcdcd5;
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 12px 14px;
     cursor: pointer;
     display: flex;
@@ -886,8 +898,8 @@
 /* Amortization Panel */
 .amortization-panel {
     background-color: #fbfbf9;
-    border: 1.5px solid #e0dfd5;
-    border-radius: 10px;
+    border: 1px solid #e0dfd5;
+    border-radius: 6px;
     padding: 16px;
     margin-bottom: 20px;
 }
@@ -910,8 +922,8 @@
 .form-select, .form-input, .form-textarea {
     width: 100%;
     padding: 10px 12px;
-    border: 1.5px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     font-size: 0.92rem;
     background: #ffffff;
     box-sizing: border-box;
@@ -927,7 +939,7 @@
 .amort-calculation-box {
     background: #ffffff;
     border: 1px solid #e5e5df;
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 12px 16px;
     display: flex;
     flex-direction: column;
@@ -945,7 +957,7 @@
     background: #fff8e6;
     margin: 4px -10px -4px -10px;
     padding: 8px 10px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid #fed7aa;
 }
 
@@ -964,8 +976,8 @@
 .channel-pill {
     padding: 8px 16px;
     background: #f3f3f0;
-    border: 1.5px solid #d1d1ca;
-    border-radius: 20px;
+    border: 1px solid #d1d1ca;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
@@ -989,18 +1001,19 @@
 /* Modal Footer */
 .booking-modal-footer {
     background: #f7f7f3;
-    padding: 16px 28px;
+    padding: 14px 28px;
     border-top: 1px solid #e0dfd5;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .btn-cancel-booking {
     background: #ffffff;
     border: 1.5px solid #777;
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 700;
     color: #333;
     cursor: pointer;
@@ -1016,7 +1029,7 @@
     color: white;
     border: none;
     padding: 10px 26px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 700;
     font-size: 0.95rem;
     cursor: pointer;
@@ -1078,7 +1091,7 @@
     transform: translate(-50%, -50%);
     width: 26px;
     height: 26px;
-    border-radius: 50%;
+    border-radius: 4px;
     background: #2c2c2c;
     color: #ffffff;
     font-size: 0.72rem;

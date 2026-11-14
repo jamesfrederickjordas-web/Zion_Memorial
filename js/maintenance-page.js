@@ -129,6 +129,11 @@ function initMaintenancePage() {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) throw new Error('Please sign in to schedule maintenance.');
 
+                const contactEmail = user.email ? ` <${user.email}>` : '';
+                const combinedNotes = notes 
+                    ? `${notes} | Client Contact:${contactEmail}` 
+                    : (contactEmail ? `Client Contact:${contactEmail}` : null);
+
                 const { error } = await supabaseClient
                     .from('maintenance_visits')
                     .insert([{
@@ -136,7 +141,7 @@ function initMaintenancePage() {
                         requested_by: user.id,
                         visit_type: visitType,
                         scheduled_date: schedDate,
-                        notes: notes || null,
+                        notes: combinedNotes,
                         status: 'scheduled'
                     }]);
 

@@ -182,10 +182,10 @@
 
 .info-card {
     background: white;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     flex: 10;
     min-height: 900;
     display: flex;
@@ -256,11 +256,11 @@
 
 .profile-card {
     background: white;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     padding: 25px;
     text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -272,18 +272,18 @@
 .profile-avatar {
     width: 130px;
     height: 130px;
-    border-radius: 50%;
+    border-radius: 6px;
     overflow: hidden;
     border: none;
     margin-bottom: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     flex-shrink: 0;
     cursor: pointer;
-    transition: transform 0.3s;
+    transition: transform 0.2s ease;
 }
 
 .profile-avatar:hover {
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
 .profile-avatar img {
@@ -308,7 +308,7 @@
     background-color: #4a6b4a;
     color: white;
     padding: 5px 18px;
-    border-radius: 20px;
+    border-radius: 4px;
     font-size: 0.8rem;
     font-weight: bold;
     margin-bottom: 18px;
@@ -318,11 +318,11 @@
     width: 100%;
     padding: 11px 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     margin-bottom: 9px;
 }
 
@@ -338,7 +338,7 @@
 .password-btn {
     background-color: white;
     color: #4a6b4a;
-    border: 2px solid #4a6b4a;
+    border: 1px solid #4a6b4a;
 }
 
 .password-btn:hover {
@@ -352,10 +352,10 @@
     color: white;
     border: none;
     padding: 11px 18px;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
     margin-top: 9px;
     width: 100%;
 }

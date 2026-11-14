@@ -177,6 +177,14 @@
                         <span class="detail-label">Remaining Balance:</span>
                         <span class="detail-val balance-total" id="detailBalance">₱ 71,486.37</span>
                     </div>
+                    <div class="detail-row" style="font-size: 0.8rem; opacity: 0.85; margin-top: 4px;">
+                        <span class="detail-label">Included Care &amp; Tax:</span>
+                        <span class="detail-val">₱ 2,500 Care / ₱ 1,200 Tax</span>
+                    </div>
+                    <div class="detail-row" id="detailLateFeeRow" style="display: none; background: #fee2e2; padding: 4px 8px; border-radius: 4px; border: 1px solid #fecdd3; margin-top: 6px;">
+                        <span class="detail-label" style="color: #991b1b; font-weight: 700;">Overdue Late Penalty (5%):</span>
+                        <span class="detail-val" id="detailLateFeeVal" style="color: #991b1b; font-weight: 700;">+₱ 0.00</span>
+                    </div>
                 </div>
 
                 <!-- Interred Deceased & Plot Capacity Section Card -->
@@ -270,7 +278,7 @@
                     </div>
 
                     <!-- Gender and Dates Grid -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                         <div>
                             <label for="cmdGender" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Gender</label>
                             <select id="cmdGender" class="form-select" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
@@ -281,6 +289,10 @@
                             </select>
                         </div>
                         <div>
+                            <label for="cmdBirthDate" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Date of Birth</label>
+                            <input type="date" id="cmdBirthDate" class="form-input" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
+                        </div>
+                        <div>
                             <label for="cmdDeathDate" style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 4px;">Date of Death</label>
                             <input type="date" id="cmdDeathDate" class="form-input" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
                         </div>
@@ -289,6 +301,7 @@
                             <input type="date" id="cmdBurialDate" class="form-input" style="padding: 8px 10px; font-size: 0.88rem; border-radius: 2px;">
                         </div>
                     </div>
+                    <div id="cmdDeceasedDateError" class="deceased-date-error-msg" style="display: none; color: #b91c1c; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px; padding: 6px 10px; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 4px;"></div>
 
                     <!-- Epitaph -->
                     <div style="margin-bottom: 16px;">
@@ -314,6 +327,78 @@
         <div class="details-footer" style="padding: 14px 24px; background: #f5f1e8; border-top: 1.5px solid #d4af37; display: flex; justify-content: flex-end;">
             <button type="button" class="btn-close-details" id="dismissCmdModalBtn" style="background: #2d4a36; border-radius: 2px;">Done</button>
         </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- TRANSFER RESERVATION MODAL (Replace Delete into Transfer) -->
+<!-- ========================================================================= -->
+<div id="transferReservationModal" class="reservation-details-modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 5000;">
+    <div class="reservation-details-card" style="max-width: 520px; border-radius: 6px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+        <div class="details-header" style="background: #1e3a29; color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="font-size: 1.15rem; margin: 0 0 2px 0; font-weight: 700;">Transfer Reservation Rights</h2>
+                <p id="transferPlotCodeSubtitle" style="font-size: 0.78rem; opacity: 0.85; margin: 0;">Plot: -</p>
+            </div>
+            <button type="button" class="close-details-btn" id="closeTransferModalBtn" style="border-radius: 4px; font-size: 1.3rem;">&times;</button>
+        </div>
+        <form id="transferReservationForm" style="padding: 20px;">
+            <input type="hidden" id="transferResId" value="">
+            <input type="hidden" id="transferOldPlotCode" value="">
+            <input type="hidden" id="transferOldSpaceId" value="">
+
+            <div style="margin-bottom: 14px;">
+                <label for="transferTypeSelect" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Transfer Action Type</label>
+                <select id="transferTypeSelect" class="form-select" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <option value="BENEFICIARY">Transfer to Beneficiary / Family Member</option>
+                    <option value="RELOCATE_PLOT">Transfer / Relocate to Another Available Plot</option>
+                    <option value="RELEASE_INVENTORY">Relinquish / Transfer Back to Park Inventory</option>
+                </select>
+            </div>
+
+            <!-- Fields for Beneficiary Transfer -->
+            <div id="transferBeneficiaryFields">
+                <div style="margin-bottom: 10px;">
+                    <label for="transferBeneficiaryName" style="display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 3px;">Beneficiary / Recipient Full Name <span style="color: #dc2626;">*</span></label>
+                    <input type="text" id="transferBeneficiaryName" class="form-input" placeholder="e.g. Maria Santos" style="width: 100%; padding: 7px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                    <div>
+                        <label for="transferBeneficiaryPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 3px;">Contact Number</label>
+                        <input type="tel" id="transferBeneficiaryPhone" class="form-input" placeholder="e.g. 09171234567" style="width: 100%; padding: 7px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="transferRelationship" style="display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 3px;">Relationship to Owner</label>
+                        <input type="text" id="transferRelationship" class="form-input" placeholder="e.g. Spouse, Son, Daughter" style="width: 100%; padding: 7px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fields for Relocating Plot -->
+            <div id="transferPlotFields" style="display: none; margin-bottom: 10px;">
+                <label for="transferTargetPlotSelect" style="display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 3px;">Select Target Available Plot</label>
+                <select id="transferTargetPlotSelect" class="form-select" style="width: 100%; padding: 7px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <option value="">Loading available plots...</option>
+                </select>
+                <p style="font-size: 0.72rem; color: #64748b; margin: 4px 0 0 0;">Prior payment balances and installments transfer to the selected plot.</p>
+            </div>
+
+            <!-- Fields for Relinquish / Release -->
+            <div id="transferReleaseFields" style="display: none; margin-bottom: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px;">
+                <p style="font-size: 0.78rem; color: #991b1b; margin: 0;">You are relinquishing this reservation. The plot will be released back to Zion Memorial Garden available inventory.</p>
+            </div>
+
+            <!-- Reason / Notes -->
+            <div style="margin-bottom: 14px;">
+                <label for="transferNotes" style="display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 3px;">Transfer Notes / Remarks</label>
+                <textarea id="transferNotes" class="form-textarea" rows="2" placeholder="e.g. Family deed transfer, agreed arrangement..." style="width: 100%; padding: 7px 10px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" class="btn-action-details" id="cancelTransferBtn" style="border-radius: 4px; padding: 8px 16px;">Cancel</button>
+                <button type="submit" id="submitTransferBtn" style="background: #1e3a29; color: #ffffff; border: none; padding: 8px 18px; border-radius: 4px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">Confirm Transfer</button>
+            </div>
+        </form>
     </div>
 </div>
 

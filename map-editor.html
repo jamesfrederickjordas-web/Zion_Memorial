@@ -9,6 +9,10 @@
     <link rel="icon" type="image/png" sizes="192x192" href="assets/images/logos/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/logos/favicon.png">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/map-editor.css">
     <link rel="stylesheet" href="css/notification-modal.css?v=4.0">
 </head>
@@ -54,6 +58,28 @@
         <div class="me-toolbar-right">
             <!-- Map Mode Actions -->
             <div class="me-action-group" id="mapActionsGroup">
+                <button type="button" class="me-btn me-btn-ghost me-btn-icon-only" id="btnUndoMap" title="Undo (Ctrl+Z)" disabled>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+                </button>
+                <button type="button" class="me-btn me-btn-ghost me-btn-icon-only" id="btnRedoMap" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+                </button>
+                <button type="button" class="me-btn me-btn-ghost" id="btnNewAreaTop" title="Create a new cemetery area with its own plot grid">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <span>New Area</span>
+                </button>
+                <button type="button" class="me-btn me-btn-ghost" id="btnAddPartTop" title="Add custom map parts: side blocks, wing walls, roundabout, chapel, borders">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l8-3 8 5-4 12-10-2z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                    <span>Add Part</span>
+                </button>
+                <button type="button" class="me-btn me-btn-ghost" id="btnAddEntranceTop" title="Add an entrance gate (snaps onto the perimeter fence)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-7h6v7"/></svg>
+                    <span>Entrance</span>
+                </button>
+                <button type="button" class="me-btn me-btn-ghost" id="btnEditWallPoints" title="Edit perimeter wall boundary points and custom vertex count">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="4 6 12 3 20 8 18 20 6 19"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="3" r="1.5" fill="currentColor"/><circle cx="20" cy="8" r="1.5" fill="currentColor"/><circle cx="18" cy="20" r="1.5" fill="currentColor"/><circle cx="6" cy="19" r="1.5" fill="currentColor"/></svg>
+                    <span>Wall Points</span>
+                </button>
                 <button type="button" class="me-btn me-btn-ghost" id="btnAddVectorTop" title="Add vector asset to canvas">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>Add Vector</span>
@@ -107,7 +133,7 @@
                         </button>
                     </div>
                 </div>
-                <p class="me-panel-hint">Select a layer to adjust position, size, or rotate. Click  to delete.</p>
+                <p class="me-panel-hint">Select a layer to adjust position, size, or rotate. Click the eye icon to hide/show or trash to delete.</p>
                 <div class="me-layers-list" id="layersList">
                     <!-- Rendered by JS -->
                 </div>
@@ -118,14 +144,18 @@
                     <div class="me-layer-item me-layer-bg" id="sidebarBgItem" title="Click to open Background settings in Inspector">
                         <div class="me-layer-thumb">
                             <img id="sidebarBgThumb" src="" alt="BG" style="display:none; width:100%; height:100%; object-fit:cover;">
-                            <span id="sidebarBgNoImg" style="font-size:18px; line-height:1;"></span>
+                            <span id="sidebarBgNoImg" style="display:inline-flex; align-items:center; justify-content:center; color:var(--me-text-dim);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            </span>
                         </div>
                         <div class="me-layer-meta">
-                            <span class="me-layer-name"> Background Image</span>
+                            <span class="me-layer-name">Background Image</span>
                             <span class="me-layer-sub" id="sidebarBgSub">No image — click Upload</span>
                         </div>
                         <div class="me-layer-actions">
-                            <button type="button" class="me-action-icon-btn" id="sidebarBgVisBtn" title="Toggle Background Visibility"></button>
+                            <button type="button" class="me-action-icon-btn" id="sidebarBgVisBtn" title="Toggle Background Visibility">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -138,15 +168,15 @@
                             <img src="assets/images/backgrounds/mapping basomuch.png" alt="Blueprint Guide">
                         </div>
                         <div class="me-layer-meta">
-                            <span class="me-layer-name"> Blueprint Reference</span>
+                            <span class="me-layer-name">Blueprint Reference</span>
                             <span class="me-layer-sub" id="sidebarBpSub">X: 0px, Y: 0px · 30° Tilt</span>
                         </div>
                         <div class="me-layer-actions">
                             <button type="button" class="me-action-icon-btn" id="sidebarBpVisBtn" title="Toggle Blueprint Visibility">
-                                
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>
                             <button type="button" class="me-action-icon-btn btn-lock-toggle" id="sidebarBpLockBtn" title="Lock / Unlock Blueprint">
-                                
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </button>
                         </div>
                     </div>
@@ -186,6 +216,10 @@
                         <option value="Area 12 - Mausoleum Court">Area 12 - Mausoleum Court</option>
                         <option value="Area 13 - Condominium">Area 13 - Condominium Niches</option>
                     </select>
+                    <div class="me-area-actions">
+                        <button type="button" class="me-btn me-btn-gold me-btn-sm" id="btnNewAreaSidebar" title="Create a new cemetery area">+ New Area</button>
+                        <button type="button" class="me-btn me-btn-ghost me-btn-sm me-btn-danger-text" id="btnDeleteAreaSidebar" style="display: none;" title="Delete this custom area (must have no plots)">Delete Area</button>
+                    </div>
                 </div>
 
                 <!-- Section KPI Summary Cards -->
@@ -347,7 +381,8 @@
             <footer class="me-statusbar">
                 <!-- Left Status Hints -->
                 <div class="me-status-left">
-                    <span id="canvasHint"> <strong>Shortcuts:</strong> Shift+Click Multi-Select · <strong>[+]</strong> / <strong>[−]</strong> Size · <strong>[K]</strong> / <strong>[L]</strong> Rotate · Arrows Nudge · Space Pan</span>
+                    <span id="canvasHint"><strong>Shortcuts:</strong> <strong>[Ctrl+Z/Y]</strong> Undo/Redo · <strong>[Ctrl+C/X/V]</strong> Copy/Cut/Paste · <strong>[Ctrl+D]</strong> Dup · <strong>[Del]</strong> Del · <strong>[H]</strong> Hide · <strong>[Ctrl+S]</strong> Save</span>
+                    <button type="button" class="me-shortcuts-pill" id="btnShowShortcuts" title="View all keyboard shortcuts (?)">? Keys</button>
                 </div>
 
                 <!-- Right Zoom Controls -->
@@ -398,9 +433,21 @@
                         <span id="multiSelectCount">1 Layer Selected</span>
                     </div>
 
+                    <div id="propHiddenBanner" class="me-hidden-layer-banner" style="display: none;">
+                        <span>This layer is hidden on the map (drag locked).</span>
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnShowHiddenLayer">Show Layer</button>
+                    </div>
+
                     <div class="me-field-group">
-                        <label class="me-field-label">Layer Name</label>
-                        <input type="text" class="me-input" id="propName">
+                        <div class="me-label-row">
+                            <label class="me-field-label" style="margin-bottom: 0;">Layer Name</label>
+                            <button type="button" class="me-inline-vis-btn" id="btnInspectorToggleVis" title="Toggle Layer Visibility (H)">Visible</button>
+                        </div>
+                        <input type="text" class="me-input" id="propName" style="margin-top: 5px;">
+                        <div id="propCustomAreaHint" class="me-custom-area-note" style="display: none;">
+                            <span>Rename / grid settings in Area Editor</span>
+                            <button type="button" class="me-link-btn" id="btnEditCustomAreaFromName">Edit Area</button>
+                        </div>
                     </div>
 
                     <!-- Position X & Y -->
@@ -480,23 +527,109 @@
                             <span class="affix-tag">Z</span>
                             <input type="number" class="me-affix-input" id="propZ" min="1" max="99">
                         </div>
-                        <button type="button" class="me-btn-order" id="btnBringFwd" title="Bring Forward">▲ Forward</button>
-                        <button type="button" class="me-btn-order" id="btnSendBack" title="Send Backward">▼ Backward</button>
+                        <button type="button" class="me-btn-order" id="btnBringFwd" title="Bring Forward (]) / Front (Ctrl+])">▲ Forward</button>
+                        <button type="button" class="me-btn-order" id="btnSendBack" title="Send Backward ([) / Back (Ctrl+[)">▼ Backward</button>
+                    </div>
+
+                    <!-- Custom Part Colors & Style Card (for walls, side blocks, landmarks) -->
+                    <div class="me-points-card" id="partStyleGroup" style="display: none; margin-bottom: 10px;">
+                        <div class="me-points-header">
+                            <span class="me-points-title">Part Appearance</span>
+                            <span class="me-points-badge">Map Part</span>
+                        </div>
+                        <div class="me-field-group" style="margin-bottom: 8px;">
+                            <label class="me-field-label" for="inspPartLabel">Map Label (optional)</label>
+                            <input type="text" class="me-input" id="inspPartLabel" maxlength="24" placeholder="Blank for wall/block">
+                        </div>
+                        <div class="me-coords-row" style="margin-bottom: 8px;">
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="inspPartFill">Fill Color</label>
+                                <input type="color" class="me-color-input" id="inspPartFill" value="#f3ecd8">
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="inspPartStroke">Border</label>
+                                <input type="color" class="me-color-input" id="inspPartStroke" value="#2f332e">
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="inspPartStrokeW">Width</label>
+                                <input type="number" class="me-input" id="inspPartStrokeW" min="0" max="12" step="0.5" value="2.5">
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px;">
+                            <label class="me-area-editor-snap" title="Draw dashed border outline">
+                                <input type="checkbox" id="inspPartDashed">
+                                <span>Dashed</span>
+                            </label>
+                            <label class="me-area-editor-snap" title="Expand automatic outer fence around this part when checked">
+                                <input type="checkbox" id="inspPartFenceInclude">
+                                <span>Include in Auto Fence</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Custom Shape Polygon Points Controls -->
+                    <div class="me-points-card" id="shapePointsGroup" style="display: none;">
+                        <div class="me-points-header">
+                            <span class="me-points-title">Shape Points</span>
+                            <span class="me-points-badge" id="shapePointCountBadge">4 pts</span>
+                        </div>
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnToggleEditShapePoints" style="width: 100%; justify-content: center;" title="Toggle Shape Points Editing (P)">
+                            Edit Shape Points on Map
+                        </button>
+                        <div class="me-points-count-row">
+                            <label class="me-field-label" for="shapePointCountInput" style="margin: 0; white-space: nowrap;">Points</label>
+                            <input type="number" class="me-input" id="shapePointCountInput" min="3" max="32" step="1" value="4">
+                            <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnApplyShapePointCount">Set</button>
+                        </div>
+                        <div class="me-points-btn-row">
+                            <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnAddShapePoint">+ Add Pt</button>
+                            <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnRemoveShapePoint">- Remove Pt</button>
+                            <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnResetShapePoints">Reset Rect</button>
+                        </div>
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnOpenModalShapeEditor" style="width: 100%; justify-content: center; margin-top: 6px;">
+                            Open Visual Shape Editor
+                        </button>
+                        <p class="me-field-hint" style="margin-top: 6px;">Drag handles on the map to reshape vertices, or click edge + markers to split a side.</p>
                     </div>
 
                     <!-- Danger Action: Delete Vector -->
                     <div class="me-danger-zone">
-                        <button type="button" class="me-btn-delete-layer" id="btnDeleteLayer">
+                        <button type="button" class="me-btn-delete-layer" id="btnDeleteLayer" title="Delete Selected Layer(s) (Del)">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             <span>Delete Vector Layer</span>
                         </button>
                     </div>
                 </div>
 
+                <!-- Perimeter Wall / Fence Points Card -->
+                <div class="me-points-card" id="wallPointsCard" style="margin-bottom: 12px;">
+                    <div class="me-points-header">
+                        <span class="me-points-title">Perimeter Wall Points</span>
+                        <span class="me-points-badge" id="wallModeBadge">Auto Wrap</span>
+                    </div>
+                    <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnToggleEditWallPoints" style="width: 100%; justify-content: center;" title="Toggle Perimeter Wall Points Editing (W)">
+                        Edit Wall Points
+                    </button>
+                    <div class="me-points-count-row">
+                        <label class="me-field-label" for="wallPointCountInput" style="margin: 0; white-space: nowrap;">Points</label>
+                        <input type="number" class="me-input" id="wallPointCountInput" min="3" max="32" step="1" value="4">
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnApplyWallPointCount">Set</button>
+                    </div>
+                    <div class="me-points-btn-row">
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnAddWallPoint">+ Add Pt</button>
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnRemoveWallPoint">- Remove Pt</button>
+                    </div>
+                    <div class="me-points-btn-row">
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnAutoFitWall" title="Snap editable wall corners snugly around all visible areas and blocks">Auto-Fit All</button>
+                        <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnResetAutoWall">Reset Auto</button>
+                    </div>
+                    <p class="me-field-hint" style="margin-top: 6px;">Customizes wall corners (3-32 points). Entrances snap onto any wall segment.</p>
+                </div>
+
                 <!-- Blueprint Reference Tilt & Alignment Card -->
                 <div class="me-ref-guide-card" id="blueprintRefCard">
                     <div class="me-ref-guide-header">
-                        <h4> Blueprint Reference Tilt</h4>
+                        <h4>Blueprint Reference Tilt</h4>
                         <span style="font-size: 10px; color: var(--me-text-muted);">Guide Layer</span>
                     </div>
 
@@ -596,8 +729,7 @@
                     <input type="file" id="bgFileInput" accept="image/*" style="display:none;">
 
                     <!-- Lock / Unlock -->
-                    <button type="button" class="me-btn me-btn-ghost" id="btnBgLockToggle" style="width:100%; justify-content:center; font-size:11px; margin-bottom:10px;"> BG Movable
-                    </button>
+                    <button type="button" class="me-btn me-btn-ghost" id="btnBgLockToggle" style="width:100%; justify-content:center; font-size:11px; margin-bottom:10px;">BG Movable</button>
 
                     <!-- Scale -->
                     <div class="me-field-label">Scale / Size</div>
@@ -785,9 +917,11 @@
             <div class="me-modal-header">
                 <div>
                     <h3>Add Map Vector Asset</h3>
-                    <p class="me-modal-sub">Select a cemetery lawn vector to insert onto the canvas, or upload your own file.</p>
+                    <p class="me-modal-sub">Select a lawn vector or the entrance gate to insert onto the canvas, create a brand new area, or upload your own file. The perimeter fence is drawn automatically.</p>
                 </div>
-                <button type="button" class="me-modal-close-btn" id="btnCloseVectorModal"></button>
+                <button type="button" class="me-modal-close-btn" id="btnCloseVectorModal" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
 
             <!-- Asset Grid -->
@@ -797,12 +931,127 @@
 
             <!-- Custom Upload Bar -->
             <div class="me-modal-footer-upload">
+                <button type="button" class="me-btn-upload-file" id="btnCreateAreaFromGallery">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <span>Create New Cemetery Area</span>
+                </button>
+                <button type="button" class="me-btn-upload-file" id="btnCreatePartFromGallery">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l8-3 8 5-4 12-10-2z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                    <span>Create Wall / Block / Part</span>
+                </button>
                 <button type="button" class="me-btn-upload-file" id="btnUploadCustomTrigger">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <span>Upload Custom Image (PNG / SVG)</span>
                 </button>
                 <input type="file" id="customVectorFileInput" accept="image/png, image/svg+xml, image/jpeg" style="display: none;">
             </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ MODAL: CREATE / EDIT CEMETERY AREA SHAPE EDITOR ═══════════ -->
+    <div class="me-overlay" id="newAreaModal">
+        <div class="me-modal-card me-area-editor-card">
+            <div class="me-modal-header">
+                <div>
+                    <h3 id="newAreaModalTitle">Create New Cemetery Area</h3>
+                    <p class="me-modal-sub" id="newAreaModalSub">Design the custom polygon outline and plot grid for this area. Drag points or click edge + markers to reshape.</p>
+                </div>
+                <button type="button" class="me-modal-close-btn" id="btnCloseNewAreaModal" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <form id="newAreaForm" autocomplete="off">
+                <div class="me-area-editor-layout">
+                    <!-- Left Column: Visual Interactive Shape Editor Canvas -->
+                    <div class="me-area-editor-left">
+                        <div class="me-shape-presets" id="newAreaPresetBar">
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="rect">Rect</button>
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="triangle">Triangle</button>
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="l-shape">L-Shape</button>
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="chamfer">Chamfer</button>
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="hex">Hexagon</button>
+                            <button type="button" class="me-shape-preset-btn" data-shape-preset="octagon">Octagon</button>
+                        </div>
+
+                        <div class="me-area-editor-stage" id="newAreaEditorStage">
+                            <div class="me-area-editor-board" id="newAreaEditorBoard">
+                                <svg class="me-area-editor-svg" id="newAreaEditorSvg" preserveAspectRatio="none"></svg>
+                                <div class="me-area-editor-handles" id="newAreaEditorHandles"></div>
+                            </div>
+                            <div class="me-area-editor-readout" id="newAreaActivePtReadout">4 points</div>
+                        </div>
+
+                        <div class="me-area-editor-controls">
+                            <div class="me-area-editor-pts-group">
+                                <label class="me-field-label" for="newAreaPoints" style="margin: 0;">Points</label>
+                                <input type="number" class="me-input" id="newAreaPoints" min="3" max="32" step="1" value="4" style="width: 58px; padding: 4px 6px;" required>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnModalApplyPoints">Set</button>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnModalAddPoint">+ Pt</button>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnModalRemovePoint">- Pt</button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label class="me-area-editor-snap" title="Snap vertices to grid cells (hold Shift while dragging for free movement)">
+                                    <input type="checkbox" id="newAreaSnapGrid" checked>
+                                    <span>Snap Grid</span>
+                                </label>
+                                <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnModalResetShape">Reset</button>
+                            </div>
+                        </div>
+                        <p class="me-field-hint" style="margin-top: 6px;">Right-click or Alt+click a point to remove it (min 3). Highlighted grid squares show usable plot slots.</p>
+                    </div>
+
+                    <!-- Right Column: Area Details & Plot Grid Settings -->
+                    <div class="me-area-editor-right">
+                        <div class="me-coords-row" style="margin-bottom: 12px;">
+                            <div class="me-field-group" style="flex: 3;">
+                                <label class="me-field-label" for="newAreaName">Area Name</label>
+                                <input type="text" class="me-input" id="newAreaName" placeholder="e.g. Lawn of Joy" maxlength="40" required>
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="newAreaNumber">Area No.</label>
+                                <input type="number" class="me-input" id="newAreaNumber" min="1" max="999" step="1" required>
+                            </div>
+                        </div>
+
+                        <div class="me-coords-row" style="margin-bottom: 12px;">
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="newAreaCategory">Plot Category</label>
+                                <select id="newAreaCategory" class="me-select">
+                                    <option value="Single Teired">Single Tiered</option>
+                                    <option value="Supreme" selected>Supreme</option>
+                                    <option value="Special Supreme">Special Supreme</option>
+                                    <option value="Family Estate Jr.">Family Estate Jr.</option>
+                                    <option value="Condominium">Condominium</option>
+                                    <option value="Mausoleum">Mausoleum</option>
+                                </select>
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="newAreaPrefix">Plot ID Prefix</label>
+                                <input type="text" class="me-input" id="newAreaPrefix" placeholder="Auto" maxlength="8" style="text-transform: uppercase;">
+                            </div>
+                        </div>
+
+                        <div class="me-coords-row" style="margin-bottom: 10px;">
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="newAreaCols">Grid Columns</label>
+                                <input type="number" class="me-input" id="newAreaCols" min="4" max="60" step="1" value="20" required>
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="newAreaRows">Grid Rows</label>
+                                <input type="number" class="me-input" id="newAreaRows" min="4" max="60" step="1" value="20" required>
+                            </div>
+                        </div>
+
+                        <p class="me-field-hint" id="newAreaHint" style="background: #f6f9f6; border: 1px solid #d5e1d7; border-radius: 4px; padding: 8px 10px;"></p>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+                            <button type="button" class="me-btn me-btn-ghost" id="btnCancelNewArea">Cancel</button>
+                            <button type="submit" class="me-btn me-btn-gold" id="btnSubmitNewArea">Create Area</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -814,7 +1063,9 @@
                     <h3>Add New Plot Slot</h3>
                     <p class="me-modal-sub">Create a new burial or niche plot in the active section.</p>
                 </div>
-                <button type="button" class="me-modal-close-btn" id="btnClosePlotModal"></button>
+                <button type="button" class="me-modal-close-btn" id="btnClosePlotModal" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
 
             <form id="addNewPlotForm">
@@ -859,10 +1110,186 @@
         </div>
     </div>
 
+    <!-- ═══════════ MODAL: CREATE / EDIT CUSTOM MAP PART (WALLS, BLOCKS, LANDMARKS) ═══════════ -->
+    <div class="me-overlay" id="mapPartModal">
+        <div class="me-modal-card me-area-editor-card">
+            <div class="me-modal-header">
+                <div>
+                    <h3 id="mapPartModalTitle">Add Custom Map Part</h3>
+                    <p class="me-modal-sub" id="mapPartModalSub">Create structural blocks, entrance wing walls, borders, roundabouts, or custom non-plot shapes. Drag points or click edge + markers to reshape.</p>
+                </div>
+                <button type="button" class="me-modal-close-btn" id="btnCloseMapPartModal" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <form id="mapPartForm" autocomplete="off">
+                <div class="me-area-editor-layout">
+                    <!-- Left Column: Preset Picker + Visual Point Editor -->
+                    <div class="me-area-editor-left">
+                        <div class="me-shape-presets" id="mapPartPresetBar">
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="block">Side Block</button>
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="wing-wall">Wing Wall</button>
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="wall-strip">Wall Strip</button>
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="creek-wall">Blue Border</button>
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="rotary">Circle / Rotary</button>
+                            <button type="button" class="me-shape-preset-btn" data-part-preset="chapel">Office / Chapel</button>
+                        </div>
+
+                        <div class="me-area-editor-stage" id="mapPartEditorStage">
+                            <div class="me-area-editor-board" id="mapPartEditorBoard">
+                                <svg class="me-area-editor-svg" id="mapPartEditorSvg" preserveAspectRatio="none"></svg>
+                                <div class="me-area-editor-handles" id="mapPartEditorHandles"></div>
+                            </div>
+                            <div class="me-area-editor-readout" id="mapPartActivePtReadout">4 points</div>
+                        </div>
+
+                        <div class="me-area-editor-controls">
+                            <div class="me-area-editor-pts-group">
+                                <label class="me-field-label" for="mapPartPoints" style="margin: 0;">Points</label>
+                                <input type="number" class="me-input" id="mapPartPoints" min="3" max="32" step="1" value="4" style="width: 58px; padding: 4px 6px;" required>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnPartApplyPoints">Set</button>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnPartAddPoint">+ Pt</button>
+                                <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnPartRemovePoint">- Pt</button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label class="me-area-editor-snap" title="Snap vertices to 5% grid increments (hold Shift for free movement)">
+                                    <input type="checkbox" id="mapPartSnapGrid">
+                                    <span>Snap Grid</span>
+                                </label>
+                                <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnPartResetShape">Rect</button>
+                            </div>
+                        </div>
+                        <p class="me-field-hint" style="margin-top: 6px;">Drag any handle freely, click + on any side to add a corner, or right-click to delete a point. After placing, press <strong>[P]</strong> to trace directly over the blueprint.</p>
+                    </div>
+
+                    <!-- Right Column: Part Name & Styling -->
+                    <div class="me-area-editor-right">
+                        <div class="me-field-group" style="margin-bottom: 10px;">
+                            <label class="me-field-label" for="partName">Part Name (Layer List)</label>
+                            <input type="text" class="me-input" id="partName" placeholder="e.g. Side Block beside 2 & 6" maxlength="44" required>
+                        </div>
+
+                        <div class="me-field-group" style="margin-bottom: 10px;">
+                            <label class="me-field-label" for="partLabel">Text Label on Map (optional)</label>
+                            <input type="text" class="me-input" id="partLabel" placeholder="Leave blank for walls / blocks" maxlength="24">
+                        </div>
+
+                        <div class="me-field-group" style="margin-bottom: 10px;">
+                            <label class="me-field-label">Quick Colors</label>
+                            <div class="me-color-swatches" id="partColorSwatches">
+                                <button type="button" class="me-swatch-btn" data-fill="#f3ecd8" data-stroke="#2f332e" title="Cream Stone (Matches Reference Wall/Block)" style="background: #f3ecd8;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#e8dfc7" data-stroke="#2f332e" title="Warm Sand" style="background: #e8dfc7;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#f7f5ef" data-stroke="#444a43" title="Light Plaza / Rotary" style="background: #f7f5ef;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#2d88a8" data-stroke="#184b5e" title="Blue Border / Creek" style="background: #2d88a8;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#cfe3c9" data-stroke="#2d4a36" title="Lawn Green Accent" style="background: #cfe3c9;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#c8ced0" data-stroke="#3a3f42" title="Slate Concrete" style="background: #c8ced0;"></button>
+                                <button type="button" class="me-swatch-btn" data-fill="#444943" data-stroke="#1f2320" title="Dark Wall / Curb" style="background: #444943;"></button>
+                            </div>
+                        </div>
+
+                        <div class="me-coords-row" style="margin-bottom: 10px;">
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="partFillColor">Fill</label>
+                                <input type="color" class="me-color-input" id="partFillColor" value="#f3ecd8">
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="partStrokeColor">Border</label>
+                                <input type="color" class="me-color-input" id="partStrokeColor" value="#2f332e">
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="partStrokeWidth">Border px</label>
+                                <input type="number" class="me-input" id="partStrokeWidth" min="0" max="12" step="0.5" value="2.5">
+                            </div>
+                            <div class="me-field-group" style="flex: 1;">
+                                <label class="me-field-label" for="partAspectPct">H % of W</label>
+                                <input type="number" class="me-input" id="partAspectPct" min="15" max="300" step="5" value="100">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
+                            <label class="me-area-editor-snap" title="Render a dashed stroke along the part edge">
+                                <input type="checkbox" id="partDashed">
+                                <span>Dashed border outline</span>
+                            </label>
+                            <label class="me-area-editor-snap" title="When checked, the automatic perimeter wall also wraps around this part">
+                                <input type="checkbox" id="partFenceInclude" checked>
+                                <span>Wrap outer wall around this part</span>
+                            </label>
+                        </div>
+
+                        <p class="me-field-hint" style="background: #f6f9f6; border: 1px solid #d5e1d7; border-radius: 4px; padding: 8px 10px;">
+                            Custom parts are non-plot architectural layers. Visitors see them on all maps without clicking into plot reservations.
+                        </p>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+                            <button type="button" class="me-btn me-btn-ghost" id="btnCancelMapPart">Cancel</button>
+                            <button type="submit" class="me-btn me-btn-gold" id="btnSubmitMapPart">Add Part to Map</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════ MODAL: KEYBOARD SHORTCUTS REFERENCE ═══════════ -->
+    <div class="me-overlay" id="shortcutsModal">
+        <div class="me-modal-card me-shortcuts-card">
+            <div class="me-modal-header">
+                <div>
+                    <h3>Keyboard Shortcuts</h3>
+                    <p class="me-modal-sub">All shortcuts automatically pause while typing in an input field.</p>
+                </div>
+                <button type="button" class="me-modal-close-btn" id="btnCloseShortcutsModal" title="Close (Esc)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="me-shortcuts-grid">
+                <div class="me-shortcut-section">
+                    <h4>Map Vector Editor</h4>
+                    <div class="me-shortcut-row"><span>Undo / Redo</span><kbd>Ctrl+Z / Ctrl+Y</kbd></div>
+                    <div class="me-shortcut-row"><span>Redo (alt)</span><kbd>Ctrl+Shift+Z</kbd></div>
+                    <div class="me-shortcut-row"><span>Copy / Cut / Paste</span><kbd>Ctrl+C / X / V</kbd></div>
+                    <div class="me-shortcut-row"><span>Duplicate Selected</span><kbd>Ctrl+D</kbd></div>
+                    <div class="me-shortcut-row"><span>Select All Visible</span><kbd>Ctrl+A</kbd></div>
+                    <div class="me-shortcut-row"><span>Multi-Select</span><kbd>Shift+Click</kbd></div>
+                    <div class="me-shortcut-row"><span>Delete Selected</span><kbd>Del / Backspace</kbd></div>
+                    <div class="me-shortcut-row"><span>Hide / Show Layer</span><kbd>H</kbd></div>
+                    <div class="me-shortcut-row"><span>Rotate -/+ 5° (Shift 15°)</span><kbd>K / L</kbd></div>
+                    <div class="me-shortcut-row"><span>Reset Rotation (0°)</span><kbd>R</kbd></div>
+                    <div class="me-shortcut-row"><span>Size -/+ (Shift fast)</span><kbd>- / +</kbd></div>
+                    <div class="me-shortcut-row"><span>Send Back / Bring Fwd</span><kbd>[ / ]</kbd></div>
+                    <div class="me-shortcut-row"><span>To Back / To Front</span><kbd>Ctrl+[ / ]</kbd></div>
+                    <div class="me-shortcut-row"><span>Wall / Shape Points</span><kbd>W / P</kbd></div>
+                    <div class="me-shortcut-row"><span>Nudge 0.5% (Shift 2%)</span><kbd>Arrow Keys</kbd></div>
+                </div>
+                <div class="me-shortcut-section">
+                    <h4>Plot Grid Editor</h4>
+                    <div class="me-shortcut-row"><span>Undo / Redo</span><kbd>Ctrl+Z / Ctrl+Y</kbd></div>
+                    <div class="me-shortcut-row"><span>Select Tool</span><kbd>1 or V</kbd></div>
+                    <div class="me-shortcut-row"><span>Place Plot Tool</span><kbd>2 or P</kbd></div>
+                    <div class="me-shortcut-row"><span>Erase Plot Tool</span><kbd>3 or E</kbd></div>
+                    <div class="me-shortcut-row"><span>Delete Selected Plot</span><kbd>Del / Backspace</kbd></div>
+                    <div class="me-shortcut-row"><span>Nudge Plot Grid Cell</span><kbd>Arrow Keys</kbd></div>
+                    <div class="me-shortcut-row"><span>Deselect / Exit Tool</span><kbd>Esc</kbd></div>
+                    <h4 style="margin-top: 12px;">Global &amp; Canvas</h4>
+                    <div class="me-shortcut-row"><span>Save Layout / Plots</span><kbd>Ctrl+S</kbd></div>
+                    <div class="me-shortcut-row"><span>Pan Canvas</span><kbd>Space + Drag</kbd></div>
+                    <div class="me-shortcut-row"><span>Zoom In / Out</span><kbd>Scroll / +/-</kbd></div>
+                    <div class="me-shortcut-row"><span>Fit Screen</span><kbd>F</kbd></div>
+                    <div class="me-shortcut-row"><span>Center View</span><kbd>0 / Home</kbd></div>
+                    <div class="me-shortcut-row"><span>Exit Edit / Deselect</span><kbd>Esc</kbd></div>
+                    <div class="me-shortcut-row"><span>Toggle Shortcuts Help</span><kbd>?</kbd></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Supabase and Utilities -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/notification-modal.js?v=4.0"></script>
+    <script src="js/map-fence.js"></script>
     <script src="js/map-editor.js"></script>
 </body>
 </html>

@@ -73,7 +73,7 @@ body {
     color: #333;
     font-weight: bold;
     padding: 8px 15px;
-    border-radius: 30px;
+    border-radius: 6px;
     transition: all 0.3s ease;
     display: block;
 }
@@ -95,7 +95,7 @@ body {
 
 .shared-header-buttons .btn {
     padding: 8px 20px;
-    border-radius: 30px;
+    border-radius: 6px;
     text-decoration: none;
     font-weight: bold;
     cursor: pointer;

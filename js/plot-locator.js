@@ -1,3 +1,8 @@
+
+let activePromoCode = '';
+let promoCodeDiscountAmount = 0;
+let currentPaymentProofDataUrl = '';
+
 // ==============================================================================
 // ONE BIG MAP CONTROLLER - CEMETERY MASTER LAYOUT & ALL PLOTS
 // Zion Memorial Garden - Cloud-Based Online Reservation & Records Management
@@ -196,15 +201,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+function syncCustomAreasToLocator(layersOverride) {
+    if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') return;
+    const layers = Array.isArray(layersOverride)
+        ? layersOverride
+        : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
+    const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.entries(entries).forEach(([secName, meta]) => {
+        SECTION_SHAPE_MAP[secName] = {
+            ...meta,
+            asset: meta.asset || window.ZMGFence.buildAreaSvgDataUrl(meta.cols, meta.rows, meta.area)
+        };
+    });
+}
+
 function getVectorLayout() {
     try {
         const saved = localStorage.getItem(MAP_VECTOR_STORAGE_KEY);
         if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
+                const filtered = parsed.filter(v => v && (!window.ZMGFence || !window.ZMGFence.isLegacyWall(v)));
                 // Merge saved coordinates with base catalog definitions to preserve image assets and metadata
-                return DEFAULT_MAP_VECTORS.map(def => {
-                    const found = parsed.find(p => String(p.area) === String(def.area) || p.id === def.id);
+                const mergedDefaults = DEFAULT_MAP_VECTORS.map(def => {
+                    const found = filtered.find(p => String(p.area) === String(def.area) || p.id === def.id);
                     if (found) {
                         const left = typeof found.left === 'number' ? found.left : def.left;
                         const top = typeof found.top === 'number' ? found.top : def.top;
@@ -216,11 +236,57 @@ function getVectorLayout() {
                             left,
                             top,
                             width,
-                            rotate
+                            rotate,
+                            zIndex: typeof found.zIndex === 'number' ? found.zIndex : (def.zIndex || 5)
                         };
                     }
                     return def;
                 });
+
+                const defaultIds = new Set(DEFAULT_MAP_VECTORS.map(d => d.id));
+                const defaultAreas = new Set(DEFAULT_MAP_VECTORS.map(d => String(d.area)));
+                const extras = filtered.filter(p => {
+                    if (window.ZMGFence && window.ZMGFence.isEntrance(p)) return true;
+                    if (window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(p)) return true;
+                    if (window.ZMGFence && window.ZMGFence.isCustomArea(p)) return true;
+                    return !defaultIds.has(p.id) && (!p.area || !defaultAreas.has(String(p.area)));
+                }).map(p => {
+                    if (window.ZMGFence && window.ZMGFence.isEntrance(p)) {
+                        return {
+                            ...p,
+                            kind: 'entrance',
+                            src: p.src || window.ZMGFence.entranceSvgDataUrl()
+                        };
+                    }
+                    if (window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(p)) {
+                        const fenceExclude = !!p.fenceExclude;
+                        const normalized = {
+                            ...p,
+                            kind: 'decor',
+                            custom: false,
+                            area: null,
+                            fenceExclude,
+                            fenceInclude: !fenceExclude
+                        };
+                        normalized.src = (Array.isArray(normalized.points) && normalized.points.length >= 3)
+                            ? window.ZMGFence.buildPartSvgDataUrl(normalized)
+                            : normalized.src;
+                        return normalized;
+                    }
+                    if (window.ZMGFence && window.ZMGFence.isCustomArea(p)) {
+                        const src = (Array.isArray(p.points) && p.points.length >= 3)
+                            ? window.ZMGFence.buildAreaSvgDataUrl(p.cols || 20, p.rows || 20, p.area, p.points, p.shapeAspect)
+                            : (p.src || window.ZMGFence.buildAreaSvgDataUrl(p.cols || 6, p.rows || 5, p.area));
+                        return {
+                            ...p,
+                            custom: true,
+                            src: src
+                        };
+                    }
+                    return p;
+                });
+
+                return [...mergedDefaults, ...extras];
             }
         }
     } catch (e) {
@@ -265,10 +331,12 @@ async function loadAllPlotsData() {
 
         const dbGrouped = {};
         let systemVectorLayers = null;
+        let systemFenceConfig = null;
         if (!fetchError && dbPlots && dbPlots.length > 0) {
             dbPlots.forEach(p => {
                 if (p.section_name === '__SYSTEM_MAP_CONFIG__' && p.coordinates?.vectorLayers) {
                     systemVectorLayers = p.coordinates.vectorLayers;
+                    if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
                 }
                 if (!p.section_name || p.section_name.includes('__SYSTEM')) return;
                 if (!dbGrouped[p.section_name]) dbGrouped[p.section_name] = [];
@@ -276,17 +344,34 @@ async function loadAllPlotsData() {
             });
         }
 
-        // Keep local vector cache aligned with cloud system config
+        // Keep local vector cache aligned with cloud system config (strip legacy walls, register custom areas)
+        if (systemFenceConfig && window.ZMGFence) {
+            window.ZMGFence.writeStoredFenceConfig(systemFenceConfig);
+        }
         if (systemVectorLayers && Array.isArray(systemVectorLayers) && systemVectorLayers.length > 0) {
+            const cleanedSystem = systemVectorLayers.filter(v => !window.ZMGFence || !window.ZMGFence.isLegacyWall(v));
             try {
-                localStorage.setItem(MAP_VECTOR_STORAGE_KEY, JSON.stringify(systemVectorLayers));
+                localStorage.setItem(MAP_VECTOR_STORAGE_KEY, JSON.stringify(cleanedSystem));
             } catch (_) {}
+            syncCustomAreasToLocator(cleanedSystem);
+        } else {
+            syncCustomAreasToLocator();
         }
 
-        // For each known cemetery area: use DB plots if available, or generate exact blueprint
+        // For each known cemetery area: use DB plots if available, local cache if present, or generate blueprint
         Object.keys(SECTION_SHAPE_MAP).forEach(secName => {
             const shapeInfo = SECTION_SHAPE_MAP[secName];
             let sectionPlots = dbGrouped[secName];
+
+            if (!sectionPlots || sectionPlots.length === 0) {
+                try {
+                    const cachedRaw = localStorage.getItem('zion_section_plots_v1_' + secName);
+                    if (cachedRaw) {
+                        const cached = JSON.parse(cachedRaw);
+                        if (Array.isArray(cached) && cached.length > 0) sectionPlots = cached;
+                    }
+                } catch (_) {}
+            }
 
             if (!sectionPlots || sectionPlots.length === 0) {
                 if (secName === 'Area 5 - Special Supreme Estate') {
@@ -308,15 +393,25 @@ async function loadAllPlotsData() {
         const avail = allPlotsMasterList.filter(p => (p.status || 'available').toLowerCase() === 'available').length;
         const res = allPlotsMasterList.filter(p => (p.status || '').toLowerCase() === 'reserved').length;
         const occ = allPlotsMasterList.filter(p => (p.status || '').toLowerCase() === 'occupied').length;
+        const maint = Math.max(0, total - (avail + res + occ));
+        const availPct = total > 0 ? Math.round((avail / total) * 100) : 0;
 
         setText('statTotal', total.toLocaleString());
         setText('statAvail', avail.toLocaleString());
         setText('statRes', res.toLocaleString());
         setText('statOcc', occ.toLocaleString());
 
+        setText('legendCountTotal', total.toLocaleString());
+        setText('legendCountAvail', avail.toLocaleString());
+        setText('legendCountRes', res.toLocaleString());
+        setText('legendCountOcc', occ.toLocaleString());
+        setText('legendCountMaint', maint.toLocaleString());
+        setText('legendAvailRate', `${availPct}%`);
+
     } catch (err) {
         console.error('Error loading all plots:', err);
         // Fallback safety: ensure all sections have plots even if cloud query failed
+        syncCustomAreasToLocator();
         if (allPlotsMasterList.length === 0) {
             Object.keys(SECTION_SHAPE_MAP).forEach(secName => {
                 const shapeInfo = SECTION_SHAPE_MAP[secName];
@@ -333,10 +428,20 @@ async function loadAllPlotsData() {
             const avail = allPlotsMasterList.filter(p => (p.status || 'available').toLowerCase() === 'available').length;
             const res = allPlotsMasterList.filter(p => (p.status || '').toLowerCase() === 'reserved').length;
             const occ = allPlotsMasterList.filter(p => (p.status || '').toLowerCase() === 'occupied').length;
+            const maint = Math.max(0, total - (avail + res + occ));
+            const availPct = total > 0 ? Math.round((avail / total) * 100) : 0;
+
             setText('statTotal', total.toLocaleString());
             setText('statAvail', avail.toLocaleString());
             setText('statRes', res.toLocaleString());
             setText('statOcc', occ.toLocaleString());
+
+            setText('legendCountTotal', total.toLocaleString());
+            setText('legendCountAvail', avail.toLocaleString());
+            setText('legendCountRes', res.toLocaleString());
+            setText('legendCountOcc', occ.toLocaleString());
+            setText('legendCountMaint', maint.toLocaleString());
+            setText('legendAvailRate', `${availPct}%`);
         }
     }
 }
@@ -421,12 +526,44 @@ function renderEntireCemeteryMapWithPlots() {
     const board = document.getElementById('entireMapBoard');
     if (!board) return;
 
-    // Remove any previous dynamic areas (preserve master boundary guide image)
-    board.querySelectorAll('.pd-map-area').forEach(el => el.remove());
+    // Remove any previous dynamic areas, entrances, & structural decor parts
+    board.querySelectorAll('.pd-map-area, .pd-map-entrance, .pd-map-decor').forEach(el => el.remove());
 
+    syncCustomAreasToLocator();
     const layout = getVectorLayout();
 
     layout.forEach(v => {
+        if (v.visible === false) return;
+        const isEntrance = window.ZMGFence && window.ZMGFence.isEntrance(v);
+        const isDecor = !isEntrance && ((window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(v)) || !v.area);
+        if (isEntrance || isDecor) {
+            if (!v.src && !isEntrance) return;
+            const partImg = document.createElement('img');
+            partImg.className = isEntrance ? 'pd-map-entrance' : 'pd-map-decor';
+            partImg.dataset.vectorId = v.id || '';
+            partImg.dataset.kind = isEntrance ? 'entrance' : 'decor';
+            partImg.src = isEntrance ? (v.src || window.ZMGFence.entranceSvgDataUrl()) : v.src;
+            partImg.alt = v.name || (isEntrance ? 'Main Entrance Gate' : 'Map Structure');
+            partImg.draggable = false;
+            partImg.style.position = 'absolute';
+            partImg.style.left = `${v.left}%`;
+            partImg.style.top = `${v.top}%`;
+            partImg.style.width = `${v.width || (isEntrance ? 11 : 16)}%`;
+            partImg.style.height = 'auto';
+            partImg.style.transform = `rotate(${v.rotate || 0}deg)`;
+            partImg.style.transformOrigin = 'center center';
+            partImg.style.opacity = String(v.opacity ?? 1);
+            partImg.style.zIndex = String(v.zIndex || (isEntrance ? 25 : 6));
+            partImg.style.pointerEvents = 'none';
+            partImg.addEventListener('load', () => {
+                if (window.ZMGFence) {
+                    window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+                }
+            });
+            board.appendChild(partImg);
+            return;
+        }
+
         const shapeMeta = Object.values(SECTION_SHAPE_MAP).find(s => s.area === String(v.area));
         const sectionName = shapeMeta ? Object.keys(SECTION_SHAPE_MAP).find(k => SECTION_SHAPE_MAP[k].area === String(v.area)) : v.name;
         if (!shapeMeta) return;
@@ -449,6 +586,7 @@ function renderEntireCemeteryMapWithPlots() {
         const areaContainer = document.createElement('div');
         areaContainer.className = 'pd-map-area';
         areaContainer.id = `area-zone-${v.area}`;
+        areaContainer.dataset.vectorId = v.id || '';
         areaContainer.dataset.area = v.area;
         areaContainer.dataset.sectionName = sectionName;
         areaContainer.dataset.leftPct = v.left;
@@ -473,6 +611,11 @@ function renderEntireCemeteryMapWithPlots() {
         shapeImg.alt = sectionName;
         shapeImg.className = 'pd-area-shape-img';
         shapeImg.draggable = false;
+        if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
+            shapeImg.addEventListener('load', () => {
+                window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+            });
+        }
         areaContainer.appendChild(shapeImg);
 
         // 3. Floating Area Name Badge Above Area
@@ -535,6 +678,10 @@ function renderEntireCemeteryMapWithPlots() {
         areaContainer.appendChild(gridLayer);
         board.appendChild(areaContainer);
     });
+
+    if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
+        window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+    }
 }
 
 function attachPinToSlot(slotEl, plotCode, areaRotate = 0) {
@@ -1046,9 +1193,124 @@ function setupBookingModalAndAmortization() {
     if (closeBtn) closeBtn.addEventListener('click', () => { if (modal) modal.classList.remove('active'); });
     if (cancelBtn) cancelBtn.addEventListener('click', () => { if (modal) modal.classList.remove('active'); });
 
+    // Setup Chronological Date Validation for Interred Loved One
+    if (typeof setupChronologicalDateValidation === 'function') {
+        setupChronologicalDateValidation({
+            birthInput: 'bookDeceasedBirthDate',
+            deathInput: 'bookDeceasedDeathDate',
+            burialInput: 'bookDeceasedBurialDate',
+            errorContainer: 'bookDeceasedDateError'
+        });
+    }
+
     // Recalculate amortization on changes
     if (termSelect) termSelect.addEventListener('change', calculateAmortization);
+    
     if (dpInput) dpInput.addEventListener('input', calculateAmortization);
+
+    // Plan Type Radios & Priority Notice
+    document.querySelectorAll('input[name="planType"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const isAtNeed = r.value === 'AT-NEED';
+            const notice = document.getElementById('atNeedPriorityNotice');
+            if (notice) notice.style.display = isAtNeed ? 'block' : 'none';
+        });
+    });
+
+    // Promo Code Apply Button
+    document.getElementById('btnApplyPromo')?.addEventListener('click', () => {
+        const basePrice = Number(document.getElementById('bookPlotPrice')?.value || 85000);
+        const grossPrice = basePrice + 2500 + 1200;
+        const code = (document.getElementById('bookPromoCode')?.value || '').trim().toUpperCase();
+        let msg = '';
+        let color = '#15803d';
+
+        if (!code) {
+            activePromoCode = '';
+            promoCodeDiscountAmount = 0;
+            msg = '';
+        } else {
+            // Check dynamic promotions list (from Admin Pricing Module)
+            let promosList = [];
+            try {
+                const stored = localStorage.getItem('zmg_active_promotions');
+                if (stored) promosList = JSON.parse(stored);
+            } catch (_) {}
+
+            if (!promosList || promosList.length === 0) {
+                promosList = [
+                    { code: 'ZIONPROMO', type: 'PERCENT', value: 5, isActive: true },
+                    { code: 'PROMO5', type: 'PERCENT', value: 5, isActive: true },
+                    { code: 'MEMORIAL2026', type: 'FIXED', value: 3000, isActive: true },
+                    { code: 'SPOTCASH10', type: 'PERCENT', value: 10, isActive: true }
+                ];
+            }
+
+            const matchedPromo = promosList.find(p => (p.code || '').toUpperCase() === code);
+            const now = new Date();
+            const isExpired = matchedPromo?.expiry ? new Date(matchedPromo.expiry) < now : false;
+
+            if (matchedPromo && matchedPromo.isActive && !isExpired) {
+                if (matchedPromo.minTcp && grossPrice < matchedPromo.minTcp) {
+                    activePromoCode = '';
+                    promoCodeDiscountAmount = 0;
+                    msg = `Minimum contract value of ₱${Number(matchedPromo.minTcp).toLocaleString()} required.`;
+                    color = '#dc2626';
+                } else {
+                    activePromoCode = code;
+                    if (matchedPromo.type === 'PERCENT') {
+                        promoCodeDiscountAmount = Math.round(grossPrice * (Number(matchedPromo.value) / 100));
+                        msg = `${matchedPromo.value}% Promotional Discount Applied!`;
+                    } else {
+                        promoCodeDiscountAmount = Number(matchedPromo.value);
+                        msg = `₱${Number(matchedPromo.value).toLocaleString()} Special Promo Applied!`;
+                    }
+                }
+            } else {
+                activePromoCode = '';
+                promoCodeDiscountAmount = 0;
+                msg = isExpired ? 'This promo code has expired' : 'Invalid or inactive promo code';
+                color = '#dc2626';
+            }
+        }
+
+        const msgEl = document.getElementById('promoStatusMessage');
+        if (msgEl) {
+            msgEl.textContent = msg;
+            msgEl.style.color = color;
+        }
+        calculateAmortization();
+    });
+
+    // Payment Proof File Upload
+    document.getElementById('bookPaymentProofFile')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentPaymentProofDataUrl = ev.target.result;
+                window.stagedGcashReceiptProofUrl = ev.target.result;
+                const prevImg = document.getElementById('paymentProofPreviewImg');
+                if (prevImg) prevImg.src = currentPaymentProofDataUrl;
+                const nameEl = document.getElementById('paymentProofFileName');
+                if (nameEl) nameEl.textContent = file.name;
+                const box = document.getElementById('paymentProofPreviewBox');
+                if (box) box.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Remove Payment Proof
+    document.getElementById('btnRemovePaymentProof')?.addEventListener('click', () => {
+        currentPaymentProofDataUrl = '';
+        window.stagedGcashReceiptProofUrl = null;
+        const fileInput = document.getElementById('bookPaymentProofFile');
+        if (fileInput) fileInput.value = '';
+        const box = document.getElementById('paymentProofPreviewBox');
+        if (box) box.style.display = 'none';
+    });
+
 
     // Payment Option Radios
     const paymentRadios = document.querySelectorAll('input[name="paymentOption"]');
@@ -1056,6 +1318,7 @@ function setupBookingModalAndAmortization() {
         r.addEventListener('change', () => {
             const amortPanel = document.getElementById('amortizationPanel');
             if (amortPanel) amortPanel.style.display = r.value === 'INSTALLMENT' ? 'block' : 'none';
+            calculateAmortization();
         });
     });
 
@@ -1088,33 +1351,99 @@ function openBookingModalForPlot(plot) {
     if (elSpaceId) elSpaceId.value = plot.id;
     if (elCode) elCode.value = plot.plot_identifier;
     if (elPrice) elPrice.value = price;
+    activePromoCode = '';
+    promoCodeDiscountAmount = 0;
+    currentPaymentProofDataUrl = '';
+    window.stagedGcashReceiptProofUrl = null;
+    if (typeof stagedGcashReceiptProofUrl !== 'undefined') stagedGcashReceiptProofUrl = null;
+    if (document.getElementById('zmgGcashReceiptUpload')) document.getElementById('zmgGcashReceiptUpload').value = '';
+    if (document.getElementById('zmgGcashReceiptThumbBox')) document.getElementById('zmgGcashReceiptThumbBox').style.display = 'none';
+    if (document.getElementById('bookPromoCode')) document.getElementById('bookPromoCode').value = '';
+    if (document.getElementById('promoStatusMessage')) document.getElementById('promoStatusMessage').textContent = '';
+    if (document.getElementById('bookPaymentRefNumber')) document.getElementById('bookPaymentRefNumber').value = '';
+    if (document.getElementById('paymentProofPreviewBox')) document.getElementById('paymentProofPreviewBox').style.display = 'none';
+    const notice = document.getElementById('atNeedPriorityNotice');
+    if (notice) notice.style.display = 'none';
     if (elDp) elDp.value = dp;
+
+    // Only GCash for clients; GCash & Cash Over Counter for staff/admin
+    if (typeof detectCurrentUserStaffRole === 'function') {
+        detectCurrentUserStaffRole().then(isStaff => {
+            const cashPill = document.getElementById('channelPillCash');
+            if (cashPill) cashPill.style.display = isStaff ? 'inline-flex' : 'none';
+            if (!isStaff) {
+                const gcashRadio = document.querySelector('input[name="paymentChannel"][value="GCash"]');
+                if (gcashRadio) {
+                    gcashRadio.checked = true;
+                    document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
+                    document.getElementById('channelPillGcash')?.classList.add('active');
+                }
+            }
+            if (typeof renderReservationChecksPanel === 'function') {
+                renderReservationChecksPanel();
+            }
+        });
+    }
     if (dpInput) {
         dpInput.value = dp.toFixed(2);
         dpInput.min = "100";
     }
 
     calculateAmortization();
-    if (typeof window.setupDynamicPaymentChannelPanel === 'function') {
+    
+    document.querySelectorAll('input[name="paymentChannel"]').forEach(r => {
+        r.addEventListener('change', () => {
+            document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
+            r.closest('.channel-pill')?.classList.add('active');
+            if (typeof renderReservationChecksPanel === 'function') {
+                renderReservationChecksPanel();
+            }
+        });
+    });
+if (typeof window.setupDynamicPaymentChannelPanel === 'function') {
         window.setupDynamicPaymentChannelPanel();
     }
     modal.classList.add('active');
 }
 
 function calculateAmortization() {
-    const price = Number(document.getElementById('bookPlotPrice')?.value || 85000);
+    const basePrice = Number(document.getElementById('bookPlotPrice')?.value || 85000);
+    const maintenanceFee = 2500.00;
+    const cemeteryTax = 1200.00;
+    const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+
+    const isFullPayment = document.querySelector('input[name="paymentOption"]:checked')?.value === 'FULL_PAYMENT';
+    const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
+    const totalDiscount = spotDiscount + promoCodeDiscountAmount;
+    const netPrice = Math.max(100, grossPrice - totalDiscount);
+
     const dpInput = document.getElementById('customDownPayment');
     const rawDp = dpInput && dpInput.value !== '' ? Number(dpInput.value) : 100;
     const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
     const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
 
-    const balance = Math.max(0, price - dp);
-    const monthly = term > 0 ? (balance / term) : 0;
+    const balance = isFullPayment ? 0 : Math.max(0, netPrice - dp);
+    const monthly = (term > 0 && !isFullPayment) ? (balance / term) : 0;
 
-    setText('calcTotalPrice', `₱ ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
-    setText('calcDownPayment', `₱ ${dp.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
-    setText('calcBalance', `₱ ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
-    setText('calcMonthly', `₱ ${monthly.toLocaleString('en-US', { minimumFractionDigits: 2 })} / mo`);
+    const peso = (n) => '₱ ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    setText('displayBasePlotPrice', peso(basePrice));
+    setText('displayMaintenanceFee', peso(maintenanceFee));
+    setText('displayCemeteryTax', peso(cemeteryTax));
+    setText('displayNetContractPrice', peso(netPrice));
+    setText('bookDisplayPrice', peso(netPrice));
+    setText('calcTotalPrice', peso(netPrice));
+    setText('calcDownPayment', peso(dp));
+    setText('calcRemainingBalance', peso(balance));
+    setText('calcBalance', peso(balance));
+    setText('calcMonthlyAmortization', `${peso(monthly)} / mo`);
+    setText('calcMonthly', `${peso(monthly)} / mo`);
+
+    const rowPromo = document.getElementById('rowPromoDiscount');
+    if (rowPromo) {
+        rowPromo.style.display = totalDiscount > 0 ? 'flex' : 'none';
+        setText('displayPromoDiscount', '- ' + peso(totalDiscount));
+    }
 }
 
 async function submitPlotReservation(form) {
@@ -1134,13 +1463,27 @@ async function submitPlotReservation(form) {
             return;
         }
 
-        const spaceId = document.getElementById('bookSpaceId')?.value;
-        const plotCode = document.getElementById('bookPlotIdentifier')?.value;
-        const price = Number(document.getElementById('bookPlotPrice')?.value || 0);
-        const dp = Number(document.getElementById('customDownPayment')?.value || 0);
-        const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
         const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
         const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
+        const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'GCash';
+        const notes = document.getElementById('reservationNotes')?.value || '';
+
+        const spaceId = document.getElementById('bookSpaceId')?.value;
+        const plotCode = document.getElementById('bookPlotIdentifier')?.value;
+        const basePrice = Number(document.getElementById('bookPlotPrice')?.value || 0);
+        const maintenanceFee = 2500.00;
+        const cemeteryTax = 1200.00;
+        const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+        const isFullPayment = paymentOption === 'FULL_PAYMENT';
+        const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
+        const totalDiscount = spotDiscount + promoCodeDiscountAmount;
+        const price = Math.max(100, grossPrice - totalDiscount);
+        const manualRef = (document.getElementById('bookPaymentRefNumber')?.value || '').trim();
+        const counterRef = (document.getElementById('counterCashReceiptNumber')?.value || '').trim();
+        const gcashQrRef = (document.getElementById('zmgGcashQrRefNumber')?.value || '').trim();
+        const isCash = paymentChannel === 'Cash';
+        const dp = Number(document.getElementById('customDownPayment')?.value || 0);
+        const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
         if (paymentOption === 'INSTALLMENT' && dp < 100) {
             alert('Minimum down payment is ₱100.00.');
             if (btnText) btnText.style.display = 'inline-block';
@@ -1148,8 +1491,6 @@ async function submitPlotReservation(form) {
             if (submitBtn) submitBtn.disabled = false;
             return;
         }
-        const paymentChannel = document.querySelector('input[name="paymentChannel"]:checked')?.value || 'GCash';
-        const notes = document.getElementById('reservationNotes')?.value || '';
 
         // Deceased Details
         const deceasedFirstName = document.getElementById('bookDeceasedFirstName')?.value?.trim() || '';
@@ -1174,31 +1515,48 @@ async function submitPlotReservation(form) {
             return;
         }
 
-        const isGcash = paymentChannel === 'GCash';
-        const isBank = paymentChannel === 'Bank';
-
-        const bankSelectEl = document.getElementById('zmgBankSelect');
-        const bankOpt = bankSelectEl?.options[bankSelectEl.selectedIndex];
-        const bankName = bankOpt?.text || 'BDO Unibank';
-        const bankRefInput = document.getElementById('zmgBankTestRefNumber')?.value?.trim();
-        const bankTestConfirmCheck = document.getElementById('zmgCheckConfirmBankTest');
-        const isBankTestPaid = isBank && (!bankTestConfirmCheck || bankTestConfirmCheck.checked);
+        // Chronological Date Validation for Interred Loved One
+        if (typeof checkDateChronology === 'function') {
+            const dateCheck = checkDateChronology(deceasedBirthDate, deceasedDeathDate, deceasedBurialDate);
+            if (!dateCheck.valid) {
+                if (btnText) btnText.style.display = 'inline-block';
+                if (btnLoader) btnLoader.style.display = 'none';
+                if (submitBtn) submitBtn.disabled = false;
+                alert('Invalid Date Chronology:\n\n' + dateCheck.message);
+                if (dateCheck.field === 'birth') document.getElementById('bookDeceasedBirthDate')?.focus();
+                else if (dateCheck.field === 'death') document.getElementById('bookDeceasedDeathDate')?.focus();
+                else if (dateCheck.field === 'burial') document.getElementById('bookDeceasedBurialDate')?.focus();
+                return;
+            }
+        }
 
         const amountNow = paymentOption === 'INSTALLMENT' ? (dp > 0 ? dp : price) : price;
-        const isGcashQr = isGcash && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
-        const gcashQrRef = document.getElementById('zmgGcashQrRefNumber')?.value?.trim();
-        const isImmediatelyPaid = isBankTestPaid || isGcashQr;
+        const isGcashQr = !isCash && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
+        const hasGcashAutoDebit = Boolean(document.getElementById('zmgGcashSubMethodAutoDebit')?.checked);
+        const attachedProof = currentPaymentProofDataUrl || window.stagedGcashReceiptProofUrl || (typeof stagedGcashReceiptProofUrl !== 'undefined' ? stagedGcashReceiptProofUrl : null);
+
+        // Mandatory GCash Screenshot Validation (Required instead of typing reference number)
+        if (paymentChannel === 'GCash' && !hasGcashAutoDebit && !attachedProof) {
+            if (btnText) btnText.style.display = 'inline-block';
+            if (btnLoader) btnLoader.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = false;
+            alert('Please attach your GCash payment screenshot to proceed. Screenshot is required for GCash reservations.');
+            const fileInput = document.getElementById('zmgGcashReceiptUpload') || document.getElementById('bookPaymentProofFile');
+            if (fileInput) fileInput.focus();
+            return;
+        }
+
+        const isImmediatelyPaid = isCash || isGcashQr || Boolean(attachedProof) || Boolean(manualRef);
         const totalPaidRecorded = isImmediatelyPaid ? amountNow : 0.00;
         const balanceRecorded = isImmediatelyPaid ? Math.max(0, price - amountNow) : price;
         const monthly = term > 0 ? (balanceRecorded / term) : 0;
         const paymentTag = isImmediatelyPaid ? 'PAID' : 'UNPAID';
-        const paymentReference = isBank
-            ? (bankRefInput || `BNK-TEST-${Date.now().toString(36).toUpperCase()}`)
-            : (isGcashQr ? (gcashQrRef || `GCASH-QR-${Date.now().toString(36).toUpperCase()}`) : (isGcash ? `GCASH-PENDING-${Date.now().toString(36).toUpperCase()}` : `CASH-UNPAID-${Date.now().toString(36).toUpperCase()}`));
-
+        const paymentReference = isCash
+            ? (counterRef || manualRef || `CSH-COUNTER-${Date.now().toString(36).toUpperCase()}`)
+            : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`);
         const resNumber = `RES-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const deceasedTagNote = fullDeceasedName ? ` [Interred: ${fullDeceasedName}${deceasedDeathDate ? ` (DOD: ${deceasedDeathDate})` : ''}]` : '';
-        const finalNotes = `[Channel: ${isBank ? `Bank Transfer (${bankName})` : paymentChannel}]${isBankTestPaid ? ` [Receipt Tag: PAID] (Test Mode Bank Authorized: ${bankName} | Ref: ${paymentReference})` : ''}${deceasedTagNote} ${notes}`.trim();
+        const finalNotes = `[Channel: ${paymentChannel}] [Receipt Tag: ${paymentTag}] [Ref: ${paymentReference}]${deceasedTagNote} ${notes}`.trim();
 
         const { data: newReservation, error: resError } = await supabaseClient
             .from('reservations')
@@ -1225,11 +1583,12 @@ async function submitPlotReservation(form) {
         // Record payment in payments table
         await supabaseClient.from('payments').insert([{
             reservation_id: newReservation.id,
-            payment_reference: paymentReference,
+            payment_reference: manualRef || paymentReference,
             amount: amountNow,
             payment_type: paymentOption === 'INSTALLMENT' ? 'DOWN_PAYMENT' : 'FULL_PAYMENT',
-            payment_method: isBank ? 'Bank Transfer' : (paymentChannel === 'GCash' ? 'GCash' : (paymentChannel === 'Maya' ? 'Maya' : (paymentChannel === 'Card' ? 'Card' : 'Cash'))),
+            payment_method: isCash ? 'Cash' : 'GCash',
             status: isImmediatelyPaid ? 'COMPLETED' : 'PENDING',
+            receipt_url: attachedProof || currentPaymentProofDataUrl || null,
             paid_at: isImmediatelyPaid ? new Date().toISOString() : null,
             due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }]);
@@ -1270,8 +1629,8 @@ async function submitPlotReservation(form) {
                 paymentTag,
                 reservationNumber: resNumber,
                 paymentReference,
-                paymentChannel: isBank ? `Bank Transfer (${bankName} - Test Mode)` : (isGcash ? 'GCash Auto-Debit' : 'Cash (Over the Counter)'),
-                gcashReference: isBank ? paymentReference : '',
+                paymentChannel: (paymentChannel === 'GCash' ? 'GCash (Instant Pay)' : 'Cash (Over the Counter)'),
+                gcashReference: (paymentChannel === 'GCash' ? paymentReference : ''),
                 dateIssued: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
                 clientName,
                 clientEmail: user.email || '',
@@ -1285,9 +1644,9 @@ async function submitPlotReservation(form) {
                 amountNow,
                 remainingBalance: balanceRecorded,
                 monthlyAmortization: monthly,
-                counterInstructions: isBankTestPaid
-                    ? `ONLINE BANK PAYMENT AUTHORIZED IN TEST MODE (TAG: PAID • ${bankName} • Ref: ${paymentReference}). Verified via Zion Memorial Garden test sandbox.`
-                    : 'Please present this receipt at the counter when called.'
+                counterInstructions: isCash
+                    ? 'Please present this receipt at the counter when called.'
+                    : 'Payment settled via official GCash merchant QR.'
             };
             window.generateAndDownloadReceiptPDF(receiptData);
             if (typeof window.sendReceiptViaEmailJS === 'function') {
