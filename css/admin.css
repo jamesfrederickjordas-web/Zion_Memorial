@@ -1800,6 +1800,16 @@ html, body {
     filter: drop-shadow(0 0 22px rgba(212, 175, 55, 0.85)) brightness(1.06) !important;
 }
 
+.admin-loc-map-entrance,
+.admin-loc-map-decor {
+    position: absolute;
+    height: auto;
+    max-width: none !important;
+    pointer-events: none;
+    transform-origin: center center;
+    user-select: none;
+}
+
 .admin-loc-area-floating-label {
     position: absolute;
     top: -24px;

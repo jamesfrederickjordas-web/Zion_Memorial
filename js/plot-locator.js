@@ -207,6 +207,11 @@ function syncCustomAreasToLocator(layersOverride) {
         ? layersOverride
         : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
     const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.keys(SECTION_SHAPE_MAP).forEach(secName => {
+        if (SECTION_SHAPE_MAP[secName].custom && !entries[secName]) {
+            delete SECTION_SHAPE_MAP[secName];
+        }
+    });
     Object.entries(entries).forEach(([secName, meta]) => {
         SECTION_SHAPE_MAP[secName] = {
             ...meta,
@@ -221,72 +226,11 @@ function getVectorLayout() {
         if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
+                if (window.ZMGFence && typeof window.ZMGFence.mergeLayoutLayers === 'function') {
+                    return window.ZMGFence.mergeLayoutLayers(DEFAULT_MAP_VECTORS, parsed);
+                }
                 const filtered = parsed.filter(v => v && (!window.ZMGFence || !window.ZMGFence.isLegacyWall(v)));
-                // Merge saved coordinates with base catalog definitions to preserve image assets and metadata
-                const mergedDefaults = DEFAULT_MAP_VECTORS.map(def => {
-                    const found = filtered.find(p => String(p.area) === String(def.area) || p.id === def.id);
-                    if (found) {
-                        const left = typeof found.left === 'number' ? found.left : def.left;
-                        const top = typeof found.top === 'number' ? found.top : def.top;
-                        const width = typeof found.width === 'number' ? found.width : def.width;
-                        const rotate = typeof found.rotate === 'number' ? found.rotate : def.rotate;
-
-                        return {
-                            ...def,
-                            left,
-                            top,
-                            width,
-                            rotate,
-                            zIndex: typeof found.zIndex === 'number' ? found.zIndex : (def.zIndex || 5)
-                        };
-                    }
-                    return def;
-                });
-
-                const defaultIds = new Set(DEFAULT_MAP_VECTORS.map(d => d.id));
-                const defaultAreas = new Set(DEFAULT_MAP_VECTORS.map(d => String(d.area)));
-                const extras = filtered.filter(p => {
-                    if (window.ZMGFence && window.ZMGFence.isEntrance(p)) return true;
-                    if (window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(p)) return true;
-                    if (window.ZMGFence && window.ZMGFence.isCustomArea(p)) return true;
-                    return !defaultIds.has(p.id) && (!p.area || !defaultAreas.has(String(p.area)));
-                }).map(p => {
-                    if (window.ZMGFence && window.ZMGFence.isEntrance(p)) {
-                        return {
-                            ...p,
-                            kind: 'entrance',
-                            src: p.src || window.ZMGFence.entranceSvgDataUrl()
-                        };
-                    }
-                    if (window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(p)) {
-                        const fenceExclude = !!p.fenceExclude;
-                        const normalized = {
-                            ...p,
-                            kind: 'decor',
-                            custom: false,
-                            area: null,
-                            fenceExclude,
-                            fenceInclude: !fenceExclude
-                        };
-                        normalized.src = (Array.isArray(normalized.points) && normalized.points.length >= 3)
-                            ? window.ZMGFence.buildPartSvgDataUrl(normalized)
-                            : normalized.src;
-                        return normalized;
-                    }
-                    if (window.ZMGFence && window.ZMGFence.isCustomArea(p)) {
-                        const src = (Array.isArray(p.points) && p.points.length >= 3)
-                            ? window.ZMGFence.buildAreaSvgDataUrl(p.cols || 20, p.rows || 20, p.area, p.points, p.shapeAspect)
-                            : (p.src || window.ZMGFence.buildAreaSvgDataUrl(p.cols || 6, p.rows || 5, p.area));
-                        return {
-                            ...p,
-                            custom: true,
-                            src: src
-                        };
-                    }
-                    return p;
-                });
-
-                return [...mergedDefaults, ...extras];
+                return filtered.length > 0 ? filtered : DEFAULT_MAP_VECTORS;
             }
         }
     } catch (e) {
@@ -334,7 +278,7 @@ async function loadAllPlotsData() {
         let systemFenceConfig = null;
         if (!fetchError && dbPlots && dbPlots.length > 0) {
             dbPlots.forEach(p => {
-                if (p.section_name === '__SYSTEM_MAP_CONFIG__' && p.coordinates?.vectorLayers) {
+                if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
                     systemVectorLayers = p.coordinates.vectorLayers;
                     if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
                 }
@@ -342,6 +286,14 @@ async function loadAllPlotsData() {
                 if (!dbGrouped[p.section_name]) dbGrouped[p.section_name] = [];
                 dbGrouped[p.section_name].push(p);
             });
+        }
+
+        if ((!systemVectorLayers || !systemFenceConfig) && window.ZMGFence && typeof window.ZMGFence.fetchMapConfigFromSupabase === 'function') {
+            const directCfg = await window.ZMGFence.fetchMapConfigFromSupabase(supabaseClient);
+            if (directCfg) {
+                if (Array.isArray(directCfg.vectorLayers) && directCfg.vectorLayers.length > 0) systemVectorLayers = directCfg.vectorLayers;
+                if (directCfg.fenceConfig) systemFenceConfig = directCfg.fenceConfig;
+            }
         }
 
         // Keep local vector cache aligned with cloud system config (strip legacy walls, register custom areas)
@@ -491,21 +443,33 @@ function generateGenericSectionBlueprint(sectionName, shapeInfo) {
     const plots = [];
     const cols = shapeInfo.cols || 24;
     const rows = shapeInfo.rows || 24;
-    const isCondo = shapeInfo.prefix === 'COND';
-    const pW = isCondo ? 1 : (shapeInfo.category.includes('Supreme') ? 2 : (shapeInfo.category.includes('Family') ? 4 : 1));
-    const pH = isCondo ? 1 : (shapeInfo.category.includes('Supreme') ? 2 : (shapeInfo.category.includes('Family') ? 4 : 2));
-    const price = isCondo ? 35000 : (shapeInfo.category.includes('Family') ? 220000 : 65000);
-    const dp = isCondo ? 5250 : (price * 0.15);
+    const cat = String(shapeInfo.category || 'Supreme');
+    const isCondo = shapeInfo.prefix === 'COND' || cat === 'Condominium';
+    const isFamily = cat.includes('Family');
+    const isMaus = cat.includes('Mausoleum');
+    const isSpecial = cat.includes('Special');
+    const isSupreme = cat.includes('Supreme');
+
+    const pW = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 1)));
+    const pH = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 2)));
+    const price = shapeInfo.defaultPrice || (isCondo ? 35000 : (isFamily ? 220000 : (isMaus ? 150000 : (isSpecial ? 85000 : (isSupreme ? 65000 : 55000)))));
+    const dp = shapeInfo.defaultDown || (isCondo ? 5250 : Math.round(price * 0.15));
+    const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
     let seq = 1;
 
     for (let r = 1; r <= rows - pH + 1; r += (pH + (isCondo ? 0 : 1))) {
         for (let c = 1; c <= cols - pW + 1; c += (pW + (isCondo ? 0 : 1))) {
+            if (polyPts && window.ZMGFence && typeof window.ZMGFence.isPointInPolygonPct === 'function') {
+                const cxPct = ((c - 1 + pW / 2) / cols) * 100;
+                const cyPct = ((r - 1 + pH / 2) / rows) * 100;
+                if (!window.ZMGFence.isPointInPolygonPct(cxPct, cyPct, polyPts)) continue;
+            }
             const code = `${shapeInfo.prefix}-${String(seq).padStart(3, '0')}`;
             plots.push({
-                id: 1000 + seq,
+                id: ((parseInt(shapeInfo.area, 10) || 1) * 1000) + seq,
                 plot_identifier: code,
                 section_name: sectionName,
-                category: shapeInfo.category,
+                category: cat,
                 status: 'available',
                 price: price,
                 down_payment: dp,
@@ -557,7 +521,7 @@ function renderEntireCemeteryMapWithPlots() {
             partImg.style.pointerEvents = 'none';
             partImg.addEventListener('load', () => {
                 if (window.ZMGFence) {
-                    window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+                    window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
                 }
             });
             board.appendChild(partImg);
@@ -613,7 +577,7 @@ function renderEntireCemeteryMapWithPlots() {
         shapeImg.draggable = false;
         if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
             shapeImg.addEventListener('load', () => {
-                window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+                window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
             });
         }
         areaContainer.appendChild(shapeImg);
@@ -680,7 +644,7 @@ function renderEntireCemeteryMapWithPlots() {
     });
 
     if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
-        window.ZMGFence.render(board, layout, { clamp: false, padding: 36 });
+        window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
     }
 }
 
@@ -1101,6 +1065,23 @@ function applyCanvasTransform() {
 }
 
 function centerMap() {
+    const board = document.getElementById('entireMapBoard');
+    const viewport = document.getElementById('pdViewport');
+    if (window.ZMGFence && typeof window.ZMGFence.computeContentFitTransform === 'function' && board && viewport) {
+        const fit = window.ZMGFence.computeContentFitTransform(
+            board,
+            viewport.getBoundingClientRect(),
+            BOARD_WIDTH,
+            BOARD_HEIGHT,
+            '.pd-map-area, .pd-map-entrance, .pd-map-decor',
+            { minZoom: 0.35, maxZoom: 1.4, padding: 40 }
+        );
+        const factor = currentZoom / (fit.zoom || 1);
+        panX = fit.panX * factor;
+        panY = fit.panY * factor;
+        applyCanvasTransform();
+        return;
+    }
     // Center directly on the active cemetery grounds cluster
     panX = -110 * currentZoom;
     panY = 180 * currentZoom;
@@ -1109,10 +1090,26 @@ function centerMap() {
 
 function autoFitMapToViewport() {
     const viewport = document.getElementById('pdViewport');
+    const board = document.getElementById('entireMapBoard');
     if (!viewport) return;
 
     const rect = viewport.getBoundingClientRect();
     if (rect.width > 50 && rect.height > 50) {
+        if (window.ZMGFence && typeof window.ZMGFence.computeContentFitTransform === 'function' && board) {
+            const fit = window.ZMGFence.computeContentFitTransform(
+                board,
+                rect,
+                BOARD_WIDTH,
+                BOARD_HEIGHT,
+                '.pd-map-area, .pd-map-entrance, .pd-map-decor',
+                { minZoom: 0.35, maxZoom: 1.4, padding: 40 }
+            );
+            currentZoom = fit.zoom;
+            panX = fit.panX;
+            panY = fit.panY;
+            applyCanvasTransform();
+            return;
+        }
         // Tightly fit to the actual cemetery grounds cluster (no dead space)
         const CLUSTER_WIDTH = 1540;
         const CLUSTER_HEIGHT = 1460;

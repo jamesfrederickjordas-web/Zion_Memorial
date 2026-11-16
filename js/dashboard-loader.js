@@ -270,12 +270,49 @@ function generateArea5ExactBlueprintLayout() {
     return plots;
 }
 
+const BASE_TAB_AREAS = {
+    'condominium': ['10'],
+    'single-teired': ['1', '6'],
+    'supreme': ['4', '7', '8'],
+    'special-supreme': ['2', '5', '9', '11'],
+    'family-estate': ['3'],
+    'mausoleum': ['12']
+};
+
+function getAreaIdsForLawnTab(lawnType) {
+    const base = BASE_TAB_AREAS[lawnType] || [];
+    const custom = Object.values(RES_SECTION_SHAPE_MAP)
+        .filter(item => item && item.tab === lawnType && item.area)
+        .map(item => String(item.area));
+    return Array.from(new Set([...base, ...custom]));
+}
+
+function applyModalActiveAreaHighlights(lawnType) {
+    const activeAreas = getAreaIdsForLawnTab(lawnType);
+    const modalMap = document.getElementById('modalVectorMapCanvas');
+    const targetEls = modalMap ? modalMap.querySelectorAll('.map-vector-element') : document.querySelectorAll('#modalVectorMapCanvas .map-vector-element');
+    targetEls.forEach(el => {
+        el.classList.remove('active-vector-zone');
+        if (activeAreas.includes(el.dataset.areaId)) {
+            el.classList.add('active-vector-zone');
+        }
+    });
+}
+
 function syncCustomAreasToDashboard(layersOverride) {
     if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') return;
     const layers = Array.isArray(layersOverride)
         ? layersOverride
         : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
     const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.keys(RES_SECTION_SHAPE_MAP).forEach(secName => {
+        if (RES_SECTION_SHAPE_MAP[secName].custom && !entries[secName]) {
+            delete RES_SECTION_SHAPE_MAP[secName];
+            Object.keys(LAWN_TAB_TO_SECTIONS).forEach(tab => {
+                LAWN_TAB_TO_SECTIONS[tab] = (LAWN_TAB_TO_SECTIONS[tab] || []).filter(n => n !== secName);
+            });
+        }
+    });
     Object.entries(entries).forEach(([secName, meta]) => {
         RES_SECTION_SHAPE_MAP[secName] = meta;
         const tabKey = meta.tab || (window.ZMGFence.CATEGORY_TABS && window.ZMGFence.CATEGORY_TABS[meta.category]) || 'special-supreme';
@@ -288,6 +325,12 @@ function syncCustomAreasToDashboard(layersOverride) {
 window.syncCustomAreasToDashboard = syncCustomAreasToDashboard;
 window.addEventListener('zmg:vector-layout-updated', (e) => {
     syncCustomAreasToDashboard(e && e.detail ? e.detail : null);
+    const modal = document.getElementById('reservationModal');
+    if (modal && modal.classList.contains('active')) {
+        const activeTab = document.querySelector('.lawn-tab.active');
+        const currentLawn = activeTab ? activeTab.getAttribute('data-lawn') : 'special-supreme';
+        requestAnimationFrame(() => applyModalActiveAreaHighlights(currentLawn));
+    }
 });
 
 async function initializeDashboard() {
@@ -657,6 +700,7 @@ async function initializeDashboard() {
 
     function openReservationModal() {
         if (reservationModal) {
+            syncCustomAreasToDashboard();
             reservationModal.classList.add('active');
 
             // Re-render modal vector map to ensure synchronized vectors
@@ -679,25 +723,8 @@ async function initializeDashboard() {
             const shapeInfo = RES_SECTION_SHAPE_MAP[currentResAreaSectionName];
             loadPlotsForCategory(currentLawn, shapeInfo ? shapeInfo.area : null, currentResAreaSectionName);
 
-            // Sync highlight to active lawn on the Full Cemetery Map
-            const tabToAreas = {
-                'condominium': ['10'],
-                'single-teired': ['1', '6'],
-                'supreme': ['4', '7', '8'],
-                'special-supreme': ['2', '5', '9', '11'],
-                'family-estate': ['3'],
-                'mausoleum': ['12']
-            };
-            const activeAreas = tabToAreas[currentLawn] || [];
             setTimeout(() => {
-                const modalMap = document.getElementById('modalVectorMapCanvas');
-                const targetEls = modalMap ? modalMap.querySelectorAll('.map-vector-element') : document.querySelectorAll('#modalVectorMapCanvas .map-vector-element');
-                targetEls.forEach(el => {
-                    el.classList.remove('active-vector-zone');
-                    if (activeAreas.includes(el.dataset.areaId)) {
-                        el.classList.add('active-vector-zone');
-                    }
-                });
+                applyModalActiveAreaHighlights(currentLawn);
                 clearDashboardMapHighlights();
             }, 50);
         }
@@ -835,28 +862,8 @@ async function initializeDashboard() {
                 }
             }
 
-            // Highlight all vectors matching this lawn category on the Full Cemetery Map
-            const tabToAreas = {
-                'condominium': ['10'],
-                'single-teired': ['1', '6'],
-                'supreme': ['4', '7', '8'],
-                'special-supreme': ['2', '5', '9', '11'],
-                'family-estate': ['3'],
-                'mausoleum': ['12']
-            };
-            const baseAreas = tabToAreas[lawnType] || [];
-            const customAreasForTab = Object.values(RES_SECTION_SHAPE_MAP)
-                .filter(item => item && item.tab === lawnType && item.area)
-                .map(item => String(item.area));
-            const activeAreas = Array.from(new Set([...baseAreas, ...customAreasForTab]));
-            const modalMap = document.getElementById('modalVectorMapCanvas');
-            const targetEls = modalMap ? modalMap.querySelectorAll('.map-vector-element') : document.querySelectorAll('#modalVectorMapCanvas .map-vector-element');
-            targetEls.forEach(el => {
-                el.classList.remove('active-vector-zone');
-                if (activeAreas.includes(el.dataset.areaId)) {
-                    el.classList.add('active-vector-zone');
-                }
-            });
+            // Highlight all vectors matching this lawn category on the Full Cemetery Map (including custom areas)
+            applyModalActiveAreaHighlights(lawnType);
             clearDashboardMapHighlights();
 
             // Load plots for this category/area
@@ -1060,6 +1067,7 @@ async function loadPlotsForCategory(lawnType, filterAreaId = null, filterAreaNam
     if (!dropdown) return;
 
     // Resolve target section name (exact cemetery area)
+    syncCustomAreasToDashboard();
     const sectionsForTab = LAWN_TAB_TO_SECTIONS[lawnType] || ['Area 5 - Special Supreme Estate'];
     let targetSectionName = filterAreaName;
     if (!targetSectionName || !RES_SECTION_SHAPE_MAP[targetSectionName]) {

@@ -88,17 +88,30 @@
 
     function resolveLayerBoxPx(container, v, requireLoaded) {
         const el = findLayerElement(container, v.id);
+        const imgEl = (el && el.tagName === 'IMG')
+            ? el
+            : (el && typeof el.querySelector === 'function' ? el.querySelector('img') : null);
         const hasInlinePoly = !!(sanitizePolygonPoints(v && v.points, MIN_POLYGON_POINTS) && v && Number(v.shapeAspect) > 0);
+        const aspectFromData = el && el.dataset && Number(el.dataset.aspectRatio) > 0 ? Number(el.dataset.aspectRatio) : 0;
+        const hasBuiltinHull = !!(v && v.src && builtinSilhouetteForSrc(v.src) && aspectFromData > 0);
         if (!el && !hasInlinePoly) return null;
-        if (requireLoaded && !hasInlinePoly && (!el || !(el.complete && el.naturalWidth > 0))) return null;
+        if (requireLoaded && !hasInlinePoly && !hasBuiltinHull && (!imgEl || !(imgEl.complete && imgEl.naturalWidth > 0))) {
+            return null;
+        }
         const { W } = containerSize(container);
         const w = (Number(v.width) || 0) / 100 * W;
-        let h = el ? (el.offsetHeight || (el.naturalWidth ? w * (el.naturalHeight / el.naturalWidth) : 0)) : 0;
+        let h = el ? (el.offsetHeight || 0) : 0;
+        if (h <= 0 && imgEl && imgEl.naturalWidth > 0) {
+            h = w * (imgEl.naturalHeight / imgEl.naturalWidth);
+        }
+        if (h <= 0 && aspectFromData > 0) {
+            h = w * aspectFromData;
+        }
         if (h <= 0 && Number(v.shapeAspect) > 0) {
             h = w * Number(v.shapeAspect);
         }
         if (w <= 0 || h <= 0) return null;
-        return { el, w, h };
+        return { el, imgEl, w, h };
     }
 
     function layerBox(container, v, requireLoaded) {
@@ -489,7 +502,7 @@
         const size = resolveLayerBoxPx(container, v, requireLoaded);
         if (!size) return null;
         const { W, H } = containerSize(container);
-        const { el, w, h } = size;
+        const { el, imgEl, w, h } = size;
 
         const left = (Number(v.left) || 0) / 100 * W;
         const top = (Number(v.top) || 0) / 100 * H;
@@ -503,8 +516,8 @@
         const customShape = sanitizePolygonPoints(v.points, MIN_POLYGON_POINTS);
         if (customShape) {
             normPts = customShape.map(p => [p.x / 100, p.y / 100]);
-        } else if (el) {
-            normPts = extractImageHullNormalized(el, v.src);
+        } else if (imgEl || el) {
+            normPts = extractImageHullNormalized(imgEl || el, v.src);
         }
         if (!normPts || normPts.length < 3) {
             normPts = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -1000,7 +1013,14 @@
             edgeGaps[best.index].push([sCenter - half, sCenter + half]);
         });
 
-        const style = { rail: '#5b4636', railWidth: 3, post: '#33271d', postSize: 6, spacing: 22 };
+        const unitScale = Math.max(1, Math.min(2.6, W / 1100));
+        const style = {
+            rail: '#5b4636',
+            railWidth: Number((3 * unitScale).toFixed(1)),
+            post: '#33271d',
+            postSize: Number((6 * unitScale).toFixed(1)),
+            spacing: Math.round(22 * unitScale)
+        };
         const splitInterval = (endLen, gapList) => {
             const sorted = gapList.slice().sort((a, b) => a[0] - b[0]);
             const segs = [];
@@ -1032,7 +1052,8 @@
         }
 
         // Heavier vertex corner posts
-        poly.points.forEach(pt => post(svg, pt.x, pt.y, 11, '#2a1f16'));
+        const cornerSize = Number((11 * unitScale).toFixed(1));
+        poly.points.forEach(pt => post(svg, pt.x, pt.y, cornerSize, '#2a1f16'));
 
         return {
             rect: poly.rect,
@@ -1338,6 +1359,169 @@
         return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
     }
 
+    function isPointInPolygonPct(px, py, poly) {
+        const clean = sanitizePolygonPoints(poly, MIN_POLYGON_POINTS);
+        if (!clean) return true;
+        let inside = false;
+        for (let i = 0, j = clean.length - 1; i < clean.length; j = i++) {
+            const xi = clean[i].x, yi = clean[i].y;
+            const xj = clean[j].x, yj = clean[j].y;
+            const intersect = ((yi > py) !== (yj > py)) &&
+                (px < ((xj - xi) * (py - yi)) / ((yj - yi) || 1e-9) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function mergeLayoutLayers(defaultVectors, savedLayers) {
+        const defaults = Array.isArray(defaultVectors) ? defaultVectors : [];
+        if (!Array.isArray(savedLayers) || savedLayers.length === 0) {
+            return defaults.map(d => ({ ...d, visible: d.visible !== false }));
+        }
+        const filtered = savedLayers.filter(v => v && !isLegacyWall(v));
+        const mergedDefaults = defaults.map(def => {
+            const found = filtered.find(p =>
+                (def.area != null && p.area != null && String(p.area) === String(def.area) && !p.custom) ||
+                p.id === def.id
+            );
+            if (!found) return { ...def, visible: def.visible !== false };
+            return {
+                ...def,
+                left: typeof found.left === 'number' ? found.left : def.left,
+                top: typeof found.top === 'number' ? found.top : def.top,
+                width: typeof found.width === 'number' ? found.width : def.width,
+                rotate: typeof found.rotate === 'number' ? found.rotate : def.rotate,
+                opacity: typeof found.opacity === 'number' ? found.opacity : (def.opacity ?? 1),
+                zIndex: typeof found.zIndex === 'number' ? found.zIndex : (def.zIndex || 5),
+                visible: found.visible !== false
+            };
+        });
+
+        const defaultIds = new Set(defaults.map(d => d.id));
+        const defaultAreas = new Set(defaults.map(d => String(d.area)));
+        const extras = filtered.filter(p => {
+            if (isEntrance(p) || isDecorPart(p) || isCustomArea(p)) return true;
+            return !defaultIds.has(p.id) && (!p.area || !defaultAreas.has(String(p.area)));
+        }).map(p => {
+            if (isEntrance(p)) {
+                return {
+                    ...p,
+                    kind: 'entrance',
+                    visible: p.visible !== false,
+                    src: p.src || entranceSvgDataUrl()
+                };
+            }
+            if (isDecorPart(p)) {
+                const fenceExclude = !!p.fenceExclude;
+                const copy = {
+                    ...p,
+                    kind: 'decor',
+                    custom: false,
+                    area: null,
+                    visible: p.visible !== false,
+                    fenceExclude,
+                    fenceInclude: !fenceExclude
+                };
+                if (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS) {
+                    copy.src = buildPartSvgDataUrl(copy);
+                }
+                return copy;
+            }
+            if (isCustomArea(p)) {
+                const copy = {
+                    ...p,
+                    custom: true,
+                    visible: p.visible !== false
+                };
+                copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
+                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
+                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area));
+                return copy;
+            }
+            return { ...p, visible: p.visible !== false };
+        });
+
+        return mergedDefaults.concat(extras);
+    }
+
+    function computeContentFitTransform(board, viewportRect, boardW, boardH, itemSelector, opts) {
+        opts = opts || {};
+        const minZ = opts.minZoom != null ? opts.minZoom : 0.3;
+        const maxZ = opts.maxZoom != null ? opts.maxZoom : 1.4;
+        const pad = opts.padding != null ? opts.padding : 48;
+        const vw = Math.max(100, viewportRect ? viewportRect.width : 800);
+        const vh = Math.max(100, viewportRect ? viewportRect.height : 600);
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        if (board && typeof board.querySelectorAll === 'function') {
+            const items = board.querySelectorAll(itemSelector);
+            for (let i = 0; i < items.length; i++) {
+                const el = items[i];
+                if (el.style && el.style.display === 'none') continue;
+                const leftPct = parseFloat(el.dataset && el.dataset.leftPct !== undefined ? el.dataset.leftPct : el.style.left);
+                const topPct = parseFloat(el.dataset && el.dataset.topPct !== undefined ? el.dataset.topPct : el.style.top);
+                const widthPct = parseFloat(el.dataset && el.dataset.widthPct !== undefined ? el.dataset.widthPct : el.style.width);
+                if (!Number.isFinite(leftPct) || !Number.isFinite(topPct) || !Number.isFinite(widthPct) || widthPct <= 0) continue;
+
+                const w = (widthPct / 100) * boardW;
+                let aspect = parseFloat(el.dataset && el.dataset.aspectRatio);
+                if (!Number.isFinite(aspect) || aspect <= 0) {
+                    aspect = (el.naturalWidth > 0 && el.naturalHeight > 0)
+                        ? (el.naturalHeight / el.naturalWidth)
+                        : (el.offsetWidth > 0 && el.offsetHeight > 0 ? (el.offsetHeight / el.offsetWidth) : 1);
+                }
+                const h = w * aspect;
+                const x0 = (leftPct / 100) * boardW;
+                const y0 = (topPct / 100) * boardH;
+                const cx = x0 + w / 2;
+                const cy = y0 + h / 2;
+                const rotMatch = el.style && el.style.transform ? /rotate\(([-\d.]+)deg\)/.exec(el.style.transform) : null;
+                const deg = parseFloat((el.dataset && el.dataset.rotate !== undefined) ? el.dataset.rotate : (rotMatch ? rotMatch[1] : '0')) || 0;
+                const rad = (deg * Math.PI) / 180;
+                const bw = Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad));
+                const bh = Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad));
+                minX = Math.min(minX, cx - bw / 2);
+                maxX = Math.max(maxX, cx + bw / 2);
+                minY = Math.min(minY, cy - bh / 2);
+                maxY = Math.max(maxY, cy + bh / 2);
+            }
+        }
+
+        if (!Number.isFinite(minX) || maxX <= minX || maxY <= minY) {
+            const zoom = Math.max(minZ, Math.min((vw - pad) / 1540, (vh - pad) / 1460, maxZ));
+            return { zoom, panX: -110 * zoom, panY: 180 * zoom };
+        }
+
+        const margin = opts.fenceMargin != null ? opts.fenceMargin : 70;
+        const cMinX = minX - margin;
+        const cMaxX = maxX + margin;
+        const cMinY = minY - margin;
+        const cMaxY = maxY + margin;
+        const contentW = Math.max(200, cMaxX - cMinX);
+        const contentH = Math.max(200, cMaxY - cMinY);
+        const zoom = Math.max(minZ, Math.min((vw - pad) / contentW, (vh - pad) / contentH, maxZ));
+        const midX = (cMinX + cMaxX) / 2;
+        const midY = (cMinY + cMaxY) / 2;
+        return {
+            zoom,
+            panX: -(midX - boardW / 2) * zoom,
+            panY: -(midY - boardH / 2) * zoom
+        };
+    }
+
+    async function fetchMapConfigFromSupabase(client) {
+        if (!client || typeof client.from !== 'function') return null;
+        try {
+            const { data, error } = await client
+                .from('memorial_spaces')
+                .select('coordinates')
+                .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
+                .maybeSingle();
+            if (!error && data && data.coordinates) return data.coordinates;
+        } catch (_) {}
+        return null;
+    }
+
     function readStoredLayers() {
         try {
             const parsed = JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) || '[]');
@@ -1364,6 +1548,10 @@
         entranceSvgDataUrl,
         createEntranceLayer,
         sanitizePolygonPoints,
+        isPointInPolygonPct,
+        mergeLayoutLayers,
+        computeContentFitTransform,
+        fetchMapConfigFromSupabase,
         readStoredFenceConfig,
         writeStoredFenceConfig,
         rectToPolygonPoints,

@@ -222,12 +222,39 @@ const CUSTOM_CATEGORY_DEFAULTS = {
     'Mausoleum':         { defaultPrice: 350000, defaultDown: 52500 }
 };
 
+function syncSectionDropdownOptions() {
+    const dropdown = document.getElementById('sectionSelectDropdown');
+    if (!dropdown) return;
+    const prevVal = dropdown.value || currentSectionName;
+    const orderedNames = Object.keys(SECTION_SHAPE_MAP).sort((a, b) => {
+        const na = parseInt(SECTION_SHAPE_MAP[a].area, 10) || 999;
+        const nb = parseInt(SECTION_SHAPE_MAP[b].area, 10) || 999;
+        return na !== nb ? na - nb : a.localeCompare(b);
+    });
+    dropdown.innerHTML = '';
+    orderedNames.forEach(secName => {
+        const meta = SECTION_SHAPE_MAP[secName];
+        const opt = document.createElement('option');
+        opt.value = secName;
+        opt.dataset.area = meta.area || '';
+        opt.dataset.tab = meta.tab || '';
+        opt.textContent = secName;
+        dropdown.appendChild(opt);
+    });
+    if (SECTION_SHAPE_MAP[prevVal]) dropdown.value = prevVal;
+}
+
 function registerCustomAreasForPlotDetails(layersOverride) {
     if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') return;
     const layers = Array.isArray(layersOverride)
         ? layersOverride
         : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
     const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.keys(SECTION_SHAPE_MAP).forEach(secName => {
+        if (SECTION_SHAPE_MAP[secName].custom && !entries[secName]) {
+            delete SECTION_SHAPE_MAP[secName];
+        }
+    });
     Object.entries(entries).forEach(([secName, meta]) => {
         const pricing = CUSTOM_CATEGORY_DEFAULTS[meta.category] || { defaultPrice: 65000, defaultDown: 9750 };
         SECTION_SHAPE_MAP[secName] = {
@@ -237,6 +264,7 @@ function registerCustomAreasForPlotDetails(layersOverride) {
             defaultDown: pricing.defaultDown
         };
     });
+    syncSectionDropdownOptions();
 }
 
 async function syncCustomAreasFromSupabase() {
@@ -246,7 +274,7 @@ async function syncCustomAreasFromSupabase() {
         const { data: cfgRow, error } = await supabaseClient
             .from('memorial_spaces')
             .select('coordinates')
-            .eq('section_name', '__SYSTEM_MAP_CONFIG__')
+            .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
             .maybeSingle();
         if (!error && cfgRow && cfgRow.coordinates && Array.isArray(cfgRow.coordinates.vectorLayers)) {
             const cleaned = cfgRow.coordinates.vectorLayers.filter(v => !window.ZMGFence || !window.ZMGFence.isLegacyWall(v));
@@ -558,9 +586,15 @@ function generateGenericBlueprint(sectionName, shapeInfo) {
 
     const stepCol = pW + (isCondo ? 0 : 1);
     const stepRow = pH + (isCondo ? 0 : 1);
+    const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
 
     for (let r = 1; r <= rows - pH + 1; r += stepRow) {
         for (let c = 1; c <= cols - pW + 1; c += stepCol) {
+            if (polyPts && window.ZMGFence && typeof window.ZMGFence.isPointInPolygonPct === 'function') {
+                const cxPct = ((c - 1 + pW / 2) / cols) * 100;
+                const cyPct = ((r - 1 + pH / 2) / rows) * 100;
+                if (!window.ZMGFence.isPointInPolygonPct(cxPct, cyPct, polyPts)) continue;
+            }
             const code = `${shapeInfo.prefix}-${String(seq).padStart(3, '0')}`;
             plots.push({
                 id: ((parseInt(shapeInfo.area, 10) || 13) * 1000) + seq,

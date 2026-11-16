@@ -1948,6 +1948,16 @@ body::-webkit-scrollbar {
     filter: drop-shadow(0 0 22px rgba(212, 175, 55, 0.85)) brightness(1.06) !important;
 }
 
+.pd-map-entrance,
+.pd-map-decor {
+    position: absolute;
+    height: auto;
+    max-width: none !important;
+    pointer-events: none;
+    transform-origin: center center;
+    user-select: none;
+}
+
 /* Floating Clean Zone Badge Above Area */
 .pd-area-floating-label {
     position: absolute;

@@ -3055,6 +3055,9 @@ let modalShapeState = {
 };
 
 function isPointInPolygonPct(x, y, poly) {
+    if (window.ZMGFence && typeof window.ZMGFence.isPointInPolygonPct === 'function') {
+        return window.ZMGFence.isPointInPolygonPct(x, y, poly);
+    }
     if (!Array.isArray(poly) || poly.length < 3) return true;
     let inside = false;
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {

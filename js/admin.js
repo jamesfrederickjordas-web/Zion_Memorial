@@ -1916,6 +1916,50 @@ const ADMIN_LOC_SECTION_SHAPE_MAP = {
     'Area 12 - Mausoleum Court': { area: '12', asset: 'assets/images/Map/Vector (4).png', prefix: 'MAUS', category: 'Mausoleum', cols: 24, rows: 24, widthPx: 691, heightPx: 669 }
 };
 
+function populateAdminLocatorSectionFilter() {
+    const select = document.getElementById('adminLocatorSectionFilter');
+    const orderedNames = Object.keys(ADMIN_LOC_SECTION_SHAPE_MAP).sort((a, b) => {
+        const na = parseInt(ADMIN_LOC_SECTION_SHAPE_MAP[a].area, 10) || 999;
+        const nb = parseInt(ADMIN_LOC_SECTION_SHAPE_MAP[b].area, 10) || 999;
+        return na !== nb ? na - nb : a.localeCompare(b);
+    });
+    const totalAreas = orderedNames.length;
+
+    const subtitleEl = document.getElementById('adminLocZonesSubtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = `All ${totalAreas} lawn zones \u2022 Click any plot or select a loved one on the right to locate`;
+    }
+
+    if (!select) return;
+    const prevVal = select.value || 'ALL';
+    select.innerHTML = `<option value="ALL">All Cemetery Sections (${totalAreas} Areas)</option>` +
+        orderedNames.map(name => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
+    select.value = orderedNames.includes(prevVal) ? prevVal : 'ALL';
+}
+
+function syncCustomAreasToAdminLoc(layersOverride) {
+    if (!window.ZMGFence || typeof window.ZMGFence.customShapeEntries !== 'function') {
+        populateAdminLocatorSectionFilter();
+        return;
+    }
+    const layers = Array.isArray(layersOverride)
+        ? layersOverride
+        : (typeof window.ZMGFence.readStoredLayers === 'function' ? window.ZMGFence.readStoredLayers() : []);
+    const entries = window.ZMGFence.customShapeEntries(layers);
+    Object.keys(ADMIN_LOC_SECTION_SHAPE_MAP).forEach(secName => {
+        if (ADMIN_LOC_SECTION_SHAPE_MAP[secName].custom && !entries[secName]) {
+            delete ADMIN_LOC_SECTION_SHAPE_MAP[secName];
+        }
+    });
+    Object.entries(entries).forEach(([secName, meta]) => {
+        ADMIN_LOC_SECTION_SHAPE_MAP[secName] = {
+            ...meta,
+            asset: meta.asset || window.ZMGFence.buildAreaSvgDataUrl(meta.cols, meta.rows, meta.area)
+        };
+    });
+    populateAdminLocatorSectionFilter();
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '--';
     const d = new Date(dateStr);
@@ -1951,6 +1995,9 @@ function getAdminLocVectorLayout() {
         if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
+                if (window.ZMGFence && typeof window.ZMGFence.mergeLayoutLayers === 'function') {
+                    return window.ZMGFence.mergeLayoutLayers(ADMIN_LOC_DEFAULT_VECTORS, parsed);
+                }
                 return ADMIN_LOC_DEFAULT_VECTORS.map(def => {
                     const found = parsed.find(p => String(p.area) === String(def.area) || p.id === def.id);
                     if (found) {
@@ -2005,21 +2052,33 @@ function generateAdminLocGenericBlueprint(sectionName, shapeInfo) {
     const plots = [];
     const cols = shapeInfo.cols || 24;
     const rows = shapeInfo.rows || 24;
-    const isCondo = shapeInfo.prefix === 'COND';
-    const pW = isCondo ? 1 : (shapeInfo.category.includes('Supreme') ? 2 : (shapeInfo.category.includes('Family') ? 4 : 1));
-    const pH = isCondo ? 1 : (shapeInfo.category.includes('Supreme') ? 2 : (shapeInfo.category.includes('Family') ? 4 : 2));
-    const price = isCondo ? 35000 : (shapeInfo.category.includes('Family') ? 220000 : 65000);
-    const dp = isCondo ? 5250 : (price * 0.15);
+    const cat = String(shapeInfo.category || 'Supreme');
+    const isCondo = shapeInfo.prefix === 'COND' || cat === 'Condominium';
+    const isFamily = cat.includes('Family');
+    const isMaus = cat.includes('Mausoleum');
+    const isSpecial = cat.includes('Special');
+    const isSupreme = cat.includes('Supreme');
+
+    const pW = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 1)));
+    const pH = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 2)));
+    const price = isCondo ? 35000 : (isFamily ? 220000 : (isMaus ? 150000 : (isSpecial ? 85000 : (isSupreme ? 65000 : 55000))));
+    const dp = isCondo ? 5250 : Math.round(price * 0.15);
+    const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
     let seq = 1;
 
     for (let r = 1; r <= rows - pH + 1; r += (pH + (isCondo ? 0 : 1))) {
         for (let c = 1; c <= cols - pW + 1; c += (pW + (isCondo ? 0 : 1))) {
+            if (polyPts && window.ZMGFence && typeof window.ZMGFence.isPointInPolygonPct === 'function') {
+                const cxPct = ((c - 1 + pW / 2) / cols) * 100;
+                const cyPct = ((r - 1 + pH / 2) / rows) * 100;
+                if (!window.ZMGFence.isPointInPolygonPct(cxPct, cyPct, polyPts)) continue;
+            }
             const code = `${shapeInfo.prefix}-${String(seq).padStart(3, '0')}`;
             plots.push({
-                id: 1000 + seq,
+                id: ((parseInt(shapeInfo.area, 10) || 1) * 1000) + seq,
                 plot_identifier: code,
                 section_name: sectionName,
-                category: shapeInfo.category,
+                category: cat,
                 status: 'available',
                 price: price,
                 down_payment: dp,
@@ -2058,19 +2117,36 @@ async function loadAdminLocMapData() {
 
         const dbGrouped = {};
         let systemVectorLayers = null;
+        let systemFenceConfig = null;
         dbPlots.forEach(p => {
-            if (p.section_name === '__SYSTEM_MAP_CONFIG__' && p.coordinates?.vectorLayers) {
+            if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
                 systemVectorLayers = p.coordinates.vectorLayers;
+                if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
             }
             if (!p.section_name || p.section_name.includes('__SYSTEM')) return;
             if (!dbGrouped[p.section_name]) dbGrouped[p.section_name] = [];
             dbGrouped[p.section_name].push(p);
         });
 
+        if ((!systemVectorLayers || !systemFenceConfig) && window.ZMGFence && typeof window.ZMGFence.fetchMapConfigFromSupabase === 'function') {
+            const directCfg = await window.ZMGFence.fetchMapConfigFromSupabase(supabaseClient);
+            if (directCfg) {
+                if (Array.isArray(directCfg.vectorLayers) && directCfg.vectorLayers.length > 0) systemVectorLayers = directCfg.vectorLayers;
+                if (directCfg.fenceConfig) systemFenceConfig = directCfg.fenceConfig;
+            }
+        }
+
+        if (systemFenceConfig && window.ZMGFence) {
+            window.ZMGFence.writeStoredFenceConfig(systemFenceConfig);
+        }
         if (systemVectorLayers && Array.isArray(systemVectorLayers) && systemVectorLayers.length > 0) {
+            const cleanedSystem = systemVectorLayers.filter(v => !window.ZMGFence || !window.ZMGFence.isLegacyWall(v));
             try {
-                localStorage.setItem(ADMIN_LOC_VECTOR_STORAGE_KEY, JSON.stringify(systemVectorLayers));
+                localStorage.setItem(ADMIN_LOC_VECTOR_STORAGE_KEY, JSON.stringify(cleanedSystem));
             } catch (_) {}
+            syncCustomAreasToAdminLoc(cleanedSystem);
+        } else {
+            syncCustomAreasToAdminLoc();
         }
 
         // Map deceased records by plot code so occupied plots strictly reflect real deceased records
@@ -2093,6 +2169,16 @@ async function loadAdminLocMapData() {
         Object.keys(ADMIN_LOC_SECTION_SHAPE_MAP).forEach(secName => {
             const shapeInfo = ADMIN_LOC_SECTION_SHAPE_MAP[secName];
             let sectionPlots = dbGrouped[secName];
+
+            if (!sectionPlots || sectionPlots.length === 0) {
+                try {
+                    const cachedRaw = localStorage.getItem('zion_section_plots_v1_' + secName);
+                    if (cachedRaw) {
+                        const cached = JSON.parse(cachedRaw);
+                        if (Array.isArray(cached) && cached.length > 0) sectionPlots = cached;
+                    }
+                } catch (_) {}
+            }
 
             if (!sectionPlots || sectionPlots.length === 0) {
                 sectionPlots = (secName === 'Area 5 - Special Supreme Estate')
@@ -2139,12 +2225,45 @@ function renderAdminLocMapBoard() {
     const board = document.getElementById('adminLocMapBoard');
     if (!board) return;
 
-    board.querySelectorAll('.admin-loc-map-area').forEach(el => el.remove());
+    board.querySelectorAll('.admin-loc-map-area, .admin-loc-map-entrance, .admin-loc-map-decor').forEach(el => el.remove());
 
+    syncCustomAreasToAdminLoc();
     const layout = getAdminLocVectorLayout();
     const sectionFilterVal = document.getElementById('adminLocatorSectionFilter')?.value || 'ALL';
 
     layout.forEach(v => {
+        if (v.visible === false) return;
+        const isEntrance = window.ZMGFence && window.ZMGFence.isEntrance(v);
+        const isDecor = !isEntrance && ((window.ZMGFence && window.ZMGFence.isDecorPart && window.ZMGFence.isDecorPart(v)) || !v.area);
+        if (isEntrance || isDecor) {
+            if (!v.src && !isEntrance) return;
+            const partImg = document.createElement('img');
+            partImg.className = isEntrance ? 'admin-loc-map-entrance' : 'admin-loc-map-decor';
+            partImg.dataset.vectorId = v.id || '';
+            partImg.dataset.kind = isEntrance ? 'entrance' : 'decor';
+            partImg.dataset.leftPct = v.left;
+            partImg.dataset.topPct = v.top;
+            partImg.dataset.widthPct = v.width || (isEntrance ? 11 : 16);
+            partImg.dataset.rotate = v.rotate || 0;
+            if (Number(v.shapeAspect) > 0) partImg.dataset.aspectRatio = v.shapeAspect;
+            partImg.src = isEntrance ? (v.src || window.ZMGFence.entranceSvgDataUrl()) : v.src;
+            partImg.alt = v.name || (isEntrance ? 'Main Entrance Gate' : 'Map Structure');
+            partImg.draggable = false;
+            partImg.style.left = `${v.left}%`;
+            partImg.style.top = `${v.top}%`;
+            partImg.style.width = `${v.width || (isEntrance ? 11 : 16)}%`;
+            partImg.style.transform = `rotate(${v.rotate || 0}deg)`;
+            partImg.style.opacity = String(v.opacity ?? 1);
+            partImg.style.zIndex = String(v.zIndex || (isEntrance ? 25 : 6));
+            partImg.addEventListener('load', () => {
+                if (window.ZMGFence) {
+                    window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
+                }
+            });
+            board.appendChild(partImg);
+            return;
+        }
+
         const shapeMeta = Object.values(ADMIN_LOC_SECTION_SHAPE_MAP).find(s => s.area === String(v.area));
         const sectionName = shapeMeta ? Object.keys(ADMIN_LOC_SECTION_SHAPE_MAP).find(k => ADMIN_LOC_SECTION_SHAPE_MAP[k].area === String(v.area)) : v.name;
         if (!shapeMeta) return;
@@ -2165,6 +2284,7 @@ function renderAdminLocMapBoard() {
         const areaContainer = document.createElement('div');
         areaContainer.className = 'admin-loc-map-area';
         areaContainer.id = `admin-loc-area-zone-${v.area}`;
+        areaContainer.dataset.vectorId = v.id || '';
         areaContainer.dataset.area = v.area;
         areaContainer.dataset.sectionName = sectionName;
         areaContainer.dataset.leftPct = v.left;
@@ -2181,9 +2301,12 @@ function renderAdminLocMapBoard() {
         areaContainer.style.width = `${v.width}%`;
         areaContainer.style.aspectRatio = `${shapeMeta.widthPx} / ${shapeMeta.heightPx}`;
         areaContainer.style.transform = `rotate(${v.rotate || 0}deg)`;
+        if (v.zIndex) areaContainer.style.zIndex = String(v.zIndex);
 
         if (sectionFilterVal !== 'ALL' && !sectionName.toLowerCase().includes(sectionFilterVal.toLowerCase())) {
             areaContainer.style.opacity = '0.28';
+        } else if (typeof v.opacity === 'number' && v.opacity < 1) {
+            areaContainer.style.opacity = String(v.opacity);
         }
 
         const shapeImg = document.createElement('img');
@@ -2191,6 +2314,11 @@ function renderAdminLocMapBoard() {
         shapeImg.alt = sectionName;
         shapeImg.className = 'admin-loc-area-shape-img';
         shapeImg.draggable = false;
+        shapeImg.addEventListener('load', () => {
+            if (window.ZMGFence) {
+                window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
+            }
+        });
         areaContainer.appendChild(shapeImg);
 
         const badge = document.createElement('div');
@@ -2247,6 +2375,10 @@ function renderAdminLocMapBoard() {
         areaContainer.appendChild(gridLayer);
         board.appendChild(areaContainer);
     });
+
+    if (window.ZMGFence && typeof window.ZMGFence.render === 'function') {
+        window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
+    }
 }
 
 function attachPinToAdminLocSlot(slotEl, labelText, areaRotate = 0) {
@@ -2577,6 +2709,23 @@ function applyAdminLocCanvasTransform() {
 }
 
 function centerAdminLocMap() {
+    const board = document.getElementById('adminLocMapBoard');
+    const viewport = document.getElementById('adminLocViewport');
+    if (window.ZMGFence && typeof window.ZMGFence.computeContentFitTransform === 'function' && board && viewport) {
+        const fit = window.ZMGFence.computeContentFitTransform(
+            board,
+            viewport.getBoundingClientRect(),
+            ADMIN_LOC_BOARD_WIDTH,
+            ADMIN_LOC_BOARD_HEIGHT,
+            '.admin-loc-map-area, .admin-loc-map-entrance, .admin-loc-map-decor',
+            { minZoom: 0.3, maxZoom: 1.3, padding: 30 }
+        );
+        const factor = adminLocZoom / (fit.zoom || 1);
+        adminLocPanX = fit.panX * factor;
+        adminLocPanY = fit.panY * factor;
+        applyAdminLocCanvasTransform();
+        return;
+    }
     adminLocPanX = -110 * adminLocZoom;
     adminLocPanY = 180 * adminLocZoom;
     applyAdminLocCanvasTransform();
@@ -2584,10 +2733,26 @@ function centerAdminLocMap() {
 
 function autoFitAdminLocMap() {
     const viewport = document.getElementById('adminLocViewport');
+    const board = document.getElementById('adminLocMapBoard');
     if (!viewport) return;
 
     const rect = viewport.getBoundingClientRect();
     if (rect.width > 50 && rect.height > 50) {
+        if (window.ZMGFence && typeof window.ZMGFence.computeContentFitTransform === 'function' && board) {
+            const fit = window.ZMGFence.computeContentFitTransform(
+                board,
+                rect,
+                ADMIN_LOC_BOARD_WIDTH,
+                ADMIN_LOC_BOARD_HEIGHT,
+                '.admin-loc-map-area, .admin-loc-map-entrance, .admin-loc-map-decor',
+                { minZoom: 0.3, maxZoom: 1.3, padding: 30 }
+            );
+            adminLocZoom = fit.zoom;
+            adminLocPanX = fit.panX;
+            adminLocPanY = fit.panY;
+            applyAdminLocCanvasTransform();
+            return;
+        }
         const CLUSTER_WIDTH = 1540;
         const CLUSTER_HEIGHT = 1460;
         const fitW = (rect.width - 30) / CLUSTER_WIDTH;
@@ -2600,6 +2765,12 @@ function autoFitAdminLocMap() {
 function setupLovedOnesLocatorFilters() {
     if (lovedOnesLocatorInitialized) return;
     lovedOnesLocatorInitialized = true;
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === ADMIN_LOC_VECTOR_STORAGE_KEY || e.key === 'zion_cemetery_fence_config_v1') {
+            loadAdminLocMapData().then(() => renderAdminLocMapBoard());
+        }
+    });
 
     const searchInput = document.getElementById('adminLocatorSearchInput');
     const sectionFilter = document.getElementById('adminLocatorSectionFilter');
