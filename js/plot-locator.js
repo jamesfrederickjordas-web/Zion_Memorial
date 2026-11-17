@@ -33,7 +33,7 @@ let activeSelectedPlot = null;
 let locatedPlotTarget = null;
 
 // Storage Keys
-const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
+const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
 
 // Calibrated 12-Area Layout Coordinates (Master Cemetery Grounds)
 const DEFAULT_MAP_VECTORS = [

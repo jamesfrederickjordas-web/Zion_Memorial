@@ -3,7 +3,7 @@
 // Zion Memorial Garden - Cloud-Based Online Reservation & Records Management
 // ==============================================================================
 
-const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
+const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
 
 // ==============================================================================
 // MAP VECTOR ASSET TO REAL CEMETERY AREA MAPPING
@@ -37,8 +37,10 @@ const VECTOR_FILE_TO_AREA = {
     'Vector (4).png':  { area: '12', name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum', desc: 'Area 12 - Mausoleum Court memorial section' }
 };
 
-// Default layout coordinates calibrated for Zion Memorial Garden vector assets (ZERO OVERLAPS)
-const DEFAULT_MAP_VECTORS = [
+// Default layout coordinates calibrated for Zion Memorial Garden revised upright map
+const DEFAULT_MAP_VECTORS = (typeof window !== 'undefined' && window.ZMGFence && typeof window.ZMGFence.getRevisedDefaultVectors === 'function')
+    ? window.ZMGFence.getRevisedDefaultVectors()
+    : [
     {
         id: 'vector-14',
         area: '10',
