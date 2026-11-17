@@ -338,13 +338,38 @@ async function initializeDashboard() {
     // =========================================
     // 1. SUPABASE AUTH & SESSION CHECK
     // =========================================
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
+    // Handle email verification / auth callback params (?code=... or #access_token=...)
+    const authUrlParams = new URLSearchParams(window.location.search);
+    const authHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const callbackError = authUrlParams.get('error_description') || authHashParams.get('error_description');
+
+    if (callbackError) {
+        sessionStorage.clear();
+        alert("Email verification failed: " + decodeURIComponent(callbackError.replace(/\+/g, ' ')));
+        window.location.href = "index.html";
+        return;
+    }
+
+    const authCode = authUrlParams.get('code');
+    if (authCode) {
+        await supabaseClient.auth.exchangeCodeForSession(authCode);
+    }
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { user }, error: authError } = session?.user
+        ? { data: { user: session.user }, error: null }
+        : await supabaseClient.auth.getUser();
+
     if (authError || !user) {
         sessionStorage.clear();
         alert("Please login first to access the dashboard.");
         window.location.href = "index.html";
         return;
+    }
+
+    // Clean auth tokens/codes from URL after successful verification
+    if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     sessionStorage.setItem("isLoggedIn", "true");
