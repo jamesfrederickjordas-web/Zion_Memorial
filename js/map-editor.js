@@ -3,7 +3,7 @@
 // Zion Memorial Garden - Unified Map Vector & Plot Grid Studio
 // ==============================================================================
 
-const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
+const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
 const MAP_DIR = 'assets/images/Map/';
 
 // ── Master Asset Catalog for "Add Vector" ──
@@ -53,22 +53,20 @@ const VECTOR_CATALOG = [
     { file: 'Vector (4).png',   name: 'Area 12 - Mausoleum Court', desc: 'Mausoleum Court memorial section', defaultW: 20, defaultZ: 6 }
 ];
 
-// ── Default Vector Layout Coordinates (Revised Upright Architectural Map) ──
-const DEFAULT_VECTORS = (typeof window !== 'undefined' && window.ZMGFence && typeof window.ZMGFence.getRevisedDefaultVectors === 'function')
-    ? window.ZMGFence.getRevisedDefaultVectors()
-    : [
-    { id: 'vector-14', area: '10', name: 'Area 10 - Condominium Block A', src: MAP_DIR + 'Vector (14).png', left: 59.6, top: 21.8, width: 21.8, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-12', area: '4',  name: 'Area 4 - Supreme Garden', src: MAP_DIR + 'Vector (12).png', left: 21.0, top: 28.2, width: 14.0, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-11', area: '9',  name: 'Area 9 - Lawn of Serenity', src: MAP_DIR + 'Vector (11).png', left: 36.2, top: 13.5, width: 13.8, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-10', area: '8',  name: 'Area 8 - Lawn of Grace', src: MAP_DIR + 'Vector (10).png', left: 51.2, top: 18.8, width: 6.5, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-13', area: '5',  name: 'Area 5 - Special Supreme Estate', src: MAP_DIR + 'Vector (13).png', left: 36.2, top: 28.2, width: 13.8, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-5',  area: '7',  name: 'Area 7 - Lawn of Faith', src: MAP_DIR + 'Vector (5).png', left: 51.2, top: 29.2, width: 7.4, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-6',  area: '6',  name: 'Area 6 - Lawn of Peace', src: MAP_DIR + 'Vector (6).png', left: 51.2, top: 43.0, width: 7.4, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-3',  area: '11', name: 'Area 11 - Lawn of Memories', src: MAP_DIR + 'Vector (3).png', left: 59.8, top: 28.0, width: 6.8, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-4',  area: '12', name: 'Area 12 - Mausoleum Court', src: MAP_DIR + 'Vector (4).png', left: 67.6, top: 26.2, width: 11.2, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-8',  area: '2',  name: 'Area 2 - Lawn of Love', src: MAP_DIR + 'Vector (8).png', left: 36.2, top: 47.4, width: 13.8, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-9',  area: '3',  name: 'Area 3 - Lawn of Hope (Family Estate)', src: MAP_DIR + 'Vector (9).png', left: 21.0, top: 47.4, width: 14.0, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-7',  area: '1',  name: 'Area 1 - Single Tiered Lawn', src: MAP_DIR + 'Vector (7).png', left: 36.2, top: 66.8, width: 18.2, rotate: 0, opacity: 1.0, zIndex: 5, visible: true }
+// ── Default Vector Layout Coordinates (ZERO OVERLAPS) ──
+const DEFAULT_VECTORS = [
+    { id: 'vector-14', area: '10', name: 'Area 10 - Condominium Block A', src: MAP_DIR + 'Vector (14).png', left: 41.0, top: 4.0, width: 18.0, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
+    { id: 'vector-12', area: '4',  name: 'Area 4 - Supreme Garden', src: MAP_DIR + 'Vector (12).png', left: 24.0, top: 25.0, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-11', area: '9',  name: 'Area 9 - Lawn of Serenity', src: MAP_DIR + 'Vector (11).png', left: 42.0, top: 25.0, width: 14.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-10', area: '8',  name: 'Area 8 - Lawn of Grace', src: MAP_DIR + 'Vector (10).png', left: 59.0, top: 27.0, width: 8.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-13', area: '5',  name: 'Area 5 - Special Supreme Estate', src: MAP_DIR + 'Vector (13).png', left: 42.0, top: 46.0, width: 14.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-5',  area: '7',  name: 'Area 7 - Lawn of Faith', src: MAP_DIR + 'Vector (5).png', left: 58.5, top: 44.5, width: 9.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-6',  area: '6',  name: 'Area 6 - Lawn of Peace', src: MAP_DIR + 'Vector (6).png', left: 58.0, top: 66.0, width: 9.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-3',  area: '11', name: 'Area 11 - Lawn of Memories', src: MAP_DIR + 'Vector (3).png', left: 70.0, top: 43.0, width: 6.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-4',  area: '12', name: 'Area 12 - Mausoleum Court', src: MAP_DIR + 'Vector (4).png', left: 78.5, top: 45.0, width: 12.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-8',  area: '2',  name: 'Area 2 - Lawn of Love', src: MAP_DIR + 'Vector (8).png', left: 24.0, top: 48.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-9',  area: '3',  name: 'Area 3 - Lawn of Hope (Family Estate)', src: MAP_DIR + 'Vector (9).png', left: 7.0, top: 48.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
+    { id: 'vector-7',  area: '1',  name: 'Area 1 - Single Tiered Lawn', src: MAP_DIR + 'Vector (7).png', left: 16.0, top: 73.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true }
 ];
 
 // ── Virtual Board Coordinate Frame Dimensions ──
@@ -1025,7 +1023,7 @@ function normalizeEditorVector(v) {
         v.fenceInclude = !v.fenceExclude;
         v.label = String(v.label || '');
         v.src = ZMGFence.buildPartSvgDataUrl(v);
-    } else if ((v.custom || Array.isArray(v.points)) && v.area != null && window.ZMGFence) {
+    } else if (v.custom && window.ZMGFence) {
         const cols = Number(v.cols) || 20;
         const rows = Number(v.rows) || 20;
         const aspect = (v.shapeAspect && Number(v.shapeAspect) > 0)
@@ -1034,13 +1032,7 @@ function normalizeEditorVector(v) {
         v.shapeAspect = parseFloat(aspect.toFixed(4));
         const pts = ZMGFence.sanitizePolygonPoints(v.points, 3) || ZMGFence.defaultShapePoints(4, aspect);
         v.points = pts;
-        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, {
-            fill: v.fill,
-            stroke: v.stroke,
-            label: v.label,
-            specialSupreme: v.specialSupreme,
-            innerBand: v.innerBand
-        });
+        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect);
     }
     return v;
 }
@@ -1089,7 +1081,7 @@ async function syncEditorVectorsWithSupabase() {
             .eq('plot_identifier', ZMG_DB_MAP_CONFIG_ID)
             .maybeSingle();
 
-        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0 && Number(row.coordinates.layoutVersion) >= 3) {
+        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
             vectorLayers = row.coordinates.vectorLayers
                 .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
@@ -1120,8 +1112,10 @@ async function syncEditorVectorsWithSupabase() {
             return;
         }
 
-        // If DB has no v3 layout yet (or still has legacy v2), push current revised v3 layout to DB
-        await persistEditorVectorsToSupabase();
+        // If DB has no saved layout yet, push current localStorage layout to DB
+        if (localStorage.getItem(MAP_STORAGE_KEY)) {
+            await persistEditorVectorsToSupabase();
+        }
     } catch (err) {
         console.warn('Editor Supabase vector sync notice:', err);
     }
@@ -1142,7 +1136,6 @@ async function persistEditorVectorsToSupabase() {
                 col_num: 0,
                 row_num: 0,
                 coordinates: {
-                    layoutVersion: 3,
                     vectorLayers,
                     bgConfig,
                     blueprintConfig,
@@ -1873,50 +1866,6 @@ function setupVectorInspectorEvents() {
         v.fenceExclude = !el.checked;
     }, 'part fence inclusion', null);
 
-    // Area Color, Label & Square Meter Inspector Bindings
-    const bindAreaField = (id, evt, mutator, labelText, coalescePrefix) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener(evt, () => {
-            const v = vectorLayers.find(l => l.id === activeVectorId);
-            if (!v || v.kind === 'decor' || v.kind === 'entrance' || v.area == null) return;
-            const beforeSnap = captureMapSnapshot(labelText);
-            mutator(v, el);
-            rebuildCustomShapeSvgAndSync(v);
-            const img = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
-            if (img) img.src = v.src;
-            commitMapUndo(beforeSnap, labelText, coalescePrefix ? `${coalescePrefix}:${v.id}` : null);
-            renderLayerSidebar();
-            localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-        });
-    };
-    bindAreaField('inspAreaLabel', 'input', (v, el) => { v.label = el.value.slice(0, 28); }, 'area label', 'area-label');
-    bindAreaField('inspAreaSqm', 'input', (v, el) => {
-        const val = parseFloat(el.value);
-        v.sqm = Number.isFinite(val) && val > 0 ? val : null;
-    }, 'area sq. meters', 'area-sqm');
-    bindAreaField('inspAreaFill', 'input', (v, el) => { v.fill = el.value; }, 'area color', 'area-fill');
-    bindAreaField('inspAreaStroke', 'input', (v, el) => { v.stroke = el.value; }, 'area border', 'area-stroke');
-
-    const areaSwatches = document.getElementById('inspAreaSwatches');
-    if (areaSwatches) {
-        areaSwatches.querySelectorAll('.me-swatch-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const v = vectorLayers.find(l => l.id === activeVectorId);
-                if (!v || v.kind === 'decor' || v.kind === 'entrance' || v.area == null) return;
-                const beforeSnap = captureMapSnapshot('area color');
-                v.fill = btn.dataset.fill || '#5e7b5c';
-                v.stroke = btn.dataset.stroke || '#3e443d';
-                rebuildCustomShapeSvgAndSync(v);
-                const img = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
-                if (img) img.src = v.src;
-                commitMapUndo(beforeSnap, 'area color');
-                updateAreaStyleInspector(v);
-                localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-            });
-        });
-    }
-
     // Directional Nudge Pad (applies to all selected vectors)
     const setupNudge = (btnId, dx, dy) => {
         const btn = document.getElementById(btnId);
@@ -2018,24 +1967,6 @@ function normalizeHex6(val, fallback) {
     return fallback;
 }
 
-function updateAreaStyleInspector(v) {
-    const card = document.getElementById('areaStyleGroup');
-    if (!card) return;
-    if (!v || v.kind === 'decor' || v.kind === 'entrance' || v.area == null) {
-        card.style.display = 'none';
-        return;
-    }
-    card.style.display = 'block';
-    const setIfIdle = (id, val) => {
-        const el = document.getElementById(id);
-        if (el && document.activeElement !== el) el.value = val;
-    };
-    setIfIdle('inspAreaLabel', v.label !== undefined && v.label !== null ? String(v.label) : '');
-    setIfIdle('inspAreaSqm', v.sqm != null ? String(v.sqm) : '');
-    setIfIdle('inspAreaFill', normalizeHex6(v.fill, '#5e7b5c'));
-    setIfIdle('inspAreaStroke', normalizeHex6(v.stroke, '#3e443d'));
-}
-
 function updatePartStyleInspector(v) {
     const card = document.getElementById('partStyleGroup');
     if (!card) return;
@@ -2097,7 +2028,6 @@ function updateVectorInspector() {
         if (emptyMsg) emptyMsg.style.display = 'block';
         if (form) form.style.display = 'none';
         if (multiBadge) multiBadge.style.display = 'none';
-        updateAreaStyleInspector(null);
         updatePartStyleInspector(null);
         updateShapePointsInspector(null);
         return;
@@ -2144,7 +2074,6 @@ function updateVectorInspector() {
     setVal('propOpacity', opPct);
     setVal('propOpSlider', opPct);
     setVal('propZ', v.zIndex || 5);
-    updateAreaStyleInspector(v);
     updatePartStyleInspector(v);
     updateShapePointsInspector(v);
 }
@@ -2435,24 +2364,12 @@ function applyBoardPxPointsToShapeLayer(v, absPts) {
 
 function rebuildCustomShapeSvgAndSync(v) {
     if (!v || !window.ZMGFence) return;
-    if (!v.shapeAspect || !(Number(v.shapeAspect) > 0)) {
-        const imgEl = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
-        if (imgEl && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
-            v.shapeAspect = parseFloat((imgEl.naturalHeight / imgEl.naturalWidth).toFixed(4));
-        }
-    }
-    const pts = (Array.isArray(v.points) && v.points.length >= 3) ? v.points : ensureCustomShapePoints(v);
+    const pts = ensureCustomShapePoints(v);
     if (v.kind === 'decor') {
         v.src = ZMGFence.buildPartSvgDataUrl(v);
         return;
     }
-    v.src = ZMGFence.buildAreaSvgDataUrl(v.cols || 20, v.rows || 20, v.area, pts, v.shapeAspect, {
-        fill: v.fill,
-        stroke: v.stroke,
-        label: v.label,
-        specialSupreme: v.specialSupreme,
-        innerBand: v.innerBand
-    });
+    v.src = ZMGFence.buildAreaSvgDataUrl(v.cols || 20, v.rows || 20, v.area, pts, v.shapeAspect);
     syncCustomAreasFromLayers();
 }
 
@@ -3569,8 +3486,6 @@ function openNewAreaModal() {
     setVal2('newAreaPrefix', '');
     setVal2('newAreaCols', 20);
     setVal2('newAreaRows', 20);
-    setVal2('newAreaSqm', 250);
-    setVal2('newAreaFill', '#5e7b5c');
     setVal2('newAreaPoints', 4);
     setVal2('newAreaCategory', 'Supreme');
     modal.classList.add('open');
@@ -3610,8 +3525,6 @@ async function openEditAreaModal(layerId) {
     setVal2('newAreaPrefix', v.prefix || suggestPrefix(strippedName));
     setVal2('newAreaCols', Number(v.cols) || 20);
     setVal2('newAreaRows', Number(v.rows) || 20);
-    setVal2('newAreaSqm', v.sqm != null ? Number(v.sqm) : 250);
-    setVal2('newAreaFill', normalizeHex6(v.fill, '#5e7b5c'));
     setVal2('newAreaPoints', existingPts.length);
     setVal2('newAreaCategory', v.category || 'Supreme');
 
@@ -3641,9 +3554,6 @@ async function createCustomAreaFromForm() {
     let prefix = (document.getElementById('newAreaPrefix')?.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const cols = parseInt(document.getElementById('newAreaCols')?.value, 10);
     const rows = parseInt(document.getElementById('newAreaRows')?.value, 10);
-    const sqmRaw = parseFloat(document.getElementById('newAreaSqm')?.value);
-    const sqm = Number.isFinite(sqmRaw) && sqmRaw > 0 ? sqmRaw : null;
-    const areaFill = normalizeHex6(document.getElementById('newAreaFill')?.value, '#5e7b5c');
     const pts = ZMGFence.sanitizePolygonPoints(modalShapeState.points, 3);
 
     if (!name || name.length > 40 || !/^[A-Za-z0-9 ()&'.-]+$/.test(name)) {
@@ -3689,30 +3599,18 @@ async function createCustomAreaFromForm() {
     }
 
     const shapeAspect = parseFloat((rows / Math.max(1, cols)).toFixed(4));
-    const areaStroke = (editingLayer && editingLayer.stroke) ? editingLayer.stroke : '#3e443d';
-    const areaLabel = (editingLayer && editingLayer.label !== undefined) ? editingLayer.label : name;
-    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect, {
-        fill: areaFill,
-        stroke: areaStroke,
-        label: areaLabel,
-        specialSupreme: !!(editingLayer && editingLayer.specialSupreme),
-        innerBand: !!(editingLayer && editingLayer.innerBand)
-    });
+    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect);
 
     if (editingLayer) {
         const beforeSnap = captureMapSnapshot(`edit ${fullName}`);
         editingLayer.area = finalNum;
         editingLayer.name = fullName;
-        editingLayer.label = areaLabel;
         editingLayer.desc = fullName + ' memorial section';
         editingLayer.category = category;
         editingLayer.tab = ZMGFence.CATEGORY_TABS[category] || 'supreme';
         editingLayer.prefix = prefix;
         editingLayer.cols = cols;
         editingLayer.rows = rows;
-        editingLayer.sqm = sqm;
-        editingLayer.fill = areaFill;
-        editingLayer.stroke = areaStroke;
         editingLayer.shapeAspect = shapeAspect;
         editingLayer.points = pts;
         editingLayer.src = svgUrl;
@@ -3749,16 +3647,12 @@ async function createCustomAreaFromForm() {
         custom: true,
         area: finalNum,
         name: fullName,
-        label: name,
         desc: fullName + ' memorial section',
         category: category,
         tab: ZMGFence.CATEGORY_TABS[category] || 'supreme',
         prefix: prefix,
         cols: cols,
         rows: rows,
-        sqm: sqm,
-        fill: areaFill,
-        stroke: '#3e443d',
         shapeAspect: shapeAspect,
         points: pts,
         src: svgUrl,

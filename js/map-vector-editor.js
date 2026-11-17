@@ -3,7 +3,7 @@
 // Zion Memorial Garden - Cloud-Based Online Reservation & Records Management
 // ==============================================================================
 
-const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
+const MAP_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
 
 // ==============================================================================
 // MAP VECTOR ASSET TO REAL CEMETERY AREA MAPPING
@@ -37,10 +37,8 @@ const VECTOR_FILE_TO_AREA = {
     'Vector (4).png':  { area: '12', name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum', desc: 'Area 12 - Mausoleum Court memorial section' }
 };
 
-// Default layout coordinates calibrated for Zion Memorial Garden revised upright map
-const DEFAULT_MAP_VECTORS = (typeof window !== 'undefined' && window.ZMGFence && typeof window.ZMGFence.getRevisedDefaultVectors === 'function')
-    ? window.ZMGFence.getRevisedDefaultVectors()
-    : [
+// Default layout coordinates calibrated for Zion Memorial Garden vector assets (ZERO OVERLAPS)
+const DEFAULT_MAP_VECTORS = [
     {
         id: 'vector-14',
         area: '10',
@@ -292,7 +290,7 @@ async function syncMapVectorLayoutWithSupabase() {
             .eq('plot_identifier', ZMG_DB_MAP_CONFIG_ID)
             .maybeSingle();
 
-        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0 && Number(row.coordinates.layoutVersion) >= 3) {
+        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
             const dbVectors = row.coordinates.vectorLayers
                 .filter(v => !isLegacyWallVector(v))
                 .map(normalizeVectorItem);

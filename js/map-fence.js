@@ -129,7 +129,7 @@
         return { cx, cy, w, h, minX: cx - bw / 2, maxX: cx + bw / 2, minY: cy - bh / 2, maxY: cy + bh / 2 };
     }
 
-    const FENCE_STORAGE_KEY = 'zion_cemetery_fence_config_v3';
+    const FENCE_STORAGE_KEY = 'zion_cemetery_fence_config_v1';
     const MIN_POLYGON_POINTS = 3;
     const MAX_POLYGON_POINTS = 32;
 
@@ -1067,7 +1067,7 @@
     // A custom area lives on the map as a vector layer flagged `custom: true`
     // that carries its own plot-grid settings (cols, rows, prefix, category).
     const PLOT_CELL_PX = 25;
-    const LAYOUT_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
+    const LAYOUT_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
     const CATEGORY_TABS = {
         'Single Teired': 'single-teired',
         'Supreme': 'supreme',
@@ -1096,31 +1096,15 @@
         return { x: sum.x / ptsPx.length, y: sum.y / ptsPx.length };
     }
 
-    function isDarkHexColor(hex) {
-        const clean = String(hex || '').replace('#', '');
-        if (!/^[0-9a-fA-F]{6}$/.test(clean)) return false;
-        const r = parseInt(clean.slice(0, 2), 16);
-        const g = parseInt(clean.slice(2, 4), 16);
-        const b = parseInt(clean.slice(4, 6), 16);
-        return (r * 0.299 + g * 0.587 + b * 0.114) < 140;
-    }
-
-    function buildAreaSvgDataUrl(cols, rows, areaNo, points, shapeAspect, opts) {
-        opts = opts || {};
+    function buildAreaSvgDataUrl(cols, rows, areaNo, points, shapeAspect) {
         const cell = 10;
         const W = Math.max(40, Math.round((Number(cols) || 20) * cell));
         const aspect = shapeAspect && Number(shapeAspect) > 0
             ? Number(shapeAspect)
             : ((Number(rows) || 20) / Math.max(1, Number(cols) || 20));
         const H = Math.max(40, Math.round(W * aspect));
-        const fill = sanitizeSvgColor(opts.fill, '#cfe3c9');
-        const stroke = sanitizeSvgColor(opts.stroke, '#2d4a36');
-        const rawLabel = opts.label !== undefined && opts.label !== null
-            ? String(opts.label).trim()
-            : ('AREA ' + String(areaNo).replace(/[^0-9A-Za-z]/g, ''));
-        const label = rawLabel.slice(0, 28);
-        const textColor = isDarkHexColor(fill) ? '#ffffff' : '#1e2920';
-        const fontSize = Math.max(12, Math.min(24, Math.round(Math.min(W, H) * (label.length > 7 ? 0.13 : 0.16))));
+        const fontSize = Math.max(14, Math.round(Math.min(W, H) * 0.16));
+        const label = 'AREA ' + String(areaNo).replace(/[^0-9A-Za-z]/g, '');
 
         const cleanPts = sanitizePolygonPoints(points, MIN_POLYGON_POINTS);
         let svg = '';
@@ -1133,34 +1117,23 @@
             const center = polygonCentroid(ptsPx);
             const labelX = clampNum(center.x, W * 0.15, W * 0.85).toFixed(1);
             const labelY = clampNum(center.y + fontSize / 3, fontSize * 0.9, H - fontSize * 0.3).toFixed(1);
-            const bandSvg = opts.specialSupreme
-                ? '<polygon points="' + ptAttr + '" fill="none" stroke="#c8ced2" stroke-width="26" opacity="0.88"/>'
-                : (opts.innerBand
-                    ? '<polygon points="' + ptAttr + '" fill="none" stroke="#b8c2c7" stroke-width="18" opacity="0.72"/>'
-                    : '<polygon points="' + ptAttr + '" fill="none" stroke="#1e3a29" stroke-width="14" stroke-dasharray="12 8" opacity="0.14"/>');
-            const labelSvg = label
-                ? '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="' + textColor + '">' + escapeXmlText(label) + '</text>'
-                : '';
             // Clip strokes strictly inside the polygon so vertices at 0..100% never clip at viewBox edges
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
                 '<defs><clipPath id="areaClip"><polygon points="' + ptAttr + '"/></clipPath></defs>' +
-                '<polygon points="' + ptAttr + '" fill="' + fill + '"/>' +
+                '<polygon points="' + ptAttr + '" fill="#cfe3c9"/>' +
                 '<g clip-path="url(#areaClip)">' +
-                bandSvg +
-                '<polygon points="' + ptAttr + '" fill="none" stroke="' + stroke + '" stroke-width="6" stroke-linejoin="miter"/>' +
+                '<polygon points="' + ptAttr + '" fill="none" stroke="#1e3a29" stroke-width="18" stroke-dasharray="12 8" opacity="0.16"/>' +
+                '<polygon points="' + ptAttr + '" fill="none" stroke="#2d4a36" stroke-width="10" stroke-linejoin="miter"/>' +
                 '</g>' +
-                labelSvg +
+                '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="#1e3a29">' + label + '</text>' +
                 '</svg>';
         } else {
-            const labelSvg = label
-                ? '<text x="' + (W / 2) + '" y="' + (H / 2 + fontSize / 3) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="' + textColor + '">' + escapeXmlText(label) + '</text>'
-                : '';
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
-                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="5"/>' +
-                '<rect x="14" y="14" width="' + (W - 28) + '" height="' + (H - 28) + '" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-dasharray="12 8" opacity="0.45"/>' +
-                labelSvg +
+                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="#cfe3c9" stroke="#2d4a36" stroke-width="6"/>' +
+                '<rect x="14" y="14" width="' + (W - 28) + '" height="' + (H - 28) + '" fill="none" stroke="#2d4a36" stroke-width="2" stroke-dasharray="12 8" opacity="0.55"/>' +
+                '<text x="' + (W / 2) + '" y="' + (H / 2 + fontSize / 3) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="#1e3a29">' + label + '</text>' +
                 '</svg>';
         }
         return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
@@ -1186,13 +1159,7 @@
             ? Math.max(PLOT_CELL_PX * 2, Math.round(widthPx * aspect))
             : rows * PLOT_CELL_PX;
         const asset = pts
-            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, {
-                fill: v.fill,
-                stroke: v.stroke,
-                label: v.label,
-                specialSupreme: v.specialSupreme,
-                innerBand: v.innerBand
-            })
+            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect)
             : v.src;
         return {
             area: String(v.area),
@@ -1205,10 +1172,6 @@
             heightPx: heightPx,
             points: pts,
             shapeAspect: aspect,
-            fill: v.fill || null,
-            stroke: v.stroke || null,
-            label: v.label || null,
-            sqm: v.sqm != null ? Number(v.sqm) : null,
             tab: v.tab || CATEGORY_TABS[v.category] || 'supreme',
             custom: true
         };
@@ -1422,7 +1385,7 @@
                 p.id === def.id
             );
             if (!found) return { ...def, visible: def.visible !== false };
-            const merged = {
+            return {
                 ...def,
                 left: typeof found.left === 'number' ? found.left : def.left,
                 top: typeof found.top === 'number' ? found.top : def.top,
@@ -1430,27 +1393,8 @@
                 rotate: typeof found.rotate === 'number' ? found.rotate : def.rotate,
                 opacity: typeof found.opacity === 'number' ? found.opacity : (def.opacity ?? 1),
                 zIndex: typeof found.zIndex === 'number' ? found.zIndex : (def.zIndex || 5),
-                visible: found.visible !== false,
-                fill: found.fill || def.fill,
-                stroke: found.stroke || def.stroke,
-                strokeWidth: typeof found.strokeWidth === 'number' ? found.strokeWidth : def.strokeWidth,
-                label: found.label !== undefined ? found.label : def.label,
-                sqm: found.sqm !== undefined ? found.sqm : def.sqm,
-                points: Array.isArray(found.points) && found.points.length >= MIN_POLYGON_POINTS ? found.points : def.points,
-                shapeAspect: typeof found.shapeAspect === 'number' ? found.shapeAspect : def.shapeAspect
+                visible: found.visible !== false
             };
-            if (isDecorPart(merged) && Array.isArray(merged.points) && merged.points.length >= MIN_POLYGON_POINTS) {
-                merged.src = buildPartSvgDataUrl(merged);
-            } else if (merged.area != null && Array.isArray(merged.points) && merged.points.length >= MIN_POLYGON_POINTS) {
-                merged.src = buildAreaSvgDataUrl(merged.cols || 20, merged.rows || 20, merged.area, merged.points, merged.shapeAspect, {
-                    fill: merged.fill,
-                    stroke: merged.stroke,
-                    label: merged.label,
-                    specialSupreme: merged.specialSupreme,
-                    innerBand: merged.innerBand
-                });
-            }
-            return merged;
         });
 
         const defaultIds = new Set(defaults.map(d => d.id));
@@ -1490,18 +1434,8 @@
                     visible: p.visible !== false
                 };
                 copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
-                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect, {
-                        fill: copy.fill,
-                        stroke: copy.stroke,
-                        label: copy.label,
-                        specialSupreme: copy.specialSupreme,
-                        innerBand: copy.innerBand
-                    })
-                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area, null, null, {
-                        fill: copy.fill,
-                        stroke: copy.stroke,
-                        label: copy.label
-                    }));
+                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
+                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area));
                 return copy;
             }
             return { ...p, visible: p.visible !== false };
@@ -1583,9 +1517,7 @@
                 .select('coordinates')
                 .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
                 .maybeSingle();
-            if (!error && data && data.coordinates && Number(data.coordinates.layoutVersion) >= 3) {
-                return data.coordinates;
-            }
+            if (!error && data && data.coordinates) return data.coordinates;
         } catch (_) {}
         return null;
     }
@@ -1597,246 +1529,6 @@
         } catch (e) {
             return [];
         }
-    }
-
-    function makeRevisedArea(def) {
-        const aspect = def.shapeAspect || (def.rows / Math.max(1, def.cols));
-        const copy = {
-            id: def.id,
-            kind: 'area',
-            area: String(def.area),
-            name: def.name,
-            label: def.label,
-            desc: def.desc || (def.name + ' memorial section'),
-            category: def.category,
-            tab: def.tab || CATEGORY_TABS[def.category] || 'supreme',
-            prefix: def.prefix,
-            cols: def.cols || 20,
-            rows: def.rows || 20,
-            sqm: def.sqm || 250,
-            shapeAspect: aspect,
-            points: def.points,
-            fill: def.fill,
-            stroke: def.stroke || '#3a4239',
-            specialSupreme: !!def.specialSupreme,
-            innerBand: !!def.innerBand,
-            left: def.left,
-            top: def.top,
-            width: def.width,
-            rotate: 0,
-            opacity: 1.0,
-            zIndex: def.zIndex || 5,
-            visible: true
-        };
-        copy.src = buildAreaSvgDataUrl(copy.cols, copy.rows, copy.area, copy.points, copy.shapeAspect, {
-            fill: copy.fill,
-            stroke: copy.stroke,
-            label: copy.label,
-            specialSupreme: copy.specialSupreme,
-            innerBand: copy.innerBand
-        });
-        return copy;
-    }
-
-    function makeRevisedPart(def) {
-        const copy = {
-            id: def.id,
-            kind: 'decor',
-            custom: false,
-            area: null,
-            name: def.name,
-            desc: def.desc || def.name,
-            label: def.label || '',
-            fill: def.fill || '#f2e5c6',
-            stroke: def.stroke || '#444943',
-            strokeWidth: def.strokeWidth != null ? def.strokeWidth : 2.0,
-            dashed: !!def.dashed,
-            shapeAspect: def.shapeAspect || 1.0,
-            points: def.points,
-            left: def.left,
-            top: def.top,
-            width: def.width,
-            rotate: def.rotate || 0,
-            opacity: 1.0,
-            zIndex: def.zIndex || 4,
-            fenceExclude: !!def.fenceExclude,
-            fenceInclude: !def.fenceExclude,
-            visible: true
-        };
-        copy.src = buildPartSvgDataUrl(copy);
-        return copy;
-    }
-
-    function getRevisedDefaultVectors() {
-        const GOLD = '#c5a467';
-        const GREEN = '#5e7b5c';
-        const TEAL = '#2c7a9b';
-        const CREAM = '#f2e5c6';
-        const DARK_BORDER = '#3e443d';
-
-        const areas = [
-            // Top-Left: Holiness (Area 13)
-            makeRevisedArea({
-                id: 'area-holiness', area: '13', name: 'Area 13 - Holiness', label: 'Holiness',
-                category: 'Supreme', prefix: 'HOL', cols: 22, rows: 16, sqm: 320,
-                fill: GOLD, stroke: DARK_BORDER, innerBand: true,
-                left: 21.0, top: 13.5, width: 14.0, shapeAspect: 0.72,
-                points: [{ x: 0, y: 38 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Top-Center: Chastity (Area 9)
-            makeRevisedArea({
-                id: 'vector-11', area: '9', name: 'Area 9 - Lawn of Serenity (Chastity)', label: 'Chastity',
-                category: 'Special Supreme', prefix: 'CHA', cols: 22, rows: 16, sqm: 340,
-                fill: GOLD, stroke: DARK_BORDER, innerBand: true,
-                left: 36.2, top: 13.5, width: 13.8, shapeAspect: 0.74,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 36 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Top-Right-Center: Truth (Area 8)
-            makeRevisedArea({
-                id: 'vector-10', area: '8', name: 'Area 8 - Lawn of Grace (Truth)', label: 'Truth',
-                category: 'Supreme', prefix: 'TRU', cols: 14, rows: 12, sqm: 140,
-                fill: GOLD, stroke: DARK_BORDER,
-                left: 51.2, top: 18.8, width: 6.5, shapeAspect: 0.85,
-                points: [{ x: 0, y: 0 }, { x: 45, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Upper-Left Green: Kindness (Area 4)
-            makeRevisedArea({
-                id: 'vector-12', area: '4', name: 'Area 4 - Supreme Garden (Kindness)', label: 'Kindness',
-                category: 'Supreme', prefix: 'SUP4', cols: 24, rows: 22, sqm: 400,
-                fill: GREEN, stroke: DARK_BORDER, specialSupreme: true,
-                left: 21.0, top: 28.2, width: 14.0, shapeAspect: 0.96,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Upper-Center Green: Goodness (Area 5)
-            makeRevisedArea({
-                id: 'vector-13', area: '5', name: 'Area 5 - Special Supreme Estate (Goodness)', label: 'Goodness',
-                category: 'Special Supreme', prefix: 'SSE', cols: 24, rows: 22, sqm: 400,
-                fill: GREEN, stroke: DARK_BORDER, specialSupreme: true,
-                left: 36.2, top: 28.2, width: 13.8, shapeAspect: 0.96,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Lower-Left Tan: Faith (Area 3)
-            makeRevisedArea({
-                id: 'vector-9', area: '3', name: 'Area 3 - Lawn of Hope (Faith)', label: 'Faith',
-                category: 'Family Estate Jr.', prefix: 'FE', cols: 24, rows: 22, sqm: 380,
-                fill: GOLD, stroke: DARK_BORDER,
-                left: 21.0, top: 47.4, width: 14.0, shapeAspect: 0.96,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Lower-Center Green: Modesty (Area 2)
-            makeRevisedArea({
-                id: 'vector-8', area: '2', name: 'Area 2 - Lawn of Love (Modesty)', label: 'Modesty',
-                category: 'Special Supreme', prefix: 'LL', cols: 24, rows: 22, sqm: 380,
-                fill: GREEN, stroke: DARK_BORDER, specialSupreme: true,
-                left: 36.2, top: 47.4, width: 13.8, shapeAspect: 0.96,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Middle-Right Upper: Joy (Area 7)
-            makeRevisedArea({
-                id: 'vector-5', area: '7', name: 'Area 7 - Lawn of Faith (Joy)', label: 'Joy',
-                category: 'Supreme', prefix: 'JOY', cols: 16, rows: 18, sqm: 220,
-                fill: GOLD, stroke: DARK_BORDER, innerBand: true,
-                left: 51.2, top: 29.2, width: 7.4, shapeAspect: 1.25,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Middle-Right Lower: Peace (Area 6)
-            makeRevisedArea({
-                id: 'vector-6', area: '6', name: 'Area 6 - Lawn of Peace', label: 'Peace',
-                category: 'Single Teired', prefix: 'PEA', cols: 16, rows: 18, sqm: 220,
-                fill: GOLD, stroke: DARK_BORDER, innerBand: true,
-                left: 51.2, top: 43.0, width: 7.4, shapeAspect: 1.32,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Right Tall Trapezoid: Prudence (Area 11)
-            makeRevisedArea({
-                id: 'vector-3', area: '11', name: 'Area 11 - Lawn of Memories (Prudence)', label: 'Prudence',
-                category: 'Special Supreme', prefix: 'PRU', cols: 14, rows: 28, sqm: 310,
-                fill: GOLD, stroke: DARK_BORDER,
-                left: 59.8, top: 28.0, width: 6.8, shapeAspect: 2.35,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 3 }, { x: 100, y: 52 }, { x: 0, y: 100 }]
-            }),
-            // Far-Right: Humility (Area 12)
-            makeRevisedArea({
-                id: 'vector-4', area: '12', name: 'Area 12 - Mausoleum Court (Humility)', label: 'Humility',
-                category: 'Mausoleum', prefix: 'HUM', cols: 20, rows: 18, sqm: 350,
-                fill: GOLD, stroke: DARK_BORDER,
-                left: 67.6, top: 26.2, width: 11.2, shapeAspect: 0.92,
-                points: [{ x: 0, y: 14 }, { x: 52, y: 0 }, { x: 100, y: 20 }, { x: 100, y: 80 }, { x: 0, y: 100 }]
-            }),
-            // Bottom-Center-Right: Area 1 - Single Tiered Lawn
-            makeRevisedArea({
-                id: 'vector-7', area: '1', name: 'Area 1 - Single Tiered Lawn', label: 'Area 1',
-                category: 'Single Teired', prefix: 'ST1', cols: 24, rows: 24, sqm: 460,
-                fill: GOLD, stroke: DARK_BORDER,
-                left: 36.2, top: 66.8, width: 18.2, shapeAspect: 0.92,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 74, y: 46 }, { x: 0, y: 100 }]
-            }),
-            // Upper-Right Teal Strip: Condominium (Area 10) - no external text/arrows
-            makeRevisedArea({
-                id: 'vector-14', area: '10', name: 'Area 10 - Condominium Block A', label: '',
-                category: 'Condominium', prefix: 'CON', cols: 24, rows: 12, sqm: 280,
-                fill: TEAL, stroke: '#1c546b',
-                left: 59.6, top: 21.8, width: 21.8, shapeAspect: 0.56,
-                points: [{ x: 0, y: 20 }, { x: 40, y: 22 }, { x: 60, y: 0 }, { x: 100, y: 36 }, { x: 100, y: 88 }, { x: 93, y: 88 }, { x: 93, y: 42 }, { x: 59, y: 11 }, { x: 40, y: 31 }, { x: 0, y: 29 }]
-            })
-        ];
-
-        const parts = [
-            // Roundabout Plaza at center of Kindness/Goodness/Faith/Modesty
-            makeRevisedPart({
-                id: 'part-roundabout', name: 'Roundabout Plaza', desc: 'Central roundabout plaza',
-                fill: '#ffffff', stroke: DARK_BORDER, strokeWidth: 2.5,
-                left: 31.6, top: 42.6, width: 8.2, shapeAspect: 1.0, zIndex: 8,
-                points: circlePolygonPoints(24)
-            }),
-            // Small white square below Peace
-            makeRevisedPart({
-                id: 'part-lower-sq', name: 'Service Plaza', desc: 'Lower courtyard block',
-                fill: '#ffffff', stroke: DARK_BORDER, strokeWidth: 2.0,
-                left: 51.2, top: 58.0, width: 6.8, shapeAspect: 0.96, zIndex: 4,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 45, y: 100 }, { x: 0, y: 100 }]
-            }),
-            // Bottom-left white side block
-            makeRevisedPart({
-                id: 'part-side-bl', name: 'West Wing Block', desc: 'Bottom-left courtyard block',
-                fill: '#ffffff', stroke: DARK_BORDER, strokeWidth: 2.0,
-                left: 16.0, top: 66.8, width: 17.5, shapeAspect: 0.94, zIndex: 4,
-                points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 90 }, { x: 64, y: 90 }, { x: 26, y: 28 }]
-            }),
-            // Top Mausoleum gable strip
-            makeRevisedPart({
-                id: 'part-mausoleum-top', name: 'North Perimeter Strip', desc: 'North perimeter mausoleum corridor',
-                fill: CREAM, stroke: DARK_BORDER, strokeWidth: 2.0,
-                left: 19.6, top: 9.2, width: 40.5, shapeAspect: 0.25, zIndex: 3,
-                points: [{ x: 0, y: 66 }, { x: 48, y: 0 }, { x: 86, y: 36 }, { x: 100, y: 92 }, { x: 96, y: 98 }, { x: 84, y: 44 }, { x: 48, y: 12 }, { x: 0, y: 78 }]
-            }),
-            // Right Mausoleum perimeter strip (no external text/arrows)
-            makeRevisedPart({
-                id: 'part-mausoleum-right', name: 'East Mausoleum Corridor', desc: 'East perimeter mausoleum corridor',
-                fill: CREAM, stroke: DARK_BORDER, strokeWidth: 2.0,
-                left: 36.2, top: 37.5, width: 45.2, shapeAspect: 1.15, zIndex: 3,
-                points: [{ x: 70, y: 4 }, { x: 100, y: 0 }, { x: 100, y: 5 }, { x: 72, y: 9 }, { x: 54, y: 22 }, { x: 34, y: 50 }, { x: 4, y: 96 }, { x: 0, y: 96 }, { x: 30, y: 46 }, { x: 50, y: 18 }]
-            }),
-            // Bottom-left Mausoleum perimeter strip (no external text/arrows)
-            makeRevisedPart({
-                id: 'part-mausoleum-bl', name: 'West Mausoleum Corridor', desc: 'West perimeter mausoleum corridor',
-                fill: CREAM, stroke: DARK_BORDER, strokeWidth: 2.0,
-                left: 15.2, top: 67.2, width: 17.5, shapeAspect: 1.08, zIndex: 3,
-                points: [{ x: 0, y: 4 }, { x: 4, y: 0 }, { x: 44, y: 38 }, { x: 78, y: 94 }, { x: 68, y: 96 }, { x: 36, y: 42 }]
-            }),
-            // Main Entrance Gate at bottom road opening
-            createEntranceLayer({
-                id: 'entrance-main',
-                left: 29.8,
-                top: 86.2,
-                width: 9.2,
-                rotate: 0,
-                zIndex: 9,
-                needsSnap: false
-            })
-        ];
-
-        return [...areas, ...parts];
     }
 
     window.ZMGFence = {
@@ -1876,8 +1568,6 @@
         customAreaLayers,
         shapeEntryFromLayer,
         customShapeEntries,
-        LAYOUT_STORAGE_KEY,
-        getRevisedDefaultVectors,
         readStoredLayers
     };
 })();
