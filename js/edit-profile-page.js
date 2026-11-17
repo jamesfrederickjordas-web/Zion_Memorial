@@ -298,7 +298,7 @@ async function openEditProfileModal() {
         const username = profile?.username || user.user_metadata?.username || user.email.split("@")[0];
         const phone = profile?.phone || user.user_metadata?.phone || "";
         const email = user.email || "";
-        const avatarUrl = profile?.avatar_url || localStorage.getItem("userProfilePicture") || "assets/images/default-avatar.png";
+        const avatarUrl = profile?.avatar_url || "assets/images/default-avatar.png";
 
         const fullNameInput = document.getElementById("editFullName");
         const usernameInput = document.getElementById("editUsername");

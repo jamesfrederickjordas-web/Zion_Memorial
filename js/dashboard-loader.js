@@ -1891,9 +1891,11 @@ async function loadLiveUserProfile(user) {
         const fullName = profile?.full_name || user.user_metadata?.full_name || user.email.split('@')[0];
         const username = profile?.username || user.user_metadata?.username || user.email.split('@')[0];
         const phone = profile?.phone || user.user_metadata?.phone || 'Not set';
-        const avatarUrl = profile?.avatar_url || localStorage.getItem('userProfilePicture') || 'assets/images/default-avatar.png';
+        const avatarUrl = profile?.avatar_url || 'assets/images/default-avatar.png';
         if (profile?.avatar_url) {
             localStorage.setItem('userProfilePicture', profile.avatar_url);
+        } else {
+            localStorage.removeItem('userProfilePicture');
         }
         const memberSince = profile?.member_since || '2026-04-07';
         const accountStatus = profile?.account_status || 'ACTIVE';
