@@ -2122,7 +2122,7 @@ async function loadAdminLocMapData() {
         let systemVectorLayers = null;
         let systemFenceConfig = null;
         dbPlots.forEach(p => {
-            if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
+            if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers && Number(p.coordinates.layoutVersion) >= 3) {
                 systemVectorLayers = p.coordinates.vectorLayers;
                 if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
             }

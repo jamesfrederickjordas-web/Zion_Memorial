@@ -129,7 +129,7 @@
         return { cx, cy, w, h, minX: cx - bw / 2, maxX: cx + bw / 2, minY: cy - bh / 2, maxY: cy + bh / 2 };
     }
 
-    const FENCE_STORAGE_KEY = 'zion_cemetery_fence_config_v1';
+    const FENCE_STORAGE_KEY = 'zion_cemetery_fence_config_v3';
     const MIN_POLYGON_POINTS = 3;
     const MAX_POLYGON_POINTS = 32;
 
@@ -1583,7 +1583,9 @@
                 .select('coordinates')
                 .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
                 .maybeSingle();
-            if (!error && data && data.coordinates) return data.coordinates;
+            if (!error && data && data.coordinates && Number(data.coordinates.layoutVersion) >= 3) {
+                return data.coordinates;
+            }
         } catch (_) {}
         return null;
     }

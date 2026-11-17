@@ -1089,7 +1089,7 @@ async function syncEditorVectorsWithSupabase() {
             .eq('plot_identifier', ZMG_DB_MAP_CONFIG_ID)
             .maybeSingle();
 
-        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
+        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0 && Number(row.coordinates.layoutVersion) >= 3) {
             vectorLayers = row.coordinates.vectorLayers
                 .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
@@ -1120,10 +1120,8 @@ async function syncEditorVectorsWithSupabase() {
             return;
         }
 
-        // If DB has no saved layout yet, push current localStorage layout to DB
-        if (localStorage.getItem(MAP_STORAGE_KEY)) {
-            await persistEditorVectorsToSupabase();
-        }
+        // If DB has no v3 layout yet (or still has legacy v2), push current revised v3 layout to DB
+        await persistEditorVectorsToSupabase();
     } catch (err) {
         console.warn('Editor Supabase vector sync notice:', err);
     }
@@ -1144,6 +1142,7 @@ async function persistEditorVectorsToSupabase() {
                 col_num: 0,
                 row_num: 0,
                 coordinates: {
+                    layoutVersion: 3,
                     vectorLayers,
                     bgConfig,
                     blueprintConfig,
@@ -2436,7 +2435,13 @@ function applyBoardPxPointsToShapeLayer(v, absPts) {
 
 function rebuildCustomShapeSvgAndSync(v) {
     if (!v || !window.ZMGFence) return;
-    const pts = ensureCustomShapePoints(v);
+    if (!v.shapeAspect || !(Number(v.shapeAspect) > 0)) {
+        const imgEl = document.querySelector(`.me-vec-element[data-vector-id="${v.id}"]`);
+        if (imgEl && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
+            v.shapeAspect = parseFloat((imgEl.naturalHeight / imgEl.naturalWidth).toFixed(4));
+        }
+    }
+    const pts = (Array.isArray(v.points) && v.points.length >= 3) ? v.points : ensureCustomShapePoints(v);
     if (v.kind === 'decor') {
         v.src = ZMGFence.buildPartSvgDataUrl(v);
         return;

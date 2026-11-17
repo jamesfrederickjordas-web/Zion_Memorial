@@ -278,7 +278,7 @@ async function loadAllPlotsData() {
         let systemFenceConfig = null;
         if (!fetchError && dbPlots && dbPlots.length > 0) {
             dbPlots.forEach(p => {
-                if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
+                if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers && Number(p.coordinates.layoutVersion) >= 3) {
                     systemVectorLayers = p.coordinates.vectorLayers;
                     if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
                 }

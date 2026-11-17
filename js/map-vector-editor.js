@@ -292,7 +292,7 @@ async function syncMapVectorLayoutWithSupabase() {
             .eq('plot_identifier', ZMG_DB_MAP_CONFIG_ID)
             .maybeSingle();
 
-        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
+        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0 && Number(row.coordinates.layoutVersion) >= 3) {
             const dbVectors = row.coordinates.vectorLayers
                 .filter(v => !isLegacyWallVector(v))
                 .map(normalizeVectorItem);
