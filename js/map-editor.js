@@ -6,6 +6,16 @@
 const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
 const MAP_DIR = 'assets/images/Map/';
 
+if (typeof window.showNotification !== 'function') {
+    window.showNotification = function(title, message, type = 'info') {
+        if (typeof window.showNotificationModal === 'function') {
+            window.showNotificationModal({ title, message, type });
+        } else {
+            alert(`${title}: ${message}`);
+        }
+    };
+}
+
 // ── Master Asset Catalog for "Add Vector" ──
 // ── Master Asset Catalog for "Add Vector" ──
 // Each vector PNG artwork has its actual Area number stamped directly into the image:
@@ -1160,6 +1170,12 @@ async function saveVectorLayout() {
         saveCurrentPlotLayoutToDatabase();
         return;
     }
+    const btnSave = document.getElementById('btnSaveLayout');
+    const origHTML = btnSave ? btnSave.innerHTML : '';
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span>Saving...</span>';
+    }
     try {
         // 1. Persist vector layers locally
         localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
@@ -1175,9 +1191,8 @@ async function saveVectorLayout() {
         await persistEditorVectorsToSupabase();
 
         // 5. Immediate visual feedback on the Save button
-        const btnSave = document.getElementById('btnSaveLayout');
         if (btnSave) {
-            const origHTML = btnSave.innerHTML;
+            btnSave.disabled = false;
             btnSave.classList.add('me-btn-saved');
             btnSave.innerHTML = `
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1196,8 +1211,15 @@ async function saveVectorLayout() {
         }
     } catch (err) {
         console.error('Error saving layout:', err);
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = origHTML;
+        }
+        const errMsg = (err && err.message) ? err.message : String(err || 'Unknown error');
         if (typeof showNotification === 'function') {
-            showNotification('Save Failed', 'Unable to save layout: ' + err.message, 'error');
+            showNotification('Save Failed', 'Unable to save layout: ' + errMsg, 'error');
+        } else {
+            alert('Save Failed: ' + errMsg);
         }
     }
 }
