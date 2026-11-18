@@ -1096,7 +1096,8 @@
         return { x: sum.x / ptsPx.length, y: sum.y / ptsPx.length };
     }
 
-    function buildAreaSvgDataUrl(cols, rows, areaNo, points, shapeAspect) {
+    function buildAreaSvgDataUrl(cols, rows, areaNo, points, shapeAspect, styleOpts) {
+        const opts = styleOpts || {};
         const cell = 10;
         const W = Math.max(40, Math.round((Number(cols) || 20) * cell));
         const aspect = shapeAspect && Number(shapeAspect) > 0
@@ -1104,7 +1105,11 @@
             : ((Number(rows) || 20) / Math.max(1, Number(cols) || 20));
         const H = Math.max(40, Math.round(W * aspect));
         const fontSize = Math.max(14, Math.round(Math.min(W, H) * 0.16));
-        const label = 'AREA ' + String(areaNo).replace(/[^0-9A-Za-z]/g, '');
+        const rawLabel = opts.label ? String(opts.label).trim().slice(0, 24) : ('AREA ' + String(areaNo).replace(/[^0-9A-Za-z]/g, ''));
+        const label = escapeXmlText(rawLabel);
+        const fill = sanitizeSvgColor(opts.fill, '#cfe3c9');
+        const stroke = sanitizeSvgColor(opts.stroke, '#2d4a36');
+        const labelColor = sanitizeSvgColor(opts.labelColor, '#1e3a29');
 
         const cleanPts = sanitizePolygonPoints(points, MIN_POLYGON_POINTS);
         let svg = '';
@@ -1121,19 +1126,19 @@
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
                 '<defs><clipPath id="areaClip"><polygon points="' + ptAttr + '"/></clipPath></defs>' +
-                '<polygon points="' + ptAttr + '" fill="#cfe3c9"/>' +
+                '<polygon points="' + ptAttr + '" fill="' + fill + '"/>' +
                 '<g clip-path="url(#areaClip)">' +
-                '<polygon points="' + ptAttr + '" fill="none" stroke="#1e3a29" stroke-width="18" stroke-dasharray="12 8" opacity="0.16"/>' +
-                '<polygon points="' + ptAttr + '" fill="none" stroke="#2d4a36" stroke-width="10" stroke-linejoin="miter"/>' +
+                '<polygon points="' + ptAttr + '" fill="none" stroke="' + stroke + '" stroke-width="18" stroke-dasharray="12 8" opacity="0.16"/>' +
+                '<polygon points="' + ptAttr + '" fill="none" stroke="' + stroke + '" stroke-width="10" stroke-linejoin="miter"/>' +
                 '</g>' +
-                '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="#1e3a29">' + label + '</text>' +
+                '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="' + labelColor + '">' + label + '</text>' +
                 '</svg>';
         } else {
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
-                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="#cfe3c9" stroke="#2d4a36" stroke-width="6"/>' +
-                '<rect x="14" y="14" width="' + (W - 28) + '" height="' + (H - 28) + '" fill="none" stroke="#2d4a36" stroke-width="2" stroke-dasharray="12 8" opacity="0.55"/>' +
-                '<text x="' + (W / 2) + '" y="' + (H / 2 + fontSize / 3) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="#1e3a29">' + label + '</text>' +
+                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="6"/>' +
+                '<rect x="14" y="14" width="' + (W - 28) + '" height="' + (H - 28) + '" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-dasharray="12 8" opacity="0.55"/>' +
+                '<text x="' + (W / 2) + '" y="' + (H / 2 + fontSize / 3) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="' + labelColor + '">' + label + '</text>' +
                 '</svg>';
         }
         return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
@@ -1159,7 +1164,7 @@
             ? Math.max(PLOT_CELL_PX * 2, Math.round(widthPx * aspect))
             : rows * PLOT_CELL_PX;
         const asset = pts
-            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect)
+            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, { fill: v.fill, stroke: v.stroke, label: v.label, labelColor: v.labelColor })
             : v.src;
         return {
             area: String(v.area),
@@ -1434,8 +1439,8 @@
                     visible: p.visible !== false
                 };
                 copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
-                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
-                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area));
+                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect, { fill: copy.fill, stroke: copy.stroke, label: copy.label, labelColor: copy.labelColor })
+                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area, null, null, { fill: copy.fill, stroke: copy.stroke, label: copy.label, labelColor: copy.labelColor }));
                 return copy;
             }
             return { ...p, visible: p.visible !== false };
@@ -1531,6 +1536,130 @@
         }
     }
 
+    // ── Blueprint Perimeter Areas: Condominium (top-right) & Mausoleum (east & west wings) ──
+    const BLUEPRINT_PERIMETER_AREAS = [
+        {
+            id: 'area-blueprint-condo-13',
+            kind: 'area',
+            custom: true,
+            area: '13',
+            name: 'Area 13 - Condominium',
+            desc: 'Area 13 - Condominium perimeter columbarium section',
+            category: 'Condominium',
+            tab: 'condominium',
+            prefix: 'CONDO13',
+            cols: 28,
+            rows: 12,
+            shapeAspect: 0.42,
+            fill: '#2d88a8',
+            stroke: '#184b5e',
+            labelColor: '#ffffff',
+            label: 'CONDO 13',
+            points: [
+                { x: 2, y: 42 },
+                { x: 58, y: 12 },
+                { x: 96, y: 52 },
+                { x: 96, y: 92 },
+                { x: 86, y: 92 },
+                { x: 86, y: 60 },
+                { x: 56, y: 30 },
+                { x: 4, y: 58 }
+            ],
+            left: 69.5,
+            top: 24.5,
+            width: 23.0,
+            rotate: 30,
+            opacity: 0.96,
+            zIndex: 6,
+            visible: true
+        },
+        {
+            id: 'area-blueprint-mausoleum-14',
+            kind: 'area',
+            custom: true,
+            area: '14',
+            name: 'Area 14 - Mausoleum (East)',
+            desc: 'Area 14 - Mausoleum (East) perimeter memorial wing',
+            category: 'Mausoleum',
+            tab: 'mausoleum',
+            prefix: 'MAUS14',
+            cols: 22,
+            rows: 20,
+            shapeAspect: 0.95,
+            fill: '#f3ecd8',
+            stroke: '#2f332e',
+            labelColor: '#232924',
+            label: 'MAUSOLEUM 14',
+            points: [
+                { x: 98, y: 4 },
+                { x: 98, y: 16 },
+                { x: 66, y: 22 },
+                { x: 44, y: 56 },
+                { x: 38, y: 76 },
+                { x: 12, y: 98 },
+                { x: 2, y: 92 },
+                { x: 30, y: 70 },
+                { x: 36, y: 50 },
+                { x: 60, y: 12 }
+            ],
+            left: 41.0,
+            top: 57.5,
+            width: 38.0,
+            rotate: 30,
+            opacity: 0.96,
+            zIndex: 6,
+            visible: true
+        },
+        {
+            id: 'area-blueprint-mausoleum-15',
+            kind: 'area',
+            custom: true,
+            area: '15',
+            name: 'Area 15 - Mausoleum (West)',
+            desc: 'Area 15 - Mausoleum (West) perimeter memorial wing',
+            category: 'Mausoleum',
+            tab: 'mausoleum',
+            prefix: 'MAUS15',
+            cols: 14,
+            rows: 14,
+            shapeAspect: 0.95,
+            fill: '#f3ecd8',
+            stroke: '#2f332e',
+            labelColor: '#232924',
+            label: 'MAUSOLEUM 15',
+            points: [
+                { x: 4, y: 14 },
+                { x: 14, y: 6 },
+                { x: 48, y: 22 },
+                { x: 56, y: 86 },
+                { x: 92, y: 90 },
+                { x: 92, y: 98 },
+                { x: 44, y: 96 },
+                { x: 36, y: 30 }
+            ],
+            left: -1.5,
+            top: 67.5,
+            width: 17.5,
+            rotate: 30,
+            opacity: 0.96,
+            zIndex: 6,
+            visible: true
+        }
+    ];
+
+    function createBlueprintPerimeterAreas() {
+        return BLUEPRINT_PERIMETER_AREAS.map(def => {
+            const copy = JSON.parse(JSON.stringify(def));
+            copy.src = buildAreaSvgDataUrl(copy.cols, copy.rows, copy.area, copy.points, copy.shapeAspect, {
+                fill: copy.fill,
+                stroke: copy.stroke,
+                label: copy.label,
+                labelColor: copy.labelColor
+            });
+            return copy;
+        });
+    }
+
     window.ZMGFence = {
         ASPECT: ENTRANCE_ASPECT,
         CATEGORY_TABS,
@@ -1564,6 +1693,7 @@
         render,
         removeFence,
         buildAreaSvgDataUrl,
+        createBlueprintPerimeterAreas,
         isCustomArea,
         customAreaLayers,
         shapeEntryFromLayer,

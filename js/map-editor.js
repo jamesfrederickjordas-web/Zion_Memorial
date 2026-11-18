@@ -1042,7 +1042,12 @@ function normalizeEditorVector(v) {
         v.shapeAspect = parseFloat(aspect.toFixed(4));
         const pts = ZMGFence.sanitizePolygonPoints(v.points, 3) || ZMGFence.defaultShapePoints(4, aspect);
         v.points = pts;
-        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect);
+        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, {
+            fill: v.fill,
+            stroke: v.stroke,
+            label: v.label,
+            labelColor: v.labelColor
+        });
     }
     return v;
 }
@@ -1095,7 +1100,7 @@ async function syncEditorVectorsWithSupabase() {
             vectorLayers = row.coordinates.vectorLayers
                 .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
-            finalizeLoadedVectors(!!row.coordinates.entranceSeeded);
+            finalizeLoadedVectors(!!row.coordinates.entranceSeeded, !!row.coordinates.blueprintAreasSeeded);
             localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 
             if (row.coordinates.bgConfig) {
@@ -1151,6 +1156,7 @@ async function persistEditorVectorsToSupabase() {
                     blueprintConfig,
                     fenceConfig,
                     entranceSeeded: !!localStorage.getItem(ENTRANCE_SEEDED_KEY),
+                    blueprintAreasSeeded: !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY),
                     updatedAt: new Date().toISOString()
                 }
             }], { onConflict: 'plot_identifier' });
@@ -1231,6 +1237,7 @@ async function resetVectorLayout() {
     const keptCustomAreas = vectorLayers.filter(v => v.custom);
     vectorLayers = JSON.parse(JSON.stringify(DEFAULT_VECTORS)).concat(keptCustomAreas);
     localStorage.removeItem(ENTRANCE_SEEDED_KEY);
+    localStorage.removeItem(BLUEPRINT_AREAS_SEEDED_KEY);
     fenceConfig = window.ZMGFence
         ? ZMGFence.writeStoredFenceConfig({ ...DEFAULT_FENCE_CONFIG })
         : { ...DEFAULT_FENCE_CONFIG };
@@ -2256,6 +2263,7 @@ function addVectorFromAsset(asset) {
 // PERIMETER FENCE, ENTRANCE GATE & CUSTOM CEMETERY AREAS
 // ==============================================================================
 const ENTRANCE_SEEDED_KEY = 'zion_map_entrance_seeded_v1';
+const BLUEPRINT_AREAS_SEEDED_KEY = 'zmg_blueprint_condo_maus_seeded_v1';
 let fenceRaf = null;
 let areaPrefixTouched = false;
 
@@ -2270,8 +2278,8 @@ function sanitizeBgConfig() {
     }
 }
 
-// Seeds one entrance gate the first time a layout is opened (never re-adds a deleted one)
-function finalizeLoadedVectors(entranceAlreadySeeded) {
+// Seeds one entrance gate and the blueprint Condominium & Mausoleum perimeter areas once (never re-adds deleted ones)
+function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeeded) {
     if (window.ZMGFence) {
         const hasEntrance = vectorLayers.some(v => v.kind === 'entrance');
         const seeded = entranceAlreadySeeded || !!localStorage.getItem(ENTRANCE_SEEDED_KEY);
@@ -2280,6 +2288,24 @@ function finalizeLoadedVectors(entranceAlreadySeeded) {
         }
         if (hasEntrance || entranceAlreadySeeded || !seeded) {
             localStorage.setItem(ENTRANCE_SEEDED_KEY, '1');
+        }
+
+        if (typeof ZMGFence.createBlueprintPerimeterAreas === 'function') {
+            const blueprintSeeded = blueprintAreasAlreadySeeded || !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY);
+            const existingIds = new Set(vectorLayers.map(v => v.id));
+            const existingAreas = new Set(vectorLayers.filter(v => v.area != null).map(v => String(v.area)));
+            if (!blueprintSeeded) {
+                const toAdd = ZMGFence.createBlueprintPerimeterAreas().filter(
+                    areaLayer => !existingIds.has(areaLayer.id) && !existingAreas.has(String(areaLayer.area))
+                );
+                if (toAdd.length > 0) {
+                    vectorLayers.push(...toAdd);
+                    try {
+                        localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
+                    } catch (_) {}
+                }
+                localStorage.setItem(BLUEPRINT_AREAS_SEEDED_KEY, '1');
+            }
         }
     }
     syncCustomAreasFromLayers();
@@ -3627,7 +3653,13 @@ async function createCustomAreaFromForm() {
     }
 
     const shapeAspect = parseFloat((rows / Math.max(1, cols)).toFixed(4));
-    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect);
+    const styleOpts = editingLayer ? {
+        fill: editingLayer.fill,
+        stroke: editingLayer.stroke,
+        label: editingLayer.label,
+        labelColor: editingLayer.labelColor
+    } : undefined;
+    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect, styleOpts);
 
     if (editingLayer) {
         const beforeSnap = captureMapSnapshot(`edit ${fullName}`);
