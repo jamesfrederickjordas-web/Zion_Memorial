@@ -1100,7 +1100,7 @@ async function syncEditorVectorsWithSupabase() {
             vectorLayers = row.coordinates.vectorLayers
                 .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
-            finalizeLoadedVectors(!!row.coordinates.entranceSeeded, !!row.coordinates.blueprintAreasSeeded);
+            const seededNow = finalizeLoadedVectors(!!row.coordinates.entranceSeeded, !!row.coordinates.blueprintAreasSeeded, true);
             localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 
             if (row.coordinates.bgConfig) {
@@ -1117,6 +1117,9 @@ async function syncEditorVectorsWithSupabase() {
             }
             if (row.coordinates.fenceConfig && window.ZMGFence) {
                 fenceConfig = ZMGFence.writeStoredFenceConfig(row.coordinates.fenceConfig);
+            }
+            if (seededNow) {
+                await persistEditorVectorsToSupabase();
             }
             renderVectorMap();
             renderLayerSidebar();
@@ -2279,7 +2282,8 @@ function sanitizeBgConfig() {
 }
 
 // Seeds one entrance gate and the blueprint Condominium & Mausoleum perimeter areas once (never re-adds deleted ones)
-function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeeded) {
+function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeeded, fromSupabase) {
+    let blueprintSeededNow = false;
     if (window.ZMGFence) {
         const hasEntrance = vectorLayers.some(v => v.kind === 'entrance');
         const seeded = entranceAlreadySeeded || !!localStorage.getItem(ENTRANCE_SEEDED_KEY);
@@ -2291,7 +2295,9 @@ function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeede
         }
 
         if (typeof ZMGFence.createBlueprintPerimeterAreas === 'function') {
-            const blueprintSeeded = blueprintAreasAlreadySeeded || !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY);
+            const blueprintSeeded = fromSupabase
+                ? !!blueprintAreasAlreadySeeded
+                : !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY);
             const existingIds = new Set(vectorLayers.map(v => v.id));
             const existingAreas = new Set(vectorLayers.filter(v => v.area != null).map(v => String(v.area)));
             if (!blueprintSeeded) {
@@ -2304,11 +2310,15 @@ function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeede
                         localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
                     } catch (_) {}
                 }
-                localStorage.setItem(BLUEPRINT_AREAS_SEEDED_KEY, '1');
+                if (fromSupabase) {
+                    localStorage.setItem(BLUEPRINT_AREAS_SEEDED_KEY, '1');
+                    blueprintSeededNow = true;
+                }
             }
         }
     }
     syncCustomAreasFromLayers();
+    return blueprintSeededNow;
 }
 
 function scheduleFence() {
