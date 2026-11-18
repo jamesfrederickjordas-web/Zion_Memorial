@@ -3,7 +3,7 @@
 // Zion Memorial Garden - Unified Map Vector & Plot Grid Studio
 // ==============================================================================
 
-const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
+const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
 const MAP_DIR = 'assets/images/Map/';
 
 if (typeof window.showNotification !== 'function') {
@@ -63,21 +63,10 @@ const VECTOR_CATALOG = [
     { file: 'Vector (4).png',   name: 'Area 12 - Mausoleum Court', desc: 'Mausoleum Court memorial section', defaultW: 20, defaultZ: 6 }
 ];
 
-// ── Default Vector Layout Coordinates (ZERO OVERLAPS) ──
-const DEFAULT_VECTORS = [
-    { id: 'vector-14', area: '10', name: 'Area 10 - Condominium Block A', src: MAP_DIR + 'Vector (14).png', left: 41.0, top: 4.0, width: 18.0, rotate: 0, opacity: 1.0, zIndex: 5, visible: true },
-    { id: 'vector-12', area: '4',  name: 'Area 4 - Supreme Garden', src: MAP_DIR + 'Vector (12).png', left: 24.0, top: 25.0, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-11', area: '9',  name: 'Area 9 - Lawn of Serenity', src: MAP_DIR + 'Vector (11).png', left: 42.0, top: 25.0, width: 14.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-10', area: '8',  name: 'Area 8 - Lawn of Grace', src: MAP_DIR + 'Vector (10).png', left: 59.0, top: 27.0, width: 8.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-13', area: '5',  name: 'Area 5 - Special Supreme Estate', src: MAP_DIR + 'Vector (13).png', left: 42.0, top: 46.0, width: 14.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-5',  area: '7',  name: 'Area 7 - Lawn of Faith', src: MAP_DIR + 'Vector (5).png', left: 58.5, top: 44.5, width: 9.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-6',  area: '6',  name: 'Area 6 - Lawn of Peace', src: MAP_DIR + 'Vector (6).png', left: 58.0, top: 66.0, width: 9.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-3',  area: '11', name: 'Area 11 - Lawn of Memories', src: MAP_DIR + 'Vector (3).png', left: 70.0, top: 43.0, width: 6.5, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-4',  area: '12', name: 'Area 12 - Mausoleum Court', src: MAP_DIR + 'Vector (4).png', left: 78.5, top: 45.0, width: 12.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-8',  area: '2',  name: 'Area 2 - Lawn of Love', src: MAP_DIR + 'Vector (8).png', left: 24.0, top: 48.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-9',  area: '3',  name: 'Area 3 - Lawn of Hope (Family Estate)', src: MAP_DIR + 'Vector (9).png', left: 7.0, top: 48.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true },
-    { id: 'vector-7',  area: '1',  name: 'Area 1 - Single Tiered Lawn', src: MAP_DIR + 'Vector (7).png', left: 16.0, top: 73.5, width: 15.0, rotate: 0, opacity: 0.95, zIndex: 5, visible: true }
-];
+// ── Default Vector Layout Coordinates from ZMGFence canonical map ──
+const DEFAULT_VECTORS = (window.ZMGFence && typeof window.ZMGFence.getDefaultMapVectors === 'function')
+    ? window.ZMGFence.getDefaultMapVectors()
+    : [];
 
 // ── Virtual Board Coordinate Frame Dimensions ──
 const BOARD_WIDTH = 1200;
@@ -1046,13 +1035,17 @@ function normalizeEditorVector(v) {
             fill: v.fill,
             stroke: v.stroke,
             label: v.label,
-            labelColor: v.labelColor
+            labelColor: v.labelColor,
+            outerFrameColor: v.outerFrameColor,
+            accentColor: v.accentColor,
+            subLabel: v.subLabel,
+            labelScale: v.labelScale
         });
     }
     return v;
 }
 
-const ZMG_DB_MAP_CONFIG_ID = 'ZMG-MAP-VECTOR-LAYOUT-CONFIG';
+const ZMG_DB_MAP_CONFIG_ID = 'ZMG-MAP-VECTOR-LAYOUT-CONFIG-V3';
 
 function loadSavedVectors() {
     if (window.ZMGFence) {

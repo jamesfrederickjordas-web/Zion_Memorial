@@ -73,154 +73,18 @@ async function loadAllDashboardComponents() {
 let categoryAvailablePlotsCache = [];
 let currentSectionAllPlotsCache = [];
 let selectedPlotToBook = null;
-let currentResAreaSectionName = 'Area 5 - Special Supreme Estate';
+let currentResAreaSectionName = 'Area 4 - Kindness';
 let currentResPlotFilter = 'all';
 let currentResViewMode = 'blueprint'; // 'blueprint' or 'map'
 
-// Exact Area Shape & Grid Blueprint Configuration (Matches Layout Studio 1:1)
-const RES_SECTION_SHAPE_MAP = {
-    'Area 1 - Single Tiered Lawn': {
-        area: '1',
-        asset: 'assets/images/Map/Vector (7).png',
-        prefix: 'ST1',
-        category: 'Single Teired',
-        tab: 'single-teired',
-        cols: 24,
-        rows: 24,
-        widthPx: 600,
-        heightPx: 630
-    },
-    'Area 2 - Lawn of Love': {
-        area: '2',
-        asset: 'assets/images/Map/Vector (8).png',
-        prefix: 'LL',
-        category: 'Special Supreme',
-        tab: 'special-supreme',
-        cols: 22,
-        rows: 28,
-        widthPx: 560,
-        heightPx: 700
-    },
-    'Area 3 - Lawn of Hope (Family Estate)': {
-        area: '3',
-        asset: 'assets/images/Map/Vector (9).png',
-        prefix: 'FE',
-        category: 'Family Estate Jr.',
-        tab: 'family-estate',
-        cols: 24,
-        rows: 26,
-        widthPx: 580,
-        heightPx: 640
-    },
-    'Area 4 - Supreme Garden': {
-        area: '4',
-        asset: 'assets/images/Map/Vector (12).png',
-        prefix: 'SUP4',
-        category: 'Supreme',
-        tab: 'supreme',
-        cols: 24,
-        rows: 26,
-        widthPx: 580,
-        heightPx: 630
-    },
-    'Area 5 - Special Supreme Estate': {
-        area: '5',
-        asset: 'assets/images/Map/Vector (13).png',
-        prefix: 'SPEC5',
-        category: 'Special Supreme',
-        tab: 'special-supreme',
-        cols: 22,
-        rows: 28,
-        widthPx: 560,
-        heightPx: 700
-    },
-    'Area 6 - Lawn of Peace': {
-        area: '6',
-        asset: 'assets/images/Map/Vector (6).png',
-        prefix: 'ST6',
-        category: 'Single Teired',
-        tab: 'single-teired',
-        cols: 18,
-        rows: 28,
-        widthPx: 460,
-        heightPx: 720
-    },
-    'Area 7 - Lawn of Faith': {
-        area: '7',
-        asset: 'assets/images/Map/Vector (5).png',
-        prefix: 'SUP7',
-        category: 'Supreme',
-        tab: 'supreme',
-        cols: 18,
-        rows: 26,
-        widthPx: 460,
-        heightPx: 680
-    },
-    'Area 8 - Lawn of Grace': {
-        area: '8',
-        asset: 'assets/images/Map/Vector (10).png',
-        prefix: 'SUP8',
-        category: 'Supreme',
-        tab: 'supreme',
-        cols: 16,
-        rows: 22,
-        widthPx: 420,
-        heightPx: 580
-    },
-    'Area 9 - Lawn of Serenity': {
-        area: '9',
-        asset: 'assets/images/Map/Vector (11).png',
-        prefix: 'SPEC9',
-        category: 'Special Supreme',
-        tab: 'special-supreme',
-        cols: 24,
-        rows: 24,
-        widthPx: 600,
-        heightPx: 620
-    },
-    'Area 10 - Condominium Block A': {
-        area: '10',
-        asset: 'assets/images/Map/Vector (14).png',
-        prefix: 'COND',
-        category: 'Condominium',
-        tab: 'condominium',
-        cols: 28,
-        rows: 24,
-        widthPx: 680,
-        heightPx: 580
-    },
-    'Area 11 - Lawn of Memories': {
-        area: '11',
-        asset: 'assets/images/Map/Vector (3).png',
-        prefix: 'SPEC11',
-        category: 'Special Supreme',
-        tab: 'special-supreme',
-        cols: 16,
-        rows: 36,
-        widthPx: 400,
-        heightPx: 820
-    },
-    'Area 12 - Mausoleum Court': {
-        area: '12',
-        asset: 'assets/images/Map/Vector (4).png',
-        prefix: 'MAUS',
-        category: 'Mausoleum',
-        tab: 'mausoleum',
-        cols: 24,
-        rows: 24,
-        widthPx: 600,
-        heightPx: 600
-    }
-};
+// Exact Area Shape & Grid Blueprint Configuration (from ZMGFence canonical map)
+const RES_SECTION_SHAPE_MAP = (window.ZMGFence && typeof window.ZMGFence.getDefaultSectionShapeMap === 'function')
+    ? window.ZMGFence.getDefaultSectionShapeMap()
+    : {};
 
-const LAWN_TAB_TO_SECTIONS = {
-    'condominium': ['Area 10 - Condominium Block A'],
-    'single-teired': ['Area 1 - Single Tiered Lawn', 'Area 6 - Lawn of Peace'],
-    'supreme': ['Area 4 - Supreme Garden', 'Area 7 - Lawn of Faith', 'Area 8 - Lawn of Grace'],
-    'special-supreme': ['Area 5 - Special Supreme Estate', 'Area 2 - Lawn of Love', 'Area 9 - Lawn of Serenity', 'Area 11 - Lawn of Memories'],
-    'family-estate': ['Area 3 - Lawn of Hope (Family Estate)'],
-    'mausoleum': ['Area 12 - Mausoleum Court']
-};
+const LAWN_TAB_TO_SECTIONS = (window.ZMGFence && typeof window.ZMGFence.getDefaultLawnTabMap === 'function')
+    ? window.ZMGFence.getDefaultLawnTabMap()
+    : {};
 
 // Generates the exact 94-plot 2x3 Special Supreme layout for Area 5 from Layout Studio
 function generateArea5ExactBlueprintLayout() {
@@ -957,21 +821,13 @@ function setupInteractiveCemeteryMap() {
     const lawnZones = document.querySelectorAll('.interactive-lawn-zone');
     const lawnBadges = document.querySelectorAll('.map-lawn-badge');
 
-    const areaMeta = {
-        '1': { name: 'Area 1 - Single Tiered Lawn', category: 'Single Teired', tab: 'single-teired' },
-        '2': { name: 'Area 2 - Lawn of Love', category: 'Special Supreme', tab: 'special-supreme' },
-        '3': { name: 'Area 3 - Lawn of Hope (Family Estate)', category: 'Family Estate Jr.', tab: 'family-estate' },
-        '4': { name: 'Area 4 - Supreme Garden', category: 'Supreme', tab: 'supreme' },
-        '5': { name: 'Area 5 - Special Supreme Estate', category: 'Special Supreme', tab: 'special-supreme' },
-        '6': { name: 'Area 6 - Lawn of Peace', category: 'Single Teired', tab: 'single-teired' },
-        '7': { name: 'Area 7 - Lawn of Faith', category: 'Supreme', tab: 'supreme' },
-        '8': { name: 'Area 8 - Lawn of Grace', category: 'Supreme', tab: 'supreme' },
-        '9': { name: 'Area 9 - Lawn of Serenity', category: 'Special Supreme', tab: 'special-supreme' },
-        '10': { name: 'Area 10 - Condominium Block A', category: 'Condominium', tab: 'condominium' },
-        '11': { name: 'Area 11 - Lawn of Memories', category: 'Special Supreme', tab: 'special-supreme' },
-        '12': { name: 'Area 12 - Mausoleum Court', category: 'Mausoleum', tab: 'mausoleum' },
-        'condominium': { name: 'Area 10 - Condominium Block A', category: 'Condominium', tab: 'condominium' }
-    };
+    const areaMeta = {};
+    Object.entries(RES_SECTION_SHAPE_MAP).forEach(([secName, info]) => {
+        if (info && info.area) {
+            areaMeta[String(info.area)] = { name: secName, category: info.category, tab: info.tab };
+        }
+    });
+    if (areaMeta['12']) areaMeta['condominium'] = areaMeta['12'];
 
     function selectArea(areaId) {
         syncCustomAreasToDashboard();
@@ -1205,6 +1061,46 @@ async function loadPlotsForCategory(lawnType, filterAreaId = null, filterAreaNam
                 try {
                     localStorage.setItem('zion_section_plots_v1_' + targetSectionName, JSON.stringify(allSectionPlots));
                 } catch (_) {}
+            }
+        }
+
+        // 4. Fallback: Generate generic blueprint plots if section has no rows in DB/cache yet
+        if (allSectionPlots.length === 0 && shapeInfo) {
+            const cols = shapeInfo.cols || 20;
+            const rows = shapeInfo.rows || 20;
+            const isCondo = shapeInfo.prefix === 'COND';
+            const isFamily = (shapeInfo.category || '').includes('Family');
+            const isSupreme = (shapeInfo.category || '').includes('Supreme');
+            const pW = isCondo ? 1 : (isFamily ? 4 : (isSupreme ? 2 : 1));
+            const pH = isCondo ? 1 : (isFamily ? 4 : (isSupreme ? 2 : 2));
+            const stepCol = pW + (isCondo ? 0 : 1);
+            const stepRow = pH + (isCondo ? 0 : 1);
+            const price = shapeInfo.defaultPrice || (isCondo ? 35000 : 65000);
+            const dp = shapeInfo.defaultDown || Math.round(price * 0.15);
+            const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
+            let seq = 1;
+            for (let r = 1; r <= rows - pH + 1; r += stepRow) {
+                for (let c = 1; c <= cols - pW + 1; c += stepCol) {
+                    if (polyPts && window.ZMGFence && typeof window.ZMGFence.isPointInPolygonPct === 'function') {
+                        const cxPct = ((c - 1 + pW / 2) / cols) * 100;
+                        const cyPct = ((r - 1 + pH / 2) / rows) * 100;
+                        if (!window.ZMGFence.isPointInPolygonPct(cxPct, cyPct, polyPts)) continue;
+                    }
+                    const code = `${shapeInfo.prefix}-${String(seq).padStart(3, '0')}`;
+                    allSectionPlots.push({
+                        id: ((parseInt(shapeInfo.area, 10) || 13) * 1000) + seq,
+                        plot_identifier: code,
+                        section_name: targetSectionName,
+                        category: shapeInfo.category,
+                        status: 'available',
+                        price: price,
+                        down_payment: dp,
+                        col_num: c,
+                        row_num: r,
+                        coordinates: { width: pW, height: pH, col_span: pW, row_span: pH }
+                    });
+                    seq++;
+                }
             }
         }
 

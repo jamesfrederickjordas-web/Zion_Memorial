@@ -9,165 +9,10 @@ let currentPaymentProofDataUrl = '';
 // Displays ONE section / plot layout at a time for focused interactive booking
 // ==============================================================================
 
-// Area Grid and Dimension Specifications (True Vector Assets & Natural Dimensions)
-const SECTION_SHAPE_MAP = {
-    'Area 1 - Single Tiered Lawn': {
-        area: '1',
-        tab: 'single-teired',
-        asset: 'assets/images/Map/Vector (7).png',
-        prefix: 'ST1',
-        category: 'Single Teired',
-        cols: 24,
-        rows: 24,
-        widthPx: 1109,
-        heightPx: 1165,
-        defaultPrice: 55000,
-        defaultDown: 8250
-    },
-    'Area 2 - Lawn of Love': {
-        area: '2',
-        tab: 'special-supreme',
-        asset: 'assets/images/Map/Vector (8).png',
-        prefix: 'LL',
-        category: 'Special Supreme',
-        cols: 22,
-        rows: 28,
-        widthPx: 786,
-        heightPx: 971,
-        defaultPrice: 85000,
-        defaultDown: 12500
-    },
-    'Area 3 - Lawn of Hope (Family Estate)': {
-        area: '3',
-        tab: 'family-estate',
-        asset: 'assets/images/Map/Vector (9).png',
-        prefix: 'FE',
-        category: 'Family Estate Jr.',
-        cols: 24,
-        rows: 26,
-        widthPx: 881,
-        heightPx: 969,
-        defaultPrice: 220000,
-        defaultDown: 33000
-    },
-    'Area 4 - Supreme Garden': {
-        area: '4',
-        tab: 'supreme',
-        asset: 'assets/images/Map/Vector (12).png',
-        prefix: 'SUP4',
-        category: 'Supreme',
-        cols: 24,
-        rows: 26,
-        widthPx: 894,
-        heightPx: 964,
-        defaultPrice: 75000,
-        defaultDown: 11250
-    },
-    'Area 5 - Special Supreme Estate': {
-        area: '5',
-        tab: 'special-supreme',
-        asset: 'assets/images/Map/Vector (13).png',
-        prefix: 'SPEC5',
-        category: 'Special Supreme',
-        cols: 22,
-        rows: 28,
-        widthPx: 782,
-        heightPx: 964,
-        defaultPrice: 85000,
-        defaultDown: 12500
-    },
-    'Area 6 - Lawn of Peace': {
-        area: '6',
-        tab: 'single-teired',
-        asset: 'assets/images/Map/Vector (6).png',
-        prefix: 'ST6',
-        category: 'Single Teired',
-        cols: 18,
-        rows: 28,
-        widthPx: 468,
-        heightPx: 765,
-        defaultPrice: 55000,
-        defaultDown: 8250
-    },
-    'Area 7 - Lawn of Faith': {
-        area: '7',
-        tab: 'supreme',
-        asset: 'assets/images/Map/Vector (5).png',
-        prefix: 'SUP7',
-        category: 'Supreme',
-        cols: 18,
-        rows: 26,
-        widthPx: 462,
-        heightPx: 697,
-        defaultPrice: 70000,
-        defaultDown: 10500
-    },
-    'Area 8 - Lawn of Grace': {
-        area: '8',
-        tab: 'supreme',
-        asset: 'assets/images/Map/Vector (10).png',
-        prefix: 'SUP8',
-        category: 'Supreme',
-        cols: 16,
-        rows: 22,
-        widthPx: 335,
-        heightPx: 456,
-        defaultPrice: 65000,
-        defaultDown: 9750
-    },
-    'Area 9 - Lawn of Serenity': {
-        area: '9',
-        tab: 'special-supreme',
-        asset: 'assets/images/Map/Vector (11).png',
-        prefix: 'SER9',
-        category: 'Special Supreme',
-        cols: 24,
-        rows: 24,
-        widthPx: 777,
-        heightPx: 799,
-        defaultPrice: 80000,
-        defaultDown: 12000
-    },
-    'Area 10 - Condominium Block A': {
-        area: '10',
-        tab: 'condominium',
-        asset: 'assets/images/Map/Vector (14).png',
-        prefix: 'COND',
-        category: 'Condominium',
-        cols: 28,
-        rows: 24,
-        widthPx: 899,
-        heightPx: 757,
-        defaultPrice: 35000,
-        defaultDown: 5250
-    },
-    'Area 11 - Lawn of Memories': {
-        area: '11',
-        tab: 'special-supreme',
-        asset: 'assets/images/Map/Vector (3).png',
-        prefix: 'SPEC11',
-        category: 'Special Supreme',
-        cols: 16,
-        rows: 36,
-        widthPx: 417,
-        heightPx: 1444,
-        defaultPrice: 85000,
-        defaultDown: 12500
-    },
-    'Area 12 - Mausoleum Court': {
-        area: '12',
-        tab: 'mausoleum',
-        asset: 'assets/images/Map/Vector (4).png',
-        prefix: 'MAUS',
-        category: 'Mausoleum',
-        cols: 24,
-        rows: 24,
-        widthPx: 691,
-        heightPx: 669,
-        defaultPrice: 350000,
-        defaultDown: 50000
-    }
-};
+// Area Grid and Dimension Specifications (from ZMGFence canonical map)
+const SECTION_SHAPE_MAP = (window.ZMGFence && typeof window.ZMGFence.getDefaultSectionShapeMap === 'function')
+    ? window.ZMGFence.getDefaultSectionShapeMap()
+    : {};
 
 // URL Parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -274,12 +119,12 @@ async function syncCustomAreasFromSupabase() {
         const { data: cfgRow, error } = await supabaseClient
             .from('memorial_spaces')
             .select('coordinates')
-            .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
+            .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG-V3')
             .maybeSingle();
         if (!error && cfgRow && cfgRow.coordinates && Array.isArray(cfgRow.coordinates.vectorLayers)) {
             const cleaned = cfgRow.coordinates.vectorLayers.filter(v => !window.ZMGFence || !window.ZMGFence.isLegacyWall(v));
             try {
-                localStorage.setItem('zion_cemetery_map_vector_layout_v2', JSON.stringify(cleaned));
+                localStorage.setItem('zion_cemetery_map_vector_layout_v3', JSON.stringify(cleaned));
             } catch (_) {}
             registerCustomAreasForPlotDetails(cleaned);
         }

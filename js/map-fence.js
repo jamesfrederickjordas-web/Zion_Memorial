@@ -1067,7 +1067,7 @@
     // A custom area lives on the map as a vector layer flagged `custom: true`
     // that carries its own plot-grid settings (cols, rows, prefix, category).
     const PLOT_CELL_PX = 25;
-    const LAYOUT_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
+    const LAYOUT_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
     const CATEGORY_TABS = {
         'Single Teired': 'single-teired',
         'Supreme': 'supreme',
@@ -1104,12 +1104,16 @@
             ? Number(shapeAspect)
             : ((Number(rows) || 20) / Math.max(1, Number(cols) || 20));
         const H = Math.max(40, Math.round(W * aspect));
-        const fontSize = Math.max(14, Math.round(Math.min(W, H) * 0.16));
+        const labelScale = Number(opts.labelScale) > 0 ? Number(opts.labelScale) : 1;
+        const fontSize = Math.max(11, Math.round(Math.min(W, H) * 0.16 * labelScale));
         const rawLabel = opts.label ? String(opts.label).trim().slice(0, 24) : ('AREA ' + String(areaNo).replace(/[^0-9A-Za-z]/g, ''));
         const label = escapeXmlText(rawLabel);
         const fill = sanitizeSvgColor(opts.fill, '#cfe3c9');
         const stroke = sanitizeSvgColor(opts.stroke, '#2d4a36');
         const labelColor = sanitizeSvgColor(opts.labelColor, '#1e3a29');
+        const outerFrameColor = opts.outerFrameColor ? sanitizeSvgColor(opts.outerFrameColor, '') : '';
+        const accentColor = opts.accentColor ? sanitizeSvgColor(opts.accentColor, '') : '';
+        const subLabel = opts.subLabel ? escapeXmlText(String(opts.subLabel).trim().slice(0, 24)) : '';
 
         const cleanPts = sanitizePolygonPoints(points, MIN_POLYGON_POINTS);
         let svg = '';
@@ -1122,15 +1126,34 @@
             const center = polygonCentroid(ptsPx);
             const labelX = clampNum(center.x, W * 0.15, W * 0.85).toFixed(1);
             const labelY = clampNum(center.y + fontSize / 3, fontSize * 0.9, H - fontSize * 0.3).toFixed(1);
+
+            let frameOverlay = '';
+            if (outerFrameColor) {
+                const frameW = Math.max(10, Math.round(Math.min(W, H) * 0.18));
+                frameOverlay += '<polygon points="' + ptAttr + '" fill="none" stroke="' + outerFrameColor + '" stroke-width="' + frameW + '" stroke-linejoin="miter"/>';
+            }
+            if (accentColor) {
+                const accW = Math.max(6, Math.round(Math.min(W, H) * 0.10));
+                frameOverlay += '<polygon points="' + ptAttr + '" fill="none" stroke="' + accentColor + '" stroke-width="' + accW + '" stroke-linejoin="miter" opacity="0.88"/>';
+            }
+            let subLabelSvg = '';
+            if (subLabel) {
+                const subFs = Math.max(7, Math.round(Math.min(W, H) * 0.065));
+                subLabelSvg =
+                    '<text x="' + (W / 2).toFixed(1) + '" y="' + (subFs * 1.15).toFixed(1) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="600" font-size="' + subFs + '" fill="#1e293b">' + subLabel + '</text>' +
+                    '<text x="' + (W / 2).toFixed(1) + '" y="' + (H - subFs * 0.35).toFixed(1) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="600" font-size="' + subFs + '" fill="#1e293b">' + subLabel + '</text>';
+            }
+
             // Clip strokes strictly inside the polygon so vertices at 0..100% never clip at viewBox edges
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
                 '<defs><clipPath id="areaClip"><polygon points="' + ptAttr + '"/></clipPath></defs>' +
                 '<polygon points="' + ptAttr + '" fill="' + fill + '"/>' +
                 '<g clip-path="url(#areaClip)">' +
-                '<polygon points="' + ptAttr + '" fill="none" stroke="' + stroke + '" stroke-width="18" stroke-dasharray="12 8" opacity="0.16"/>' +
+                frameOverlay +
                 '<polygon points="' + ptAttr + '" fill="none" stroke="' + stroke + '" stroke-width="10" stroke-linejoin="miter"/>' +
                 '</g>' +
+                subLabelSvg +
                 '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="' + labelColor + '">' + label + '</text>' +
                 '</svg>';
         } else {
@@ -1164,7 +1187,16 @@
             ? Math.max(PLOT_CELL_PX * 2, Math.round(widthPx * aspect))
             : rows * PLOT_CELL_PX;
         const asset = pts
-            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, { fill: v.fill, stroke: v.stroke, label: v.label, labelColor: v.labelColor })
+            ? buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, {
+                fill: v.fill,
+                stroke: v.stroke,
+                label: v.label,
+                labelColor: v.labelColor,
+                outerFrameColor: v.outerFrameColor,
+                accentColor: v.accentColor,
+                subLabel: v.subLabel,
+                labelScale: v.labelScale
+            })
             : v.src;
         return {
             area: String(v.area),
@@ -1520,7 +1552,7 @@
             const { data, error } = await client
                 .from('memorial_spaces')
                 .select('coordinates')
-                .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG')
+                .eq('plot_identifier', 'ZMG-MAP-VECTOR-LAYOUT-CONFIG-V3')
                 .maybeSingle();
             if (!error && data && data.coordinates) return data.coordinates;
         } catch (_) {}
@@ -1660,6 +1692,292 @@
         });
     }
 
+    // ── Canonical New Cemetery Map Definition (Holiness, Chastity, Truth, Kindness, Goodness, Joy, Prudence, Humility, Faith, Modesty, Peace, Condominium, Mausoleum) ──
+    function _makeNewMapLayer(spec) {
+        const pts = spec.poly;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (let i = 0; i < pts.length; i++) {
+            if (pts[i][0] < minX) minX = pts[i][0];
+            if (pts[i][0] > maxX) maxX = pts[i][0];
+            if (pts[i][1] < minY) minY = pts[i][1];
+            if (pts[i][1] > maxY) maxY = pts[i][1];
+        }
+        const spanX = Math.max(0.5, maxX - minX);
+        const spanY = Math.max(0.5, maxY - minY);
+        const left = Number((22 + minX * 0.56).toFixed(2));
+        const top = Number((2 + minY * 0.96).toFixed(2));
+        const width = Number((spanX * 0.56).toFixed(2));
+        const heightPct = spanY * 0.96;
+        const shapeAspect = Number(((heightPct * 0.75) / width).toFixed(4));
+        const normPts = pts.map(([ix, iy]) => ({
+            x: Number((((ix - minX) / spanX) * 100).toFixed(2)),
+            y: Number((((iy - minY) / spanY) * 100).toFixed(2))
+        }));
+
+        if (spec.kind === 'decor') {
+            const decorLayer = {
+                id: spec.id,
+                kind: 'decor',
+                partType: spec.partType || 'custom',
+                name: spec.name,
+                desc: spec.desc || spec.name,
+                left: left,
+                top: top,
+                width: width,
+                rotate: 0,
+                opacity: spec.opacity !== undefined ? spec.opacity : 1.0,
+                zIndex: spec.zIndex || 4,
+                visible: true,
+                custom: false,
+                fenceExclude: !!spec.fenceExclude,
+                fenceInclude: !spec.fenceExclude,
+                shapeAspect: shapeAspect,
+                points: normPts,
+                fill: spec.fill || '#f2e5c2',
+                stroke: spec.stroke || '#4a4a4a',
+                strokeWidth: spec.strokeWidth !== undefined ? spec.strokeWidth : 2,
+                dashed: !!spec.dashed,
+                label: spec.label || '',
+                labelColor: spec.labelColor || '#1e293b'
+            };
+            decorLayer.src = buildPartSvgDataUrl(decorLayer);
+            return decorLayer;
+        }
+
+        const layer = {
+            id: spec.id,
+            area: String(spec.area),
+            name: spec.name,
+            desc: spec.desc,
+            category: spec.category,
+            tab: spec.tab,
+            prefix: spec.prefix,
+            cols: spec.cols || 20,
+            rows: spec.rows || 20,
+            defaultPrice: spec.defaultPrice || 65000,
+            defaultDown: spec.defaultDown || 9750,
+            left: left,
+            top: top,
+            width: width,
+            rotate: 0,
+            opacity: spec.opacity !== undefined ? spec.opacity : 0.98,
+            zIndex: spec.zIndex || 5,
+            visible: true,
+            custom: true,
+            shapeAspect: shapeAspect,
+            points: normPts,
+            fill: spec.fill,
+            stroke: spec.stroke || '#4a4a4a',
+            label: spec.label,
+            labelColor: spec.labelColor || '#1e293b',
+            outerFrameColor: spec.outerFrameColor || '',
+            accentColor: spec.accentColor || '',
+            subLabel: spec.subLabel || '',
+            labelScale: spec.labelScale || 1
+        };
+        layer.src = buildAreaSvgDataUrl(layer.cols, layer.rows, layer.area, layer.points, layer.shapeAspect, {
+            fill: layer.fill,
+            stroke: layer.stroke,
+            label: layer.label,
+            labelColor: layer.labelColor,
+            outerFrameColor: layer.outerFrameColor,
+            accentColor: layer.accentColor,
+            subLabel: layer.subLabel,
+            labelScale: layer.labelScale
+        });
+        return layer;
+    }
+
+    const NEW_MAP_AREA_SPECS = [
+        {
+            id: 'area-1-holiness', area: '1', name: 'Area 1 - Holiness',
+            desc: 'Area 1 - Holiness Single Tiered Lawn', category: 'Single Teired', tab: 'single-teired', prefix: 'HOL',
+            cols: 20, rows: 14, defaultPrice: 55000, defaultDown: 8250,
+            fill: '#bfa065', stroke: '#4a4a4a', accentColor: '#b8c6d6', label: 'Holiness',
+            poly: [[10, 19.5], [31.5, 13.0], [31.5, 25.5], [10, 25.5]]
+        },
+        {
+            id: 'area-2-chastity', area: '2', name: 'Area 2 - Chastity',
+            desc: 'Area 2 - Chastity Single Tiered Lawn', category: 'Single Teired', tab: 'single-teired', prefix: 'CHA',
+            cols: 20, rows: 14, defaultPrice: 55000, defaultDown: 8250,
+            fill: '#bfa065', stroke: '#4a4a4a', accentColor: '#b8c6d6', label: 'Chastity',
+            poly: [[32.5, 12.8], [51.5, 18.8], [51.5, 25.5], [32.5, 25.5]]
+        },
+        {
+            id: 'area-3-truth', area: '3', name: 'Area 3 - Truth',
+            desc: 'Area 3 - Truth Single Tiered Lawn', category: 'Single Teired', tab: 'single-teired', prefix: 'TRU',
+            cols: 12, rows: 14, defaultPrice: 55000, defaultDown: 8250,
+            fill: '#bfa065', stroke: '#4a4a4a', label: 'Truth', labelScale: 0.85,
+            poly: [[53.5, 17.5], [56.5, 17.5], [61.5, 25.5], [53.5, 25.5]]
+        },
+        {
+            id: 'area-4-kindness', area: '4', name: 'Area 4 - Kindness',
+            desc: 'Area 4 - Kindness Special Supreme Estate', category: 'Special Supreme', tab: 'special-supreme', prefix: 'KND',
+            cols: 22, rows: 20, defaultPrice: 85000, defaultDown: 12500,
+            fill: '#607d63', stroke: '#4a5d4c', outerFrameColor: '#c2ccc4', subLabel: 'Special Supreme', label: 'Kindness',
+            poly: [[10.0, 27.0], [31.0, 27.0], [31.0, 39.2], [26.2, 42.5], [10.0, 42.5]]
+        },
+        {
+            id: 'area-5-goodness', area: '5', name: 'Area 5 - Goodness',
+            desc: 'Area 5 - Goodness Special Supreme Estate', category: 'Special Supreme', tab: 'special-supreme', prefix: 'GOD',
+            cols: 22, rows: 20, defaultPrice: 85000, defaultDown: 12500,
+            fill: '#607d63', stroke: '#4a5d4c', outerFrameColor: '#c2ccc4', subLabel: 'Special Supreme', label: 'Goodness',
+            poly: [[32.5, 27.0], [51.0, 27.0], [51.0, 42.5], [37.5, 42.5], [32.5, 39.2]]
+        },
+        {
+            id: 'area-6-joy', area: '6', name: 'Area 6 - Joy',
+            desc: 'Area 6 - Joy Supreme Garden', category: 'Supreme', tab: 'supreme', prefix: 'JOY',
+            cols: 16, rows: 18, defaultPrice: 75000, defaultDown: 11250,
+            fill: '#bfa065', stroke: '#4a4a4a', accentColor: '#b8c6d6', label: 'Joy',
+            poly: [[53.2, 27.5], [64.2, 27.5], [64.2, 39.5], [53.2, 39.5]]
+        },
+        {
+            id: 'area-7-prudence', area: '7', name: 'Area 7 - Prudence',
+            desc: 'Area 7 - Prudence Family Estate Jr.', category: 'Family Estate Jr.', tab: 'family-estate', prefix: 'PRU',
+            cols: 16, rows: 28, defaultPrice: 220000, defaultDown: 33000,
+            fill: '#bfa065', stroke: '#4a4a4a', label: 'Prudence', labelScale: 0.78,
+            poly: [[65.5, 27.5], [75.5, 27.0], [75.5, 36.8], [65.5, 51.0]]
+        },
+        {
+            id: 'area-8-humility', area: '8', name: 'Area 8 - Humility',
+            desc: 'Area 8 - Humility Family Estate Jr.', category: 'Family Estate Jr.', tab: 'family-estate', prefix: 'HUM',
+            cols: 20, rows: 16, defaultPrice: 220000, defaultDown: 33000,
+            fill: '#bfa065', stroke: '#4a4a4a', label: 'Humility', labelScale: 0.9,
+            poly: [[76.8, 26.8], [84.0, 24.8], [92.8, 28.8], [92.8, 34.5], [76.8, 35.5]]
+        },
+        {
+            id: 'area-9-faith', area: '9', name: 'Area 9 - Faith',
+            desc: 'Area 9 - Faith Supreme Garden', category: 'Supreme', tab: 'supreme', prefix: 'FAI',
+            cols: 22, rows: 20, defaultPrice: 75000, defaultDown: 11250,
+            fill: '#bfa065', stroke: '#4a4a4a', label: 'Faith',
+            poly: [[10.0, 44.5], [26.2, 44.5], [31.0, 47.8], [31.0, 60.5], [10.0, 60.5]]
+        },
+        {
+            id: 'area-10-modesty', area: '10', name: 'Area 10 - Modesty',
+            desc: 'Area 10 - Modesty Special Supreme Estate', category: 'Special Supreme', tab: 'special-supreme', prefix: 'MOD',
+            cols: 22, rows: 20, defaultPrice: 85000, defaultDown: 12500,
+            fill: '#607d63', stroke: '#4a5d4c', outerFrameColor: '#c2ccc4', subLabel: 'Special Supreme', label: 'Modesty',
+            poly: [[37.5, 44.5], [51.0, 44.5], [51.0, 60.5], [32.5, 60.5], [32.5, 47.8]]
+        },
+        {
+            id: 'area-11-peace', area: '11', name: 'Area 11 - Peace',
+            desc: 'Area 11 - Peace Supreme Garden', category: 'Supreme', tab: 'supreme', prefix: 'PEA',
+            cols: 16, rows: 18, defaultPrice: 75000, defaultDown: 11250,
+            fill: '#bfa065', stroke: '#4a4a4a', accentColor: '#b8c6d6', label: 'Peace',
+            poly: [[53.2, 40.8], [64.2, 40.8], [64.2, 53.2], [53.2, 53.2]]
+        },
+        {
+            id: 'area-12-condominium', area: '12', name: 'Area 12 - Condominium',
+            desc: 'Area 12 - Condominium Columbarium Wing', category: 'Condominium', tab: 'condominium', prefix: 'COND',
+            cols: 28, rows: 12, defaultPrice: 35000, defaultDown: 5250,
+            fill: '#1b85a1', stroke: '#145369', label: 'Condominium', labelColor: '#ffffff', labelScale: 0.68, zIndex: 6,
+            poly: [[66.0, 23.0], [76.5, 23.6], [84.2, 21.6], [97.4, 27.4], [97.4, 33.8], [95.4, 33.8], [95.4, 28.6], [84.0, 23.4], [76.5, 25.2], [66.0, 24.4]]
+        },
+        {
+            id: 'area-13-mausoleum-east', area: '13', name: 'Area 13 - Mausoleum (East)',
+            desc: 'Area 13 - Mausoleum East Wing', category: 'Mausoleum', tab: 'mausoleum', prefix: 'MAUS',
+            cols: 24, rows: 24, defaultPrice: 450000, defaultDown: 67500,
+            fill: '#f2e5c2', stroke: '#7c6f55', label: 'Mausoleum', labelScale: 0.62, zIndex: 3,
+            poly: [[97.4, 34.5], [97.4, 36.5], [77.0, 38.2], [66.0, 54.5], [54.5, 72.5], [34.5, 84.0], [33.8, 82.2], [53.0, 71.0], [64.2, 53.5], [75.5, 36.8]]
+        },
+        {
+            id: 'area-14-mausoleum-west', area: '14', name: 'Area 14 - Mausoleum (West)',
+            desc: 'Area 14 - Mausoleum West Wing', category: 'Mausoleum', tab: 'mausoleum', prefix: 'MAUW',
+            cols: 18, rows: 18, defaultPrice: 450000, defaultDown: 67500,
+            fill: '#f2e5c2', stroke: '#7c6f55', label: 'Mausoleum', labelScale: 0.72, zIndex: 3,
+            poly: [[1.2, 63.0], [16.5, 70.2], [24.2, 83.2], [27.5, 83.2], [27.5, 84.8], [23.0, 84.8], [15.2, 71.6], [1.0, 64.5]]
+        },
+        {
+            id: 'area-15-south-lawn', area: '15', name: 'Area 15 - South Lawn',
+            desc: 'Area 15 - South Lawn Single Tiered', category: 'Single Teired', tab: 'single-teired', prefix: 'SLW',
+            cols: 22, rows: 20, defaultPrice: 55000, defaultDown: 8250,
+            fill: '#bfa065', stroke: '#4a4a4a', label: 'South Lawn', labelScale: 0.75,
+            poly: [[32.5, 62.5], [58.8, 62.5], [52.5, 70.8], [33.8, 81.8], [33.8, 79.5], [32.5, 78.5]]
+        }
+    ];
+
+    function getDefaultMapVectors() {
+        const areas = NEW_MAP_AREA_SPECS.map(s => _makeNewMapLayer(s));
+        const roundaboutPts = circlePolygonPoints(16);
+        const roundabout = _makeNewMapLayer({
+            id: 'decor-roundabout',
+            kind: 'decor',
+            partType: 'roundabout',
+            name: 'Central Roundabout',
+            desc: 'Central memorial roundabout',
+            fill: '#ffffff',
+            stroke: '#4a4a4a',
+            strokeWidth: 3,
+            zIndex: 8,
+            fenceExclude: true,
+            poly: roundaboutPts.map(pt => [25.2 + (pt.x / 100) * 13.2, 39.0 + (pt.y / 100) * 9.0])
+        });
+        const topRoof = _makeNewMapLayer({
+            id: 'decor-top-roof',
+            kind: 'decor',
+            partType: 'border',
+            name: 'North Perimeter Border',
+            desc: 'North boundary wall strip',
+            fill: '#f2e5c2',
+            stroke: '#7c6f55',
+            strokeWidth: 2,
+            zIndex: 3,
+            fenceExclude: false,
+            poly: [[7.0, 17.5], [36.8, 9.6], [57.5, 16.0], [64.0, 23.2], [62.5, 24.0], [56.2, 17.2], [36.8, 11.2], [7.0, 19.0]]
+        });
+        const entrance = createEntranceLayer({
+            id: 'entrance-gate-main',
+            left: 36.8,
+            top: 81.0,
+            width: 6.2,
+            rotate: 0,
+            zIndex: 9,
+            needsSnap: false
+        });
+        return [topRoof, ...areas, roundabout, entrance];
+    }
+
+    function getDefaultSectionShapeMap() {
+        const map = {};
+        NEW_MAP_AREA_SPECS.forEach(s => {
+            const layer = _makeNewMapLayer(s);
+            const widthPx = (s.cols || 20) * PLOT_CELL_PX;
+            const heightPx = Math.max(PLOT_CELL_PX * 2, Math.round(widthPx * layer.shapeAspect));
+            map[s.name] = {
+                area: String(s.area),
+                tab: s.tab,
+                asset: layer.src,
+                prefix: s.prefix,
+                category: s.category,
+                cols: s.cols || 20,
+                rows: s.rows || 20,
+                widthPx: widthPx,
+                heightPx: heightPx,
+                points: layer.points,
+                shapeAspect: layer.shapeAspect,
+                defaultPrice: s.defaultPrice,
+                defaultDown: s.defaultDown
+            };
+        });
+        return map;
+    }
+
+    function getDefaultLawnTabMap() {
+        const tabs = {
+            'condominium': [],
+            'single-teired': [],
+            'supreme': [],
+            'special-supreme': [],
+            'family-estate': [],
+            'mausoleum': []
+        };
+        NEW_MAP_AREA_SPECS.forEach(s => {
+            if (!tabs[s.tab]) tabs[s.tab] = [];
+            tabs[s.tab].push(s.name);
+        });
+        return tabs;
+    }
+
     window.ZMGFence = {
         ASPECT: ENTRANCE_ASPECT,
         CATEGORY_TABS,
@@ -1698,6 +2016,9 @@
         customAreaLayers,
         shapeEntryFromLayer,
         customShapeEntries,
-        readStoredLayers
+        readStoredLayers,
+        getDefaultMapVectors,
+        getDefaultSectionShapeMap,
+        getDefaultLawnTabMap
     };
 })();

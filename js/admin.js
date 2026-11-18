@@ -1884,37 +1884,15 @@ let adminLocActiveDeceasedId = null;
 
 const ADMIN_LOC_BOARD_WIDTH = 2400;
 const ADMIN_LOC_BOARD_HEIGHT = 1800;
-const ADMIN_LOC_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
+const ADMIN_LOC_VECTOR_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v3';
 
-const ADMIN_LOC_DEFAULT_VECTORS = [
-    { id: 'vector-14', area: '10', name: 'Area 10 - Condominium Block A', src: 'assets/images/Map/Vector (14).png', left: 33.4, top: -20.0, width: 21.5, rotate: 30, opacity: 1.0, zIndex: 5 },
-    { id: 'vector-12', area: '4',  name: 'Area 4 - Supreme Garden',       src: 'assets/images/Map/Vector (12).png', left: 23.0, top: 2.3,   width: 20.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-11', area: '9',  name: 'Area 9 - Lawn of Serenity',     src: 'assets/images/Map/Vector (11).png', left: 53.5, top: -5.9,  width: 17.5, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-10', area: '8',  name: 'Area 8 - Lawn of Grace',        src: 'assets/images/Map/Vector (10).png', left: 68.9, top: 13.3,  width: 7.5,  rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-13', area: '5',  name: 'Area 5 - Special Supreme Estate',src: 'assets/images/Map/Vector (13).png', left: 42.5, top: 15.8,  width: 18.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-5',  area: '7',  name: 'Area 7 - Lawn of Faith',         src: 'assets/images/Map/Vector (5).png',  left: 61.8, top: 26.8,  width: 11.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-6',  area: '6',  name: 'Area 6 - Lawn of Peace',         src: 'assets/images/Map/Vector (6).png',  left: 52.4, top: 47.2,  width: 11.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-3',  area: '11', name: 'Area 11 - Lawn of Memories',     src: 'assets/images/Map/Vector (3).png',  left: 68.4, top: 33.1,  width: 9.5,  rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-4',  area: '12', name: 'Area 12 - Mausoleum Court',      src: 'assets/images/Map/Vector (4).png',  left: 82.4, top: 40.1,  width: 16.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-8',  area: '2',  name: 'Area 2 - Lawn of Love',          src: 'assets/images/Map/Vector (8).png',  left: 29.5, top: 44.7,  width: 18.5, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-9',  area: '3',  name: 'Area 3 - Lawn of Hope (Family Estate)', src: 'assets/images/Map/Vector (9).png', left: 10.5, top: 31.1, width: 20.0, rotate: 30, opacity: 0.95, zIndex: 5 },
-    { id: 'vector-7',  area: '1',  name: 'Area 1 - Single Tiered Lawn',    src: 'assets/images/Map/Vector (7).png',  left: 16.8, top: 75.7,  width: 23.0, rotate: 30, opacity: 0.95, zIndex: 5 }
-];
+const ADMIN_LOC_DEFAULT_VECTORS = (window.ZMGFence && typeof window.ZMGFence.getDefaultMapVectors === 'function')
+    ? window.ZMGFence.getDefaultMapVectors()
+    : [];
 
-const ADMIN_LOC_SECTION_SHAPE_MAP = {
-    'Area 1 - Single Tiered Lawn': { area: '1', asset: 'assets/images/Map/Vector (7).png', prefix: 'ST1', category: 'Single Teired', cols: 24, rows: 24, widthPx: 1109, heightPx: 1165 },
-    'Area 2 - Lawn of Love': { area: '2', asset: 'assets/images/Map/Vector (8).png', prefix: 'LL', category: 'Special Supreme', cols: 22, rows: 28, widthPx: 786, heightPx: 971 },
-    'Area 3 - Lawn of Hope (Family Estate)': { area: '3', asset: 'assets/images/Map/Vector (9).png', prefix: 'FE', category: 'Family Estate Jr.', cols: 24, rows: 26, widthPx: 881, heightPx: 969 },
-    'Area 4 - Supreme Garden': { area: '4', asset: 'assets/images/Map/Vector (12).png', prefix: 'SUP4', category: 'Supreme', cols: 24, rows: 26, widthPx: 894, heightPx: 964 },
-    'Area 5 - Special Supreme Estate': { area: '5', asset: 'assets/images/Map/Vector (13).png', prefix: 'SPEC5', category: 'Special Supreme', cols: 22, rows: 28, widthPx: 782, heightPx: 964 },
-    'Area 6 - Lawn of Peace': { area: '6', asset: 'assets/images/Map/Vector (6).png', prefix: 'ST6', category: 'Single Teired', cols: 18, rows: 28, widthPx: 468, heightPx: 765 },
-    'Area 7 - Lawn of Faith': { area: '7', asset: 'assets/images/Map/Vector (5).png', prefix: 'SUP7', category: 'Supreme', cols: 18, rows: 26, widthPx: 462, heightPx: 697 },
-    'Area 8 - Lawn of Grace': { area: '8', asset: 'assets/images/Map/Vector (10).png', prefix: 'SUP8', category: 'Supreme', cols: 16, rows: 22, widthPx: 335, heightPx: 456 },
-    'Area 9 - Lawn of Serenity': { area: '9', asset: 'assets/images/Map/Vector (11).png', prefix: 'SER9', category: 'Special Supreme', cols: 24, rows: 24, widthPx: 777, heightPx: 799 },
-    'Area 10 - Condominium Block A': { area: '10', asset: 'assets/images/Map/Vector (14).png', prefix: 'COND', category: 'Condominium', cols: 28, rows: 24, widthPx: 899, heightPx: 757 },
-    'Area 11 - Lawn of Memories': { area: '11', asset: 'assets/images/Map/Vector (3).png', prefix: 'SPEC11', category: 'Special Supreme', cols: 16, rows: 36, widthPx: 417, heightPx: 1444 },
-    'Area 12 - Mausoleum Court': { area: '12', asset: 'assets/images/Map/Vector (4).png', prefix: 'MAUS', category: 'Mausoleum', cols: 24, rows: 24, widthPx: 691, heightPx: 669 }
-};
+const ADMIN_LOC_SECTION_SHAPE_MAP = (window.ZMGFence && typeof window.ZMGFence.getDefaultSectionShapeMap === 'function')
+    ? window.ZMGFence.getDefaultSectionShapeMap()
+    : {};
 
 function populateAdminLocatorSectionFilter() {
     const select = document.getElementById('adminLocatorSectionFilter');
@@ -2119,7 +2097,7 @@ async function loadAdminLocMapData() {
         let systemVectorLayers = null;
         let systemFenceConfig = null;
         dbPlots.forEach(p => {
-            if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
+            if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG-V3' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
                 systemVectorLayers = p.coordinates.vectorLayers;
                 if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
             }
