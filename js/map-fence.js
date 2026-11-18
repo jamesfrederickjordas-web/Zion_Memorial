@@ -974,93 +974,8 @@
     // Draw the fence (auto-fitted rect OR custom N-point polygon).
     // Also performs a pending auto-snap for freshly added gates.
     function render(container, layers, opts) {
-        if (!container) return { rect: null, points: null, isCustomPolygon: false, snapped: false };
-        opts = opts || {};
-        const svg = getSvg(container);
-        while (svg.firstChild) svg.removeChild(svg.firstChild);
-
-        const poly = computeFencePolygon(container, layers, opts);
-        if (!poly) return { rect: null, points: null, isCustomPolygon: false, snapped: false };
-
-        const { W, H } = containerSize(container);
-        svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-        // Auto-snap newly placed entrance gates onto the fence
-        let snapped = false;
-        const entrances = (layers || []).filter(v => isEntrance(v) && v.visible !== false);
-        entrances.forEach(v => {
-            if (v.needsSnap) {
-                if (snapEntrance(container, v, poly.points)) snapped = true;
-                const el = findLayerElement(container, v.id);
-                if (el) {
-                    el.style.left = v.left + '%';
-                    el.style.top = v.top + '%';
-                    el.style.transform = 'rotate(' + v.rotate + 'deg)';
-                }
-            }
-        });
-
-        // Gate openings mapped onto each polygon edge by arc distance along the edge
-        const edgeCount = poly.points.length;
-        const edgeGaps = Array.from({ length: edgeCount }, () => []);
-        entrances.forEach(v => {
-            const box = layerBox(container, v, false);
-            if (!box) return;
-            const best = nearestPolygonEdge(poly.points, box.cx, box.cy);
-            if (!best || best.dist > Math.max(box.w, box.h) * 0.75) return;
-            const half = (box.w * GATE_GAP_RATIO) / 2;
-            const sCenter = best.t * best.segLen;
-            edgeGaps[best.index].push([sCenter - half, sCenter + half]);
-        });
-
-        const unitScale = Math.max(1, Math.min(2.6, W / 1100));
-        const style = {
-            rail: '#5b4636',
-            railWidth: Number((3 * unitScale).toFixed(1)),
-            post: '#33271d',
-            postSize: Number((6 * unitScale).toFixed(1)),
-            spacing: Math.round(22 * unitScale)
-        };
-        const splitInterval = (endLen, gapList) => {
-            const sorted = gapList.slice().sort((a, b) => a[0] - b[0]);
-            const segs = [];
-            let cursor = 0;
-            sorted.forEach(g => {
-                const gs = Math.max(0, g[0]);
-                const ge = Math.min(endLen, g[1]);
-                if (ge <= gs) return;
-                if (gs > cursor) segs.push([cursor, gs]);
-                cursor = Math.max(cursor, ge);
-            });
-            if (cursor < endLen) segs.push([cursor, endLen]);
-            return segs;
-        };
-
-        for (let i = 0; i < edgeCount; i++) {
-            const a = poly.points[i];
-            const b = poly.points[(i + 1) % edgeCount];
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const segLen = Math.hypot(dx, dy);
-            if (segLen < 2) continue;
-            const subSegs = splitInterval(segLen, edgeGaps[i]);
-            subSegs.forEach(s => {
-                const t0 = s[0] / segLen;
-                const t1 = s[1] / segLen;
-                drawSegment(svg, a.x + dx * t0, a.y + dy * t0, a.x + dx * t1, a.y + dy * t1, style);
-            });
-        }
-
-        // Heavier vertex corner posts
-        const cornerSize = Number((11 * unitScale).toFixed(1));
-        poly.points.forEach(pt => post(svg, pt.x, pt.y, cornerSize, '#2a1f16'));
-
-        return {
-            rect: poly.rect,
-            points: poly.points,
-            isCustomPolygon: poly.isCustomPolygon,
-            snapped: snapped
-        };
+        if (container) removeFence(container);
+        return { rect: null, points: null, isCustomPolygon: false, snapped: false };
     }
 
     // ── Custom (admin-created) cemetery areas ──
@@ -1912,19 +1827,6 @@
             fenceExclude: true,
             poly: roundaboutPts.map(pt => [25.2 + (pt.x / 100) * 13.2, 39.0 + (pt.y / 100) * 9.0])
         });
-        const topRoof = _makeNewMapLayer({
-            id: 'decor-top-roof',
-            kind: 'decor',
-            partType: 'border',
-            name: 'North Perimeter Border',
-            desc: 'North boundary wall strip',
-            fill: '#f2e5c2',
-            stroke: '#7c6f55',
-            strokeWidth: 2,
-            zIndex: 3,
-            fenceExclude: false,
-            poly: [[7.0, 17.5], [36.8, 9.6], [57.5, 16.0], [64.0, 23.2], [62.5, 24.0], [56.2, 17.2], [36.8, 11.2], [7.0, 19.0]]
-        });
         const entrance = createEntranceLayer({
             id: 'entrance-gate-main',
             left: 36.8,
@@ -1934,7 +1836,7 @@
             zIndex: 9,
             needsSnap: false
         });
-        return [topRoof, ...areas, roundabout, entrance];
+        return [...areas, roundabout, entrance];
     }
 
     function getDefaultSectionShapeMap() {

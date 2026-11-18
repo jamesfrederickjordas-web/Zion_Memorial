@@ -2563,15 +2563,10 @@ function resetSelectedShapeToRect() {
 }
 
 function toggleWallPointEdit() {
-    if (currentMode !== 'map') switchEditorMode('map');
     if (pointEditState && pointEditState.mode === 'wall') {
         pointEditState = null;
-    } else {
-        pointEditState = { mode: 'wall' };
+        renderPointOverlay();
     }
-    renderPointOverlay();
-    updateWallPointsInspector();
-    updateVectorInspector();
 }
 
 function toggleShapePointEdit(layerId) {
@@ -6580,13 +6575,6 @@ function initKeyboardShortcuts() {
             if (noMods && !e.shiftKey && key === 'h' && getActionableSelectedVectors().length > 0) {
                 e.preventDefault();
                 toggleVectorVisibility(null, null);
-                return;
-            }
-
-            // Toggle Wall Points Editing: W
-            if (noMods && !e.shiftKey && key === 'w') {
-                e.preventDefault();
-                toggleWallPointEdit();
                 return;
             }
 
