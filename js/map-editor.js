@@ -1122,9 +1122,9 @@ async function syncEditorVectorsWithSupabase() {
 }
 
 async function persistEditorVectorsToSupabase() {
-    if (typeof supabaseClient === 'undefined') return;
+    if (typeof supabaseClient === 'undefined') return false;
     try {
-        await supabaseClient
+        const { error } = await supabaseClient
             .from('memorial_spaces')
             .upsert([{
                 plot_identifier: ZMG_DB_MAP_CONFIG_ID,
@@ -1144,8 +1144,14 @@ async function persistEditorVectorsToSupabase() {
                     updatedAt: new Date().toISOString()
                 }
             }], { onConflict: 'plot_identifier' });
+        if (error) {
+            console.error('Supabase map vector save error:', error);
+            throw error;
+        }
+        return true;
     } catch (err) {
         console.warn('Could not save map vector layout to Supabase:', err);
+        throw err;
     }
 }
 
@@ -1741,7 +1747,7 @@ async function deleteSelectedVectors() {
     if (selectedVectorIds.size === 0) return;
     const count = selectedVectorIds.size;
     if (count === 1) {
-        deleteVector(Array.from(selectedVectorIds)[0]);
+        await deleteVector(Array.from(selectedVectorIds)[0]);
         return;
     }
     const selectedCustom = vectorLayers.filter(l => selectedVectorIds.has(l.id) && l.custom);
@@ -1759,7 +1765,7 @@ async function deleteSelectedVectors() {
     deselectAll();
     renderVectorMap();
     renderLayerSidebar();
-    saveVectorLayout();
+    await saveVectorLayout();
 }
 
 // ── Vector Inspector Panel Events & Sync ──
@@ -2099,11 +2105,11 @@ async function deleteVector(id) {
     }
 
     commitMapUndo(beforeSnap, `delete ${name}`);
-    saveVectorLayout();
     renderVectorMap();
     renderLayerSidebar();
     updateVectorInspector();
     renderPointOverlay();
+    await saveVectorLayout();
 
     if (typeof showNotification === 'function') {
         showNotification('Layer Deleted', `Removed "${name}" from layout.`, 'info');

@@ -265,13 +265,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const ZMG_DB_MAP_CONFIG_ID = 'ZMG-MAP-VECTOR-LAYOUT-CONFIG';
+let lastSyncedMapSignature = null;
+let mapSyncInFlight = false;
+let mapLiveSyncInitialized = false;
 
 // Exposed global init for dynamic component loaders
 window.initVectorMapSystem = function() {
     loadSavedVectorLayout();
     renderVectorMapElements();
     setupMapEditorEvents();
-    syncMapVectorLayoutWithSupabase();
+    syncMapVectorLayoutWithSupabase(true);
+    setupLiveMapSync();
 
     // Check if ?editMap=true query param is present
     const urlParams = new URLSearchParams(window.location.search);
@@ -280,9 +284,38 @@ window.initVectorMapSystem = function() {
     }
 };
 
+function applyCloudMapConfig(coordinates) {
+    if (!coordinates || !Array.isArray(coordinates.vectorLayers)) return false;
+
+    const sig = coordinates.updatedAt || JSON.stringify(coordinates.vectorLayers.map(v => `${v.id}:${v.left}:${v.top}:${v.width}:${v.rotate}:${v.visible}`));
+    if (lastSyncedMapSignature && sig === lastSyncedMapSignature) {
+        return false;
+    }
+    lastSyncedMapSignature = sig;
+
+    const dbVectors = coordinates.vectorLayers
+        .filter(v => !isLegacyWallVector(v))
+        .map(normalizeVectorItem);
+    currentVectorLayout = dbVectors;
+    localStorage.setItem(MAP_VECTOR_STORAGE_KEY, JSON.stringify(currentVectorLayout));
+
+    if (coordinates.bgConfig) {
+        localStorage.setItem('zion_cemetery_dashboard_bg_v1', JSON.stringify(coordinates.bgConfig));
+        localStorage.setItem('zion_cemetery_map_bg_v1', JSON.stringify(coordinates.bgConfig));
+    }
+    if (coordinates.fenceConfig && window.ZMGFence) {
+        window.ZMGFence.writeStoredFenceConfig(coordinates.fenceConfig);
+    }
+    window.dispatchEvent(new CustomEvent('zmg:vector-layout-updated', { detail: currentVectorLayout }));
+    renderVectorMapElements();
+    renderDashboardBg();
+    return true;
+}
+
 // Cloud Sync: Fetch saved Map Vector Layout from Supabase DB (or push existing local custom layout to DB)
-async function syncMapVectorLayoutWithSupabase() {
-    if (typeof supabaseClient === 'undefined') return;
+async function syncMapVectorLayoutWithSupabase(force = false) {
+    if (typeof supabaseClient === 'undefined' || mapSyncInFlight) return;
+    mapSyncInFlight = true;
     try {
         const { data: row, error } = await supabaseClient
             .from('memorial_spaces')
@@ -290,22 +323,9 @@ async function syncMapVectorLayoutWithSupabase() {
             .eq('plot_identifier', ZMG_DB_MAP_CONFIG_ID)
             .maybeSingle();
 
-        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers) && row.coordinates.vectorLayers.length > 0) {
-            const dbVectors = row.coordinates.vectorLayers
-                .filter(v => !isLegacyWallVector(v))
-                .map(normalizeVectorItem);
-            currentVectorLayout = dbVectors;
-            localStorage.setItem(MAP_VECTOR_STORAGE_KEY, JSON.stringify(currentVectorLayout));
-
-            if (row.coordinates.bgConfig) {
-                localStorage.setItem('zion_cemetery_dashboard_bg_v1', JSON.stringify(row.coordinates.bgConfig));
-                localStorage.setItem('zion_cemetery_map_bg_v1', JSON.stringify(row.coordinates.bgConfig));
-            }
-            if (row.coordinates.fenceConfig && window.ZMGFence) {
-                window.ZMGFence.writeStoredFenceConfig(row.coordinates.fenceConfig);
-            }
-            window.dispatchEvent(new CustomEvent('zmg:vector-layout-updated', { detail: currentVectorLayout }));
-            renderVectorMapElements();
+        if (!error && row && row.coordinates && Array.isArray(row.coordinates.vectorLayers)) {
+            if (force) lastSyncedMapSignature = null;
+            applyCloudMapConfig(row.coordinates);
             return;
         }
 
@@ -316,7 +336,57 @@ async function syncMapVectorLayoutWithSupabase() {
         }
     } catch (err) {
         console.warn('Cloud map vector sync notice:', err);
+    } finally {
+        mapSyncInFlight = false;
     }
+}
+
+function setupLiveMapSync() {
+    if (mapLiveSyncInitialized) return;
+    mapLiveSyncInitialized = true;
+
+    // 1. Supabase Realtime subscription for instant cross-browser/cross-device updates
+    if (typeof supabaseClient !== 'undefined' && typeof supabaseClient.channel === 'function') {
+        try {
+            supabaseClient
+                .channel('zmg-map-layout-sync')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'memorial_spaces',
+                        filter: `plot_identifier=eq.${ZMG_DB_MAP_CONFIG_ID}`
+                    },
+                    (payload) => {
+                        const coords = payload && payload.new && payload.new.coordinates;
+                        if (coords && Array.isArray(coords.vectorLayers)) {
+                            applyCloudMapConfig(coords);
+                        }
+                    }
+                )
+                .subscribe();
+        } catch (err) {
+            console.warn('Map Realtime subscription notice:', err);
+        }
+    }
+
+    // 2. Sync immediately when user returns to this tab or window
+    window.addEventListener('focus', () => {
+        syncMapVectorLayoutWithSupabase();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            syncMapVectorLayoutWithSupabase();
+        }
+    });
+
+    // 3. Lightweight periodic fallback sync while tab is visible
+    setInterval(() => {
+        if (document.visibilityState === 'visible' && !isMapEditorActive) {
+            syncMapVectorLayoutWithSupabase();
+        }
+    }, 15000);
 }
 
 async function persistMapVectorLayoutToSupabase(vectorsToSave) {
@@ -328,8 +398,9 @@ async function persistMapVectorLayoutToSupabase(vectorsToSave) {
             if (rawBg) bgCfg = JSON.parse(rawBg);
         } catch (_) {}
         const fenceCfg = window.ZMGFence ? window.ZMGFence.readStoredFenceConfig() : null;
+        const updatedAt = new Date().toISOString();
 
-        await supabaseClient
+        const { error } = await supabaseClient
             .from('memorial_spaces')
             .upsert([{
                 plot_identifier: ZMG_DB_MAP_CONFIG_ID,
@@ -344,9 +415,14 @@ async function persistMapVectorLayoutToSupabase(vectorsToSave) {
                     vectorLayers: vectorsToSave,
                     bgConfig: bgCfg,
                     fenceConfig: fenceCfg,
-                    updatedAt: new Date().toISOString()
+                    updatedAt
                 }
             }], { onConflict: 'plot_identifier' });
+        if (error) {
+            console.warn('Supabase map vector persist error:', error);
+        } else {
+            lastSyncedMapSignature = updatedAt;
+        }
     } catch (err) {
         console.warn('Could not persist map vector layout to Supabase:', err);
     }
@@ -361,6 +437,7 @@ window.addEventListener('storage', (e) => {
     if (e.key === MAP_VECTOR_STORAGE_KEY) {
         loadSavedVectorLayout();
         renderVectorMapElements();
+        window.dispatchEvent(new CustomEvent('zmg:vector-layout-updated', { detail: currentVectorLayout }));
     }
     if (e.key === 'zion_cemetery_fence_config_v1') {
         renderVectorMapElements();

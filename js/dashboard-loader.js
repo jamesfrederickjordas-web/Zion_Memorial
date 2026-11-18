@@ -325,6 +325,9 @@ function syncCustomAreasToDashboard(layersOverride) {
 window.syncCustomAreasToDashboard = syncCustomAreasToDashboard;
 window.addEventListener('zmg:vector-layout-updated', (e) => {
     syncCustomAreasToDashboard(e && e.detail ? e.detail : null);
+    if (currentResAreaSectionName && !RES_SECTION_SHAPE_MAP[currentResAreaSectionName]) {
+        currentResAreaSectionName = 'Area 5 - Special Supreme Estate';
+    }
     const modal = document.getElementById('reservationModal');
     if (modal && modal.classList.contains('active')) {
         const activeTab = document.querySelector('.lawn-tab.active');
