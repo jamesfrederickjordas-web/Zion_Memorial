@@ -3029,8 +3029,8 @@ async function convertLayersToArea(ids) {
         const fullName = `Area ${num} - ${rawLabel}`.slice(0, 56);
         const prefix = suggestPrefix(rawLabel);
         const aspect = parseFloat(measureLayerAspectRatio(v).toFixed(4));
-        const cols = 28;
-        const rows = Math.max(6, Math.min(60, Math.round(cols * aspect)));
+        const cols = 36;
+        const rows = Math.max(8, Math.min(60, Math.round(cols * aspect)));
 
         v.kind = 'area';
         v.custom = true;
@@ -3056,10 +3056,27 @@ async function convertLayersToArea(ids) {
     updateVectorInspector();
     await persistMapStateNow();
 
+    let totalGeneratedPlots = 0;
+    for (const fullName of convertedNames) {
+        const shapeInfo = SECTION_SHAPE_MAP[fullName];
+        if (!shapeInfo) continue;
+        const generated = await generateMaskedPlotsForShape(fullName, shapeInfo, {
+            w: 1,
+            h: 1,
+            category: shapeInfo.category || 'Supreme',
+            status: 'available',
+            existingPlots: []
+        });
+        if (generated.length > 0) {
+            await savePlotsPayloadForSection(fullName, generated);
+            totalGeneratedPlots += generated.length;
+        }
+    }
+
     if (typeof showNotification === 'function') {
         const msg = convertedNames.length === 1
-            ? `"${convertedNames[0]}" is now an area. Switch to Plot Layouts to place or auto-fill plots inside it.`
-            : `Converted ${convertedNames.length} layers into cemetery areas (${convertedNames.join(', ')}). Switch to Plot Layouts to add plots inside them.`;
+            ? `"${convertedNames[0]}" is now an area with ${totalGeneratedPlots} plots inside it.`
+            : `Converted ${convertedNames.length} layers into cemetery areas with ${totalGeneratedPlots} total plots inside them.`;
         showNotification('Converted to Cemetery Area', msg, 'success');
     }
 }
@@ -4625,7 +4642,10 @@ function setupPlotBuilderToolbar() {
     const btnRedo = document.getElementById('btnRedoPlot');
     if (btnRedo) btnRedo.addEventListener('click', redoPlotAction);
 
-    // Save to DB and Clear Section action buttons
+    // Auto-Fill, Save to DB, and Clear Section action buttons
+    const btnAutoFill = document.getElementById('btnAutoFillPlots');
+    if (btnAutoFill) btnAutoFill.addEventListener('click', autoFillPlotsInCurrentSection);
+
     const btnSaveDb = document.getElementById('btnSavePlotsDb');
     if (btnSaveDb) btnSaveDb.addEventListener('click', saveCurrentPlotLayoutToDatabase);
 
@@ -5359,6 +5379,188 @@ async function clearCurrentSectionPlots() {
 
     if (typeof showNotification === 'function') {
         showNotification('Section Cleared', `All plots in ${chosenSection} have been removed.`, 'info');
+    }
+}
+
+function loadShapeMaskDataAsync(assetSrc, cols, rows) {
+    return new Promise((resolve) => {
+        if (!assetSrc) { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = cols;
+                offCanvas.height = rows;
+                const offCtx = offCanvas.getContext('2d');
+                offCtx.drawImage(img, 0, 0, cols, rows);
+                resolve(offCtx.getImageData(0, 0, cols, rows).data);
+            } catch (_) {
+                resolve(null);
+            }
+        };
+        img.onerror = () => resolve(null);
+        img.src = assetSrc;
+    });
+}
+
+async function generateMaskedPlotsForShape(sectionName, shapeInfo, opts = {}) {
+    if (!shapeInfo) return [];
+    const cols = Number(shapeInfo.cols) || 28;
+    const rows = Number(shapeInfo.rows) || 28;
+    const w = Math.max(1, Number(opts.w) || 1);
+    const h = Math.max(1, Number(opts.h) || 1);
+    const prefix = shapeInfo.prefix || 'PL';
+    const validCategories = ['Condominium', 'Single Teired', 'Supreme', 'Special Supreme', 'Mausoleum', 'Family Estate Jr.'];
+    const targetCategory = validCategories.includes(opts.category)
+        ? opts.category
+        : (validCategories.includes(shapeInfo.category) ? shapeInfo.category : 'Supreme');
+    const spec = CATEGORY_DEFAULT_SPECS[targetCategory] || { price: 65000, down: 9500 };
+    const status = opts.status || 'available';
+    const existing = Array.isArray(opts.existingPlots) ? opts.existingPlots : [];
+
+    const maskData = await loadShapeMaskDataAsync(shapeInfo.asset, cols, rows);
+    const isCellMasked = (c, r) => {
+        if (c < 1 || c > cols || r < 1 || r > rows) return false;
+        if (!maskData) return true;
+        const idx = ((r - 1) * cols + (c - 1)) * 4 + 3;
+        return maskData[idx] > 30;
+    };
+    const isRectInside = (col, row, pw, ph) => {
+        for (let rr = row; rr < row + ph; rr++) {
+            for (let cc = col; cc < col + pw; cc++) {
+                if (!isCellMasked(cc, rr)) return false;
+            }
+        }
+        return true;
+    };
+    const collides = (col, row, pw, ph, list) => list.some(p => {
+        const pc = p.col_num || 1;
+        const pr = p.row_num || 1;
+        const pw2 = p.coordinates?.col_span || p.coordinates?.width || 1;
+        const ph2 = p.coordinates?.row_span || p.coordinates?.height || 1;
+        return col < pc + pw2 && col + pw > pc && row < pr + ph2 && row + ph > pr;
+    });
+
+    let maxNum = 0;
+    existing.forEach(p => {
+        if (p.plot_identifier && p.plot_identifier.startsWith(prefix)) {
+            const parts = p.plot_identifier.split('-');
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+    });
+
+    const created = [];
+    const combined = existing.slice();
+    const stepC = w;
+    const stepR = h;
+    for (let r = 1; r <= rows - h + 1; r += stepR) {
+        for (let c = 1; c <= cols - w + 1; c += stepC) {
+            if (!isRectInside(c, r, w, h)) continue;
+            if (collides(c, r, w, h, combined)) continue;
+            maxNum++;
+            const plot = {
+                id: `plot-${Date.now()}-${Math.floor(Math.random() * 1000000)}-${maxNum}`,
+                plot_identifier: `${prefix}-${String(maxNum).padStart(3, '0')}`,
+                section_name: sectionName,
+                category: targetCategory,
+                status: status,
+                price: spec.price,
+                down_payment: spec.down,
+                col_num: c,
+                row_num: r,
+                coordinates: { col_span: w, row_span: h, width: w, height: h }
+            };
+            created.push(plot);
+            combined.push(plot);
+        }
+    }
+    return created;
+}
+
+async function savePlotsPayloadForSection(sectionName, plotsList) {
+    if (!plotsList || plotsList.length === 0) return;
+    syncPlotSectionLocalCache(sectionName, plotsList);
+    if (typeof supabaseClient === 'undefined') return;
+    const validCategories = ['Condominium', 'Single Teired', 'Supreme', 'Special Supreme', 'Mausoleum', 'Family Estate Jr.'];
+    const payload = plotsList.map(p => ({
+        plot_identifier: p.plot_identifier,
+        section_name: sectionName,
+        category: validCategories.includes(p.category) ? p.category : 'Supreme',
+        status: p.status || 'available',
+        price: Number(p.price) || 60000,
+        down_payment: Number(p.down_payment) || 10200,
+        col_num: p.col_num || 1,
+        row_num: p.row_num || 1,
+        coordinates: {
+            width: (p.coordinates?.col_span || p.coordinates?.width || 1),
+            height: (p.coordinates?.row_span || p.coordinates?.height || 1),
+            col_span: (p.coordinates?.col_span || p.coordinates?.width || 1),
+            row_span: (p.coordinates?.row_span || p.coordinates?.height || 1)
+        }
+    }));
+    try {
+        await supabaseClient
+            .from('memorial_spaces')
+            .upsert(payload, { onConflict: 'plot_identifier' });
+    } catch (err) {
+        console.warn('Background plot upsert notice:', err);
+    }
+}
+
+async function autoFillPlotsInCurrentSection() {
+    const sectionSelect = document.getElementById('editorSectionSelect');
+    const chosenSection = sectionSelect ? sectionSelect.value : 'Area 2 - Lawn of Love';
+    const shapeInfo = SECTION_SHAPE_MAP[chosenSection];
+    if (!shapeInfo) return;
+
+    const btn = document.getElementById('btnAutoFillPlots');
+    if (btn) { btn.disabled = true; btn.textContent = 'Filling...'; }
+
+    try {
+        let created = await generateMaskedPlotsForShape(chosenSection, shapeInfo, {
+            w: BUILDER_STATE.plotWidth,
+            h: BUILDER_STATE.plotHeight,
+            category: BUILDER_STATE.selectedCategory,
+            status: BUILDER_STATE.plotStatus,
+            existingPlots: currentPlotsList
+        });
+
+        // If WxH is too large for a thin/curved strip, retry automatically with 1x1 plots
+        if (created.length === 0 && (BUILDER_STATE.plotWidth > 1 || BUILDER_STATE.plotHeight > 1)) {
+            created = await generateMaskedPlotsForShape(chosenSection, shapeInfo, {
+                w: 1,
+                h: 1,
+                category: BUILDER_STATE.selectedCategory,
+                status: BUILDER_STATE.plotStatus,
+                existingPlots: currentPlotsList
+            });
+        }
+
+        if (created.length === 0) {
+            if (typeof showNotification === 'function') {
+                showNotification('No Empty Cells', `No available empty cells found inside ${chosenSection}.`, 'info');
+            }
+            return;
+        }
+
+        currentPlotsList = currentPlotsList.concat(created);
+        recordPlotHistory({
+            type: 'add',
+            plots: created.map(p => ({ ...p, coordinates: { ...(p.coordinates || {}) } })),
+            description: `auto-fill ${created.length} plots in ${chosenSection}`
+        });
+        syncPlotSectionLocalCache(chosenSection, currentPlotsList);
+        updatePlotKPIs();
+        renderAreaBlueprintGrid();
+        renderPlotQuickList();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Plots Auto-Filled', `Added ${created.length} plots inside ${chosenSection}. Click "Save to DB" to publish.`, 'success');
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Auto-Fill Plots'; }
     }
 }
 
