@@ -6,16 +6,6 @@
 const MAP_STORAGE_KEY = 'zion_cemetery_map_vector_layout_v2';
 const MAP_DIR = 'assets/images/Map/';
 
-if (typeof window.showNotification !== 'function') {
-    window.showNotification = function(title, message, type = 'info') {
-        if (typeof window.showNotificationModal === 'function') {
-            window.showNotificationModal({ title, message, type });
-        } else {
-            alert(`${title}: ${message}`);
-        }
-    };
-}
-
 // ── Master Asset Catalog for "Add Vector" ──
 // ── Master Asset Catalog for "Add Vector" ──
 // Each vector PNG artwork has its actual Area number stamped directly into the image:
@@ -1042,12 +1032,7 @@ function normalizeEditorVector(v) {
         v.shapeAspect = parseFloat(aspect.toFixed(4));
         const pts = ZMGFence.sanitizePolygonPoints(v.points, 3) || ZMGFence.defaultShapePoints(4, aspect);
         v.points = pts;
-        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect, {
-            fill: v.fill,
-            stroke: v.stroke,
-            label: v.label,
-            labelColor: v.labelColor
-        });
+        v.src = ZMGFence.buildAreaSvgDataUrl(cols, rows, v.area, pts, aspect);
     }
     return v;
 }
@@ -1100,7 +1085,7 @@ async function syncEditorVectorsWithSupabase() {
             vectorLayers = row.coordinates.vectorLayers
                 .filter(v => v && !isLegacyWallLayer(v))
                 .map(v => normalizeEditorVector({ visible: true, ...v }));
-            const seededNow = finalizeLoadedVectors(!!row.coordinates.entranceSeeded, !!row.coordinates.blueprintAreasSeeded, true);
+            finalizeLoadedVectors(!!row.coordinates.entranceSeeded);
             localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
 
             if (row.coordinates.bgConfig) {
@@ -1117,9 +1102,6 @@ async function syncEditorVectorsWithSupabase() {
             }
             if (row.coordinates.fenceConfig && window.ZMGFence) {
                 fenceConfig = ZMGFence.writeStoredFenceConfig(row.coordinates.fenceConfig);
-            }
-            if (seededNow) {
-                await persistEditorVectorsToSupabase();
             }
             renderVectorMap();
             renderLayerSidebar();
@@ -1140,9 +1122,9 @@ async function syncEditorVectorsWithSupabase() {
 }
 
 async function persistEditorVectorsToSupabase() {
-    if (typeof supabaseClient === 'undefined') return false;
+    if (typeof supabaseClient === 'undefined') return;
     try {
-        const { error } = await supabaseClient
+        await supabaseClient
             .from('memorial_spaces')
             .upsert([{
                 plot_identifier: ZMG_DB_MAP_CONFIG_ID,
@@ -1159,18 +1141,11 @@ async function persistEditorVectorsToSupabase() {
                     blueprintConfig,
                     fenceConfig,
                     entranceSeeded: !!localStorage.getItem(ENTRANCE_SEEDED_KEY),
-                    blueprintAreasSeeded: !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY),
                     updatedAt: new Date().toISOString()
                 }
             }], { onConflict: 'plot_identifier' });
-        if (error) {
-            console.error('Supabase map vector save error:', error);
-            throw error;
-        }
-        return true;
     } catch (err) {
         console.warn('Could not save map vector layout to Supabase:', err);
-        throw err;
     }
 }
 
@@ -1178,12 +1153,6 @@ async function saveVectorLayout() {
     if (typeof currentMode !== 'undefined' && currentMode === 'plots') {
         saveCurrentPlotLayoutToDatabase();
         return;
-    }
-    const btnSave = document.getElementById('btnSaveLayout');
-    const origHTML = btnSave ? btnSave.innerHTML : '';
-    if (btnSave) {
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<span>Saving...</span>';
     }
     try {
         // 1. Persist vector layers locally
@@ -1200,8 +1169,9 @@ async function saveVectorLayout() {
         await persistEditorVectorsToSupabase();
 
         // 5. Immediate visual feedback on the Save button
+        const btnSave = document.getElementById('btnSaveLayout');
         if (btnSave) {
-            btnSave.disabled = false;
+            const origHTML = btnSave.innerHTML;
             btnSave.classList.add('me-btn-saved');
             btnSave.innerHTML = `
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1220,15 +1190,8 @@ async function saveVectorLayout() {
         }
     } catch (err) {
         console.error('Error saving layout:', err);
-        if (btnSave) {
-            btnSave.disabled = false;
-            btnSave.innerHTML = origHTML;
-        }
-        const errMsg = (err && err.message) ? err.message : String(err || 'Unknown error');
         if (typeof showNotification === 'function') {
-            showNotification('Save Failed', 'Unable to save layout: ' + errMsg, 'error');
-        } else {
-            alert('Save Failed: ' + errMsg);
+            showNotification('Save Failed', 'Unable to save layout: ' + err.message, 'error');
         }
     }
 }
@@ -1240,7 +1203,6 @@ async function resetVectorLayout() {
     const keptCustomAreas = vectorLayers.filter(v => v.custom);
     vectorLayers = JSON.parse(JSON.stringify(DEFAULT_VECTORS)).concat(keptCustomAreas);
     localStorage.removeItem(ENTRANCE_SEEDED_KEY);
-    localStorage.removeItem(BLUEPRINT_AREAS_SEEDED_KEY);
     fenceConfig = window.ZMGFence
         ? ZMGFence.writeStoredFenceConfig({ ...DEFAULT_FENCE_CONFIG })
         : { ...DEFAULT_FENCE_CONFIG };
@@ -1779,7 +1741,7 @@ async function deleteSelectedVectors() {
     if (selectedVectorIds.size === 0) return;
     const count = selectedVectorIds.size;
     if (count === 1) {
-        await deleteVector(Array.from(selectedVectorIds)[0]);
+        deleteVector(Array.from(selectedVectorIds)[0]);
         return;
     }
     const selectedCustom = vectorLayers.filter(l => selectedVectorIds.has(l.id) && l.custom);
@@ -1797,7 +1759,7 @@ async function deleteSelectedVectors() {
     deselectAll();
     renderVectorMap();
     renderLayerSidebar();
-    await saveVectorLayout();
+    saveVectorLayout();
 }
 
 // ── Vector Inspector Panel Events & Sync ──
@@ -2137,11 +2099,11 @@ async function deleteVector(id) {
     }
 
     commitMapUndo(beforeSnap, `delete ${name}`);
+    saveVectorLayout();
     renderVectorMap();
     renderLayerSidebar();
     updateVectorInspector();
     renderPointOverlay();
-    await saveVectorLayout();
 
     if (typeof showNotification === 'function') {
         showNotification('Layer Deleted', `Removed "${name}" from layout.`, 'info');
@@ -2266,7 +2228,6 @@ function addVectorFromAsset(asset) {
 // PERIMETER FENCE, ENTRANCE GATE & CUSTOM CEMETERY AREAS
 // ==============================================================================
 const ENTRANCE_SEEDED_KEY = 'zion_map_entrance_seeded_v1';
-const BLUEPRINT_AREAS_SEEDED_KEY = 'zmg_blueprint_condo_maus_seeded_v1';
 let fenceRaf = null;
 let areaPrefixTouched = false;
 
@@ -2281,9 +2242,8 @@ function sanitizeBgConfig() {
     }
 }
 
-// Seeds one entrance gate and the blueprint Condominium & Mausoleum perimeter areas once (never re-adds deleted ones)
-function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeeded, fromSupabase) {
-    let blueprintSeededNow = false;
+// Seeds one entrance gate the first time a layout is opened (never re-adds a deleted one)
+function finalizeLoadedVectors(entranceAlreadySeeded) {
     if (window.ZMGFence) {
         const hasEntrance = vectorLayers.some(v => v.kind === 'entrance');
         const seeded = entranceAlreadySeeded || !!localStorage.getItem(ENTRANCE_SEEDED_KEY);
@@ -2293,32 +2253,8 @@ function finalizeLoadedVectors(entranceAlreadySeeded, blueprintAreasAlreadySeede
         if (hasEntrance || entranceAlreadySeeded || !seeded) {
             localStorage.setItem(ENTRANCE_SEEDED_KEY, '1');
         }
-
-        if (typeof ZMGFence.createBlueprintPerimeterAreas === 'function') {
-            const blueprintSeeded = fromSupabase
-                ? !!blueprintAreasAlreadySeeded
-                : !!localStorage.getItem(BLUEPRINT_AREAS_SEEDED_KEY);
-            const existingIds = new Set(vectorLayers.map(v => v.id));
-            const existingAreas = new Set(vectorLayers.filter(v => v.area != null).map(v => String(v.area)));
-            if (!blueprintSeeded) {
-                const toAdd = ZMGFence.createBlueprintPerimeterAreas().filter(
-                    areaLayer => !existingIds.has(areaLayer.id) && !existingAreas.has(String(areaLayer.area))
-                );
-                if (toAdd.length > 0) {
-                    vectorLayers.push(...toAdd);
-                    try {
-                        localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(vectorLayers));
-                    } catch (_) {}
-                }
-                if (fromSupabase) {
-                    localStorage.setItem(BLUEPRINT_AREAS_SEEDED_KEY, '1');
-                    blueprintSeededNow = true;
-                }
-            }
-        }
     }
     syncCustomAreasFromLayers();
-    return blueprintSeededNow;
 }
 
 function scheduleFence() {
@@ -3663,13 +3599,7 @@ async function createCustomAreaFromForm() {
     }
 
     const shapeAspect = parseFloat((rows / Math.max(1, cols)).toFixed(4));
-    const styleOpts = editingLayer ? {
-        fill: editingLayer.fill,
-        stroke: editingLayer.stroke,
-        label: editingLayer.label,
-        labelColor: editingLayer.labelColor
-    } : undefined;
-    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect, styleOpts);
+    const svgUrl = ZMGFence.buildAreaSvgDataUrl(cols, rows, finalNum, pts, shapeAspect);
 
     if (editingLayer) {
         const beforeSnap = captureMapSnapshot(`edit ${fullName}`);

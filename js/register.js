@@ -105,15 +105,11 @@ function initRegister() {
             }
 
             try {
-                // Build dynamic redirect URL for both localhost dev and Vercel production
-                const emailRedirectUrl = `${window.location.origin}/dashboard.html`;
-
                 // Create account + send metadata for the trigger
                 const { data, error } = await supabaseClient.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        emailRedirectTo: emailRedirectUrl,
                         data: {
                             full_name: fullName,
                             username: username,

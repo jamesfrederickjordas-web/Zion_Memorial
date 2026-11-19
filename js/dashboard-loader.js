@@ -325,9 +325,6 @@ function syncCustomAreasToDashboard(layersOverride) {
 window.syncCustomAreasToDashboard = syncCustomAreasToDashboard;
 window.addEventListener('zmg:vector-layout-updated', (e) => {
     syncCustomAreasToDashboard(e && e.detail ? e.detail : null);
-    if (currentResAreaSectionName && !RES_SECTION_SHAPE_MAP[currentResAreaSectionName]) {
-        currentResAreaSectionName = 'Area 5 - Special Supreme Estate';
-    }
     const modal = document.getElementById('reservationModal');
     if (modal && modal.classList.contains('active')) {
         const activeTab = document.querySelector('.lawn-tab.active');
@@ -341,38 +338,13 @@ async function initializeDashboard() {
     // =========================================
     // 1. SUPABASE AUTH & SESSION CHECK
     // =========================================
-    // Handle email verification / auth callback params (?code=... or #access_token=...)
-    const authUrlParams = new URLSearchParams(window.location.search);
-    const authHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const callbackError = authUrlParams.get('error_description') || authHashParams.get('error_description');
-
-    if (callbackError) {
-        sessionStorage.clear();
-        alert("Email verification failed: " + decodeURIComponent(callbackError.replace(/\+/g, ' ')));
-        window.location.href = "index.html";
-        return;
-    }
-
-    const authCode = authUrlParams.get('code');
-    if (authCode) {
-        await supabaseClient.auth.exchangeCodeForSession(authCode);
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const { data: { user }, error: authError } = session?.user
-        ? { data: { user: session.user }, error: null }
-        : await supabaseClient.auth.getUser();
-
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
     if (authError || !user) {
         sessionStorage.clear();
         alert("Please login first to access the dashboard.");
         window.location.href = "index.html";
         return;
-    }
-
-    // Clean auth tokens/codes from URL after successful verification
-    if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
-        window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     sessionStorage.setItem("isLoggedIn", "true");
@@ -1894,11 +1866,9 @@ async function loadLiveUserProfile(user) {
         const fullName = profile?.full_name || user.user_metadata?.full_name || user.email.split('@')[0];
         const username = profile?.username || user.user_metadata?.username || user.email.split('@')[0];
         const phone = profile?.phone || user.user_metadata?.phone || 'Not set';
-        const avatarUrl = profile?.avatar_url || 'assets/images/default-avatar.png';
+        const avatarUrl = profile?.avatar_url || localStorage.getItem('userProfilePicture') || 'assets/images/default-avatar.png';
         if (profile?.avatar_url) {
             localStorage.setItem('userProfilePicture', profile.avatar_url);
-        } else {
-            localStorage.removeItem('userProfilePicture');
         }
         const memberSince = profile?.member_since || '2026-04-07';
         const accountStatus = profile?.account_status || 'ACTIVE';
