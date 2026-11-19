@@ -125,8 +125,9 @@ async function verifyStaffOrAdminAccess() {
         setText('sidebarUserRole', roleLabel);
         const sidebarAvatarEl = document.getElementById('sidebarUserAvatar');
         if (sidebarAvatarEl) {
-            if (profile?.avatar_url) {
-                sidebarAvatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="Avatar">`;
+            const resolvedAvatar = resolveProfileAvatarUrl(profile, user);
+            if (resolvedAvatar) {
+                sidebarAvatarEl.innerHTML = `<img src="${resolvedAvatar}" alt="Avatar">`;
             } else {
                 sidebarAvatarEl.textContent = avatarInitial;
             }
@@ -10096,6 +10097,39 @@ function exportPlotHistoryPdf() {
 // STAFF & ADMINISTRATOR PROFILE MODULE (Photo Upload, Details & Security)
 // ==============================================================================
 
+function getAccountAvatarCache(userId) {
+    if (!userId) return null;
+    try {
+        return localStorage.getItem(`zmg_avatar_${userId}`) || null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function setAccountAvatarCache(userId, url) {
+    if (!userId) return;
+    try {
+        if (url) localStorage.setItem(`zmg_avatar_${userId}`, url);
+        else localStorage.removeItem(`zmg_avatar_${userId}`);
+    } catch (_) {}
+}
+
+function resolveProfileAvatarUrl(profile, user) {
+    const dbUrl = profile && typeof profile.avatar_url === 'string' ? profile.avatar_url.trim() : '';
+    if (dbUrl) {
+        if (user?.id) setAccountAvatarCache(user.id, dbUrl);
+        return dbUrl;
+    }
+    const metaUrl = user?.user_metadata && typeof user.user_metadata.avatar_url === 'string'
+        ? user.user_metadata.avatar_url.trim()
+        : '';
+    if (metaUrl) {
+        if (user?.id) setAccountAvatarCache(user.id, metaUrl);
+        return metaUrl;
+    }
+    return getAccountAvatarCache(user?.id);
+}
+
 async function loadAdminProfileView() {
     if (typeof supabaseClient === 'undefined') return;
     try {
@@ -10132,21 +10166,21 @@ async function loadAdminProfileView() {
 
         const avatarImgEl = document.getElementById('adminProfileAvatarImg');
         if (avatarImgEl) {
-            avatarImgEl.src = profile?.avatar_url || 'assets/images/default-avatar.png';
+            avatarImgEl.src = resolveProfileAvatarUrl(profile, user) || 'assets/images/default-avatar.png';
         }
 
         // Populate Right Column: Personal Information Form
         const fullNameInput = document.getElementById('adminProfileFullNameInput');
-        if (fullNameInput) fullNameInput.value = profile?.full_name || '';
+        if (fullNameInput) fullNameInput.value = profile?.full_name || user.user_metadata?.full_name || '';
 
         const usernameInput = document.getElementById('adminProfileUsernameInput');
-        if (usernameInput) usernameInput.value = profile?.username || '';
+        if (usernameInput) usernameInput.value = profile?.username || user.user_metadata?.username || '';
 
         const emailInput = document.getElementById('adminProfileEmailInput');
         if (emailInput) emailInput.value = user.email || '';
 
         const phoneInput = document.getElementById('adminProfilePhoneInput');
-        if (phoneInput) phoneInput.value = profile?.phone || '';
+        if (phoneInput) phoneInput.value = profile?.phone || user.user_metadata?.phone || '';
 
     } catch (err) {
         console.error('Error loading admin profile:', err);
@@ -10233,8 +10267,8 @@ function setupAdminProfileModule() {
                     reader.readAsDataURL(file);
                 });
 
-                // Storage path matches RLS policy: folder name = auth.uid()
-                const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
+                // 1 profile image per account: overwrite `${user.id}/avatar.jpg` + cache-busting query
+                const filePath = `${user.id}/avatar.jpg`;
 
                 const { error: uploadError } = await supabaseClient.storage
                     .from('profiles')
@@ -10252,19 +10286,34 @@ function setupAdminProfileModule() {
                     .from('profiles')
                     .getPublicUrl(filePath);
 
-                const publicUrl = urlData?.publicUrl;
-                if (!publicUrl) throw new Error('Could not retrieve public avatar URL.');
+                const basePublicUrl = urlData?.publicUrl;
+                if (!basePublicUrl) throw new Error('Could not retrieve public avatar URL.');
+                const publicUrl = `${basePublicUrl}?t=${Date.now()}`;
 
-                // Update profiles table
+                // Persist to auth user_metadata (always scoped to this account) + profiles table (upsert) + per-account local cache
+                const { error: authMetaErr } = await supabaseClient.auth.updateUser({
+                    data: { avatar_url: publicUrl }
+                });
+                if (authMetaErr) {
+                    console.warn('Auth metadata avatar update notice:', authMetaErr);
+                }
+
                 const { error: dbErr } = await supabaseClient
                     .from('profiles')
-                    .update({
+                    .upsert({
+                        id: user.id,
+                        email: user.email || null,
+                        role: currentAdminPortalRole || 'admin',
                         avatar_url: publicUrl,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('id', user.id);
+                    }, { onConflict: 'id' });
 
-                if (dbErr) throw dbErr;
+                if (dbErr) {
+                    console.warn('Profiles table upsert notice:', dbErr);
+                    if (authMetaErr) throw dbErr;
+                }
+
+                setAccountAvatarCache(user.id, publicUrl);
 
                 // Update UI previews immediately
                 if (avatarImgEl) avatarImgEl.src = publicUrl;
@@ -10300,15 +10349,28 @@ function setupAdminProfileModule() {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) return;
 
+                const { error: authMetaErr } = await supabaseClient.auth.updateUser({
+                    data: { avatar_url: null }
+                });
+                if (authMetaErr) console.warn('Auth metadata avatar clear notice:', authMetaErr);
+
                 const { error } = await supabaseClient
                     .from('profiles')
-                    .update({
+                    .upsert({
+                        id: user.id,
+                        email: user.email || null,
+                        role: currentAdminPortalRole || 'admin',
                         avatar_url: null,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('id', user.id);
+                    }, { onConflict: 'id' });
 
-                if (error) throw error;
+                if (error && authMetaErr) throw error;
+
+                try {
+                    await supabaseClient.storage.from('profiles').remove([`${user.id}/avatar.jpg`]);
+                } catch (_) {}
+
+                setAccountAvatarCache(user.id, null);
 
                 if (avatarImgEl) avatarImgEl.src = 'assets/images/default-avatar.png';
                 const sidebarAvatar = document.getElementById('sidebarUserAvatar');
@@ -10353,17 +10415,28 @@ function setupAdminProfileModule() {
                     return;
                 }
 
+                const { error: authMetaErr } = await supabaseClient.auth.updateUser({
+                    data: {
+                        full_name: fullName,
+                        username: username,
+                        phone: phone || null
+                    }
+                });
+                if (authMetaErr) console.warn('Auth metadata details update notice:', authMetaErr);
+
                 const { error: updateErr } = await supabaseClient
                     .from('profiles')
-                    .update({
+                    .upsert({
+                        id: user.id,
+                        email: user.email || null,
+                        role: currentAdminPortalRole || 'admin',
                         full_name: fullName,
                         username: username,
                         phone: phone || null,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('id', user.id);
+                    }, { onConflict: 'id' });
 
-                if (updateErr) throw updateErr;
+                if (updateErr && authMetaErr) throw updateErr;
 
                 // Update UI labels
                 setText('sidebarUserName', fullName);
