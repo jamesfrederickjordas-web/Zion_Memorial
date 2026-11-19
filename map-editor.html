@@ -584,6 +584,18 @@
                         <p class="me-field-hint" style="margin-top: 6px;">Drag handles on the map to reshape vertices, or click edge + markers to split a side.</p>
                     </div>
 
+                    <!-- Convert Non-Area Layer to Cemetery Area (Enables Plots) -->
+                    <div class="me-points-card" id="convertToAreaGroup" style="display: none;">
+                        <div class="me-points-header">
+                            <span class="me-points-title">Cemetery Area &amp; Plots</span>
+                            <span class="me-points-badge">Non-Plot Layer</span>
+                        </div>
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnConvertLayerToArea" style="width: 100%; justify-content: center;">
+                            Convert to Area (Enable Plots)
+                        </button>
+                        <p class="me-field-hint" style="margin-top: 6px;">Makes this shape (or all selected shapes) a cemetery area so you can place plots inside it under Plot Layouts.</p>
+                    </div>
+
                     <!-- Danger Action: Delete Vector -->
                     <div class="me-danger-zone">
                         <button type="button" class="me-btn-delete-layer" id="btnDeleteLayer" title="Delete Selected Layer(s) (Del)">

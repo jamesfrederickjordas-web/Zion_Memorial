@@ -1941,6 +1941,16 @@ function setupVectorInspectorEvents() {
         });
     }
 
+    const btnConvertArea = document.getElementById('btnConvertLayerToArea');
+    if (btnConvertArea) {
+        btnConvertArea.addEventListener('click', () => {
+            const ids = selectedVectorIds.size > 1
+                ? Array.from(selectedVectorIds)
+                : (activeVectorId ? [activeVectorId] : []);
+            convertLayersToArea(ids);
+        });
+    }
+
     // Delete Button in Inspector
     const btnDelete = document.getElementById('btnDeleteLayer');
     if (btnDelete) {
@@ -1989,10 +1999,14 @@ function updatePartStyleInspector(v) {
     if (fenceEl) fenceEl.checked = v.fenceExclude !== true;
 }
 
+function isConvertibleToAreaLayer(v) {
+    return !!v && v.area == null && v.custom !== true && v.kind !== 'entrance' && !isLegacyWallLayer(v);
+}
+
 function updateShapePointsInspector(v) {
     const card = document.getElementById('shapePointsGroup');
     if (!card) return;
-    if (!isShapeEditableLayer(v)) {
+    if (!isShapeEditableLayer(v) || v.preserveCustomSrc) {
         card.style.display = 'none';
         return;
     }
@@ -2076,6 +2090,10 @@ function updateVectorInspector() {
     setVal('propZ', v.zIndex || 5);
     updatePartStyleInspector(v);
     updateShapePointsInspector(v);
+    const convertCard = document.getElementById('convertToAreaGroup');
+    if (convertCard) {
+        convertCard.style.display = isConvertibleToAreaLayer(v) ? 'block' : 'none';
+    }
 }
 
 // ── Deleting Vectors ──
@@ -2980,6 +2998,72 @@ function syncCustomAreasFromLayers() {
     updateAreaActionButtons();
 }
 
+function measureLayerAspectRatio(v) {
+    const el = document.querySelector('.me-vec-element[data-vector-id="' + v.id + '"]');
+    const img = el ? (el.tagName === 'IMG' ? el : el.querySelector('img')) : null;
+    if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        return Math.max(0.12, Math.min(6.0, img.naturalHeight / img.naturalWidth));
+    }
+    if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        return Math.max(0.12, Math.min(6.0, el.offsetHeight / el.offsetWidth));
+    }
+    if (v.shapeAspect && Number(v.shapeAspect) > 0) {
+        return Math.max(0.12, Math.min(6.0, Number(v.shapeAspect)));
+    }
+    return 1.0;
+}
+
+async function convertLayersToArea(ids) {
+    if (!window.ZMGFence) return;
+    const targets = (ids || [])
+        .map(id => vectorLayers.find(l => l.id === id))
+        .filter(isConvertibleToAreaLayer);
+    if (targets.length === 0) return;
+
+    const beforeSnap = captureMapSnapshot(targets.length > 1 ? 'convert layers to areas' : `convert ${targets[0].name} to area`);
+    const convertedNames = [];
+
+    targets.forEach(v => {
+        const num = nextFreeAreaNumber();
+        const rawLabel = String(v.name || `Section ${num}`).replace(/^Area\s+\d+\s*-\s*/i, '').trim() || `Section ${num}`;
+        const fullName = `Area ${num} - ${rawLabel}`.slice(0, 56);
+        const prefix = suggestPrefix(rawLabel);
+        const aspect = parseFloat(measureLayerAspectRatio(v).toFixed(4));
+        const cols = 28;
+        const rows = Math.max(6, Math.min(60, Math.round(cols * aspect)));
+
+        v.kind = 'area';
+        v.custom = true;
+        v.preserveCustomSrc = true;
+        v.area = String(num);
+        v.name = fullName;
+        v.desc = `${fullName} memorial section`;
+        v.category = v.category || 'Supreme';
+        v.tab = ZMGFence.CATEGORY_TABS[v.category] || 'supreme';
+        v.prefix = prefix;
+        v.cols = cols;
+        v.rows = rows;
+        v.shapeAspect = aspect;
+        delete v.points;
+        convertedNames.push(fullName);
+    });
+
+    commitMapUndo(beforeSnap, targets.length > 1 ? 'convert layers to areas' : `convert ${convertedNames[0]}`);
+    syncCustomAreasFromLayers();
+    saveVectorLayout();
+    renderVectorMap();
+    renderLayerSidebar();
+    updateVectorInspector();
+    await persistMapStateNow();
+
+    if (typeof showNotification === 'function') {
+        const msg = convertedNames.length === 1
+            ? `"${convertedNames[0]}" is now an area. Switch to Plot Layouts to place or auto-fill plots inside it.`
+            : `Converted ${convertedNames.length} layers into cemetery areas (${convertedNames.join(', ')}). Switch to Plot Layouts to add plots inside them.`;
+        showNotification('Converted to Cemetery Area', msg, 'success');
+    }
+}
+
 function updateAreaActionButtons() {
     const select = document.getElementById('editorSectionSelect');
     const delBtn = document.getElementById('btnDeleteAreaSidebar');
@@ -3579,9 +3663,11 @@ async function createCustomAreaFromForm() {
         editingLayer.prefix = prefix;
         editingLayer.cols = cols;
         editingLayer.rows = rows;
-        editingLayer.shapeAspect = shapeAspect;
-        editingLayer.points = pts;
-        editingLayer.src = svgUrl;
+        if (!editingLayer.preserveCustomSrc) {
+            editingLayer.shapeAspect = shapeAspect;
+            editingLayer.points = pts;
+            editingLayer.src = svgUrl;
+        }
 
         commitMapUndo(beforeSnap, `edit ${fullName}`);
         syncCustomAreasFromLayers();
