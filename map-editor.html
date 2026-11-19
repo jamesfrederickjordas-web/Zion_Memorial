@@ -161,11 +161,11 @@
                     <div class="me-blueprint-pinned-header">Guide Layer</div>
                     <div class="me-layer-item me-layer-blueprint" id="sidebarBlueprintItem" title="Click to select and move Reference Blueprint">
                         <div class="me-layer-thumb">
-                            <img src="assets/images/backgrounds/mapping basomuch.png" alt="Blueprint Guide">
+                            <img id="sidebarBpThumbImg" src="assets/images/backgrounds/blueprint-reference-v2.png" alt="Blueprint Guide">
                         </div>
                         <div class="me-layer-meta">
                             <span class="me-layer-name">Blueprint Reference</span>
-                            <span class="me-layer-sub" id="sidebarBpSub">X: 0px, Y: 0px · 30° Tilt</span>
+                            <span class="me-layer-sub" id="sidebarBpSub">X: 0px, Y: 0px · 0° Tilt</span>
                         </div>
                         <div class="me-layer-actions">
                             <button type="button" class="me-action-icon-btn" id="sidebarBpVisBtn" title="Toggle Blueprint Visibility">
@@ -259,7 +259,7 @@
                 <!-- VIEW 1: MAP VECTOR CANVAS (INFINITE TRANSFORM STAGE) -->
                 <div class="me-viewport-stage" id="viewportStage">
                     <div class="me-board" id="mapBoard">
-                        <img src="assets/images/backgrounds/mapping basomuch.png" class="me-blueprint-guide" id="blueprintImg" alt="Master Blueprint Guide" draggable="false">
+                        <img src="assets/images/backgrounds/blueprint-reference-v2.png" class="me-blueprint-guide" id="blueprintImg" alt="Master Blueprint Guide" draggable="false">
                         <!-- Dynamic vector layers rendered here -->
                     </div>
                 </div>
@@ -596,22 +596,33 @@
                 <!-- Blueprint Reference Tilt & Alignment Card -->
                 <div class="me-ref-guide-card" id="blueprintRefCard">
                     <div class="me-ref-guide-header">
-                        <h4>Blueprint Reference Tilt</h4>
+                        <h4>Blueprint Reference</h4>
                         <span style="font-size: 10px; color: var(--me-text-muted);">Guide Layer</span>
+                    </div>
+
+                    <!-- Custom Blueprint Image Upload -->
+                    <input type="file" id="blueprintFileInput" accept="image/*" style="display: none;">
+                    <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnUploadBlueprint" style="flex: 1; justify-content: center;">
+                            Upload New Map Image
+                        </button>
+                        <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnResetBlueprintImg" title="Reset to default blueprint reference image">
+                            Default
+                        </button>
                     </div>
 
                     <!-- Tilt Rotation -->
                     <div class="me-field-label">Reference Tilt Angle</div>
                     <div class="me-slider-row">
-                        <input type="range" class="me-range" id="bpRefRotSlider" min="-180" max="180" step="0.5" value="30">
+                        <input type="range" class="me-range" id="bpRefRotSlider" min="-180" max="180" step="0.5" value="0">
                         <div class="me-input-affix" style="width: 80px; flex-shrink: 0;">
                             <span class="affix-tag">°</span>
-                            <input type="number" class="me-affix-input" id="bpRefRotNum" step="0.5" min="-180" max="180" value="30">
+                            <input type="number" class="me-affix-input" id="bpRefRotNum" step="0.5" min="-180" max="180" value="0">
                         </div>
                     </div>
                     <div class="me-quick-presets" style="margin-bottom: 10px;">
-                        <button type="button" class="btn-preset active" id="btnBpPreset30">30° Aligned</button>
-                        <button type="button" class="btn-preset" id="btnBpPreset0">0° Flat</button>
+                        <button type="button" class="btn-preset" id="btnBpPreset30">30° Aligned</button>
+                        <button type="button" class="btn-preset active" id="btnBpPreset0">0° Flat</button>
                         <button type="button" class="btn-preset" id="btnBpPresetM30">-30°</button>
                         <button type="button" class="btn-preset" id="btnBpPreset45">45°</button>
                     </div>
@@ -619,16 +630,16 @@
                     <!-- Scale / Size -->
                     <div class="me-field-label">Reference Size (% of Canvas)</div>
                     <div class="me-slider-row">
-                        <input type="range" class="me-range" id="bpRefScaleSlider" min="20" max="150" step="1" value="70">
+                        <input type="range" class="me-range" id="bpRefScaleSlider" min="20" max="150" step="1" value="85">
                         <div class="me-input-affix" style="width: 80px; flex-shrink: 0;">
-                            <input type="number" class="me-affix-input" id="bpRefScaleNum" min="20" max="150" value="70">
+                            <input type="number" class="me-affix-input" id="bpRefScaleNum" min="20" max="150" value="85">
                             <span class="affix-unit">%</span>
                         </div>
                     </div>
                     <div class="me-quick-presets" style="margin-bottom: 12px;">
                         <button type="button" class="btn-preset" id="btnBpScale50">50%</button>
-                        <button type="button" class="btn-preset active" id="btnBpScale70">70% Fit</button>
-                        <button type="button" class="btn-preset" id="btnBpScale85">85%</button>
+                        <button type="button" class="btn-preset" id="btnBpScale70">70% Fit</button>
+                        <button type="button" class="btn-preset active" id="btnBpScale85">85%</button>
                         <button type="button" class="btn-preset" id="btnBpScale100">100%</button>
                     </div>
 
@@ -1253,6 +1264,6 @@
     <script src="js/supabase-config.js"></script>
     <script src="js/notification-modal.js?v=4.0"></script>
     <script src="js/map-fence.js?v=5.1"></script>
-    <script src="js/map-editor.js?v=5.1"></script>
+    <script src="js/map-editor.js?v=5.2"></script>
 </body>
 </html>

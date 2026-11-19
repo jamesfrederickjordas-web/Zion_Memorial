@@ -86,10 +86,12 @@ const DEFAULT_BG_CONFIG = {
 let bgConfig = { ...DEFAULT_BG_CONFIG };
 
 // ── Blueprint Reference Alignment State ──
-const BLUEPRINT_STORAGE_KEY = 'zion_cemetery_blueprint_config_v1';
+const BLUEPRINT_STORAGE_KEY = 'zion_cemetery_blueprint_config_v2';
+const DEFAULT_BLUEPRINT_SRC = 'assets/images/backgrounds/blueprint-reference-v2.png';
 const DEFAULT_BLUEPRINT_CONFIG = {
-    rotate: 30.0,
-    scale: 0.68, // 68% size - ample margin on the boundless canvas!
+    src: DEFAULT_BLUEPRINT_SRC,
+    rotate: 0.0,
+    scale: 0.85,
     x: 0,
     y: 0,
     opacity: 0.70,
@@ -363,8 +365,12 @@ function saveBlueprintConfig() {
 }
 
 function applyBlueprintConfig() {
+    const bpSrc = blueprintConfig.src || DEFAULT_BLUEPRINT_SRC;
     const bp = document.getElementById('blueprintImg');
     if (bp) {
+        if (bp.getAttribute('src') !== bpSrc) {
+            bp.src = bpSrc;
+        }
         bp.style.setProperty('--bp-rotate', `${blueprintConfig.rotate}deg`);
         bp.style.setProperty('--bp-scale', blueprintConfig.scale);
         bp.style.setProperty('--bp-x', `${blueprintConfig.x}px`);
@@ -372,6 +378,10 @@ function applyBlueprintConfig() {
         bp.style.setProperty('--bp-opacity', blueprintConfig.opacity);
         bp.style.display = blueprintConfig.visible ? 'block' : 'none';
         bp.classList.toggle('is-locked', !blueprintConfig.unlocked);
+    }
+    const thumbImg = document.getElementById('sidebarBpThumbImg');
+    if (thumbImg && thumbImg.getAttribute('src') !== bpSrc) {
+        thumbImg.src = bpSrc;
     }
 
     // Sync input values
@@ -445,6 +455,44 @@ function updateSidebarBlueprintMeta() {
 }
 
 function setupBlueprintEvents() {
+    // Upload custom blueprint reference image
+    const btnUploadBp = document.getElementById('btnUploadBlueprint');
+    const bpFileInput = document.getElementById('blueprintFileInput');
+    const btnResetBpImg = document.getElementById('btnResetBlueprintImg');
+
+    if (btnUploadBp && bpFileInput) {
+        btnUploadBp.addEventListener('click', () => bpFileInput.click());
+        bpFileInput.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                if (ev.target && typeof ev.target.result === 'string') {
+                    blueprintConfig.src = ev.target.result;
+                    blueprintConfig.visible = true;
+                    applyBlueprintConfig();
+                    if (typeof showNotification === 'function') {
+                        showNotification('Blueprint Updated', 'New blueprint reference image loaded.', 'success');
+                    }
+                }
+            };
+            reader.readAsDataURL(file);
+            bpFileInput.value = '';
+        });
+    }
+
+    if (btnResetBpImg) {
+        btnResetBpImg.addEventListener('click', () => {
+            blueprintConfig.src = DEFAULT_BLUEPRINT_SRC;
+            blueprintConfig.rotate = 0.0;
+            blueprintConfig.scale = 0.85;
+            blueprintConfig.x = 0;
+            blueprintConfig.y = 0;
+            blueprintConfig.visible = true;
+            applyBlueprintConfig();
+        });
+    }
+
     // Quick statusbar reposition / lock toggle
     const quickDragBtn = document.getElementById('btnQuickDragBp');
     if (quickDragBtn) {
