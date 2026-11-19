@@ -276,11 +276,15 @@ async function loadAllPlotsData() {
         const dbGrouped = {};
         let systemVectorLayers = null;
         let systemFenceConfig = null;
+        let hasPrimaryMapConfig = false;
         if (!fetchError && dbPlots && dbPlots.length > 0) {
             dbPlots.forEach(p => {
-                if ((p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG' || p.section_name === '__SYSTEM_MAP_CONFIG__') && p.coordinates?.vectorLayers) {
+                const isPrimaryCfg = p.plot_identifier === 'ZMG-MAP-VECTOR-LAYOUT-CONFIG';
+                const isLegacyCfg = !isPrimaryCfg && p.section_name === '__SYSTEM_MAP_CONFIG__';
+                if ((isPrimaryCfg || (isLegacyCfg && !hasPrimaryMapConfig)) && p.coordinates?.vectorLayers) {
                     systemVectorLayers = p.coordinates.vectorLayers;
                     if (p.coordinates.fenceConfig) systemFenceConfig = p.coordinates.fenceConfig;
+                    if (isPrimaryCfg) hasPrimaryMapConfig = true;
                 }
                 if (!p.section_name || p.section_name.includes('__SYSTEM')) return;
                 if (!dbGrouped[p.section_name]) dbGrouped[p.section_name] = [];
@@ -288,7 +292,7 @@ async function loadAllPlotsData() {
             });
         }
 
-        if ((!systemVectorLayers || !systemFenceConfig) && window.ZMGFence && typeof window.ZMGFence.fetchMapConfigFromSupabase === 'function') {
+        if ((!hasPrimaryMapConfig || !systemVectorLayers || !systemFenceConfig) && window.ZMGFence && typeof window.ZMGFence.fetchMapConfigFromSupabase === 'function') {
             const directCfg = await window.ZMGFence.fetchMapConfigFromSupabase(supabaseClient);
             if (directCfg) {
                 if (Array.isArray(directCfg.vectorLayers) && directCfg.vectorLayers.length > 0) systemVectorLayers = directCfg.vectorLayers;
@@ -568,6 +572,7 @@ function renderEntireCemeteryMapWithPlots() {
         areaContainer.style.width = `${v.width}%`;
         areaContainer.style.aspectRatio = `${shapeMeta.widthPx} / ${shapeMeta.heightPx}`;
         areaContainer.style.transform = `rotate(${v.rotate || 0}deg)`;
+        if (v.zIndex) areaContainer.style.zIndex = String(v.zIndex);
 
         // 2. Vector Shape Silhouette Backdrop Image
         const shapeImg = document.createElement('img');
