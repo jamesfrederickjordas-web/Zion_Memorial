@@ -72,13 +72,9 @@
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l8-3 8 5-4 12-10-2z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
                     <span>Add Part</span>
                 </button>
-                <button type="button" class="me-btn me-btn-ghost" id="btnAddEntranceTop" title="Add an entrance gate (snaps onto the perimeter fence)">
+                <button type="button" class="me-btn me-btn-ghost" id="btnAddEntranceTop" title="Add an entrance gate">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-7h6v7"/></svg>
                     <span>Entrance</span>
-                </button>
-                <button type="button" class="me-btn me-btn-ghost" id="btnEditWallPoints" title="Edit perimeter wall boundary points and custom vertex count">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="4 6 12 3 20 8 18 20 6 19"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="3" r="1.5" fill="currentColor"/><circle cx="20" cy="8" r="1.5" fill="currentColor"/><circle cx="18" cy="20" r="1.5" fill="currentColor"/><circle cx="6" cy="19" r="1.5" fill="currentColor"/></svg>
-                    <span>Wall Points</span>
                 </button>
                 <button type="button" class="me-btn me-btn-ghost" id="btnAddVectorTop" title="Add vector asset to canvas">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -560,10 +556,6 @@
                                 <input type="checkbox" id="inspPartDashed">
                                 <span>Dashed</span>
                             </label>
-                            <label class="me-area-editor-snap" title="Expand automatic outer fence around this part when checked">
-                                <input type="checkbox" id="inspPartFenceInclude">
-                                <span>Include in Auto Fence</span>
-                            </label>
                         </div>
                     </div>
 
@@ -599,31 +591,6 @@
                             <span>Delete Vector Layer</span>
                         </button>
                     </div>
-                </div>
-
-                <!-- Perimeter Wall / Fence Points Card -->
-                <div class="me-points-card" id="wallPointsCard" style="margin-bottom: 12px;">
-                    <div class="me-points-header">
-                        <span class="me-points-title">Perimeter Wall Points</span>
-                        <span class="me-points-badge" id="wallModeBadge">Auto Wrap</span>
-                    </div>
-                    <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnToggleEditWallPoints" style="width: 100%; justify-content: center;" title="Toggle Perimeter Wall Points Editing (W)">
-                        Edit Wall Points
-                    </button>
-                    <div class="me-points-count-row">
-                        <label class="me-field-label" for="wallPointCountInput" style="margin: 0; white-space: nowrap;">Points</label>
-                        <input type="number" class="me-input" id="wallPointCountInput" min="3" max="32" step="1" value="4">
-                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnApplyWallPointCount">Set</button>
-                    </div>
-                    <div class="me-points-btn-row">
-                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnAddWallPoint">+ Add Pt</button>
-                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnRemoveWallPoint">- Remove Pt</button>
-                    </div>
-                    <div class="me-points-btn-row">
-                        <button type="button" class="me-btn me-btn-outline me-btn-sm" id="btnAutoFitWall" title="Snap editable wall corners snugly around all visible areas and blocks">Auto-Fit All</button>
-                        <button type="button" class="me-btn me-btn-ghost me-btn-sm" id="btnResetAutoWall">Reset Auto</button>
-                    </div>
-                    <p class="me-field-hint" style="margin-top: 6px;">Customizes wall corners (3-32 points). Entrances snap onto any wall segment.</p>
                 </div>
 
                 <!-- Blueprint Reference Tilt & Alignment Card -->
@@ -1212,10 +1179,6 @@
                                 <input type="checkbox" id="partDashed">
                                 <span>Dashed border outline</span>
                             </label>
-                            <label class="me-area-editor-snap" title="When checked, the automatic perimeter wall also wraps around this part">
-                                <input type="checkbox" id="partFenceInclude" checked>
-                                <span>Wrap outer wall around this part</span>
-                            </label>
                         </div>
 
                         <p class="me-field-hint" style="background: #f6f9f6; border: 1px solid #d5e1d7; border-radius: 4px; padding: 8px 10px;">
@@ -1260,7 +1223,7 @@
                     <div class="me-shortcut-row"><span>Size -/+ (Shift fast)</span><kbd>- / +</kbd></div>
                     <div class="me-shortcut-row"><span>Send Back / Bring Fwd</span><kbd>[ / ]</kbd></div>
                     <div class="me-shortcut-row"><span>To Back / To Front</span><kbd>Ctrl+[ / ]</kbd></div>
-                    <div class="me-shortcut-row"><span>Wall / Shape Points</span><kbd>W / P</kbd></div>
+                    <div class="me-shortcut-row"><span>Shape Points</span><kbd>P</kbd></div>
                     <div class="me-shortcut-row"><span>Nudge 0.5% (Shift 2%)</span><kbd>Arrow Keys</kbd></div>
                 </div>
                 <div class="me-shortcut-section">

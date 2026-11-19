@@ -971,10 +971,17 @@
         while (svg.firstChild) svg.removeChild(svg.firstChild);
     }
 
+    // Temporarily disabled: set to true to re-enable the brown perimeter wall/fence
+    const PERIMETER_WALL_ENABLED = false;
+
     // Draw the fence (auto-fitted rect OR custom N-point polygon).
     // Also performs a pending auto-snap for freshly added gates.
     function render(container, layers, opts) {
         if (!container) return { rect: null, points: null, isCustomPolygon: false, snapped: false };
+        if (!PERIMETER_WALL_ENABLED) {
+            removeFence(container);
+            return { rect: null, points: null, isCustomPolygon: false, snapped: false };
+        }
         opts = opts || {};
         const svg = getSvg(container);
         while (svg.firstChild) svg.removeChild(svg.firstChild);

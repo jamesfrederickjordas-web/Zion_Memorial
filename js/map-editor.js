@@ -2506,15 +2506,11 @@ function resetSelectedShapeToRect() {
 }
 
 function toggleWallPointEdit() {
-    if (currentMode !== 'map') switchEditorMode('map');
+    // Perimeter wall editing is temporarily disabled
     if (pointEditState && pointEditState.mode === 'wall') {
         pointEditState = null;
-    } else {
-        pointEditState = { mode: 'wall' };
+        renderPointOverlay();
     }
-    renderPointOverlay();
-    updateWallPointsInspector();
-    updateVectorInspector();
 }
 
 function toggleShapePointEdit(layerId) {
@@ -2677,9 +2673,8 @@ function renderPointOverlay() {
     let wallPtsPct = null;
 
     if (pointEditState.mode === 'wall') {
-        isWall = true;
-        wallPtsPct = getEditableWallPointsPct().map(p => ({ x: p.x, y: p.y }));
-        ptsPx = wallPtsPct.map(p => ({ x: (p.x / 100) * BOARD_WIDTH, y: (p.y / 100) * BOARD_HEIGHT }));
+        pointEditState = null;
+        return;
     } else if (pointEditState.mode === 'shape') {
         targetLayer = vectorLayers.find(l => l.id === pointEditState.layerId);
         if (!isShapeEditableLayer(targetLayer)) {
@@ -2847,33 +2842,6 @@ function initFenceSystem() {
     };
 
     bindClick('btnAddEntranceTop', addEntranceLayer);
-    bindClick('btnEditWallPoints', toggleWallPointEdit);
-    bindClick('btnToggleEditWallPoints', toggleWallPointEdit);
-    bindClick('btnApplyWallPointCount', () => {
-        const val = parseInt(document.getElementById('wallPointCountInput')?.value, 10) || 4;
-        applyWallPointCount(val, false);
-    });
-    bindClick('btnAddWallPoint', () => {
-        const pts = getEditableWallPointsPct();
-        applyWallPointCount(Math.min(32, pts.length + 1), false);
-    });
-    bindClick('btnRemoveWallPoint', () => {
-        const pts = getEditableWallPointsPct();
-        applyWallPointCount(Math.max(3, pts.length - 1), false);
-    });
-    bindClick('btnAutoFitWall', () => {
-        applyWallPointCount(null, true);
-    });
-    bindClick('btnResetAutoWall', () => {
-        if (!window.ZMGFence) return;
-        const beforeSnap = captureMapSnapshot('reset auto wall');
-        fenceConfig = ZMGFence.writeStoredFenceConfig({ ...DEFAULT_FENCE_CONFIG });
-        commitMapUndo(beforeSnap, 'reset auto wall');
-        updateFence();
-        updateWallPointsInspector();
-        renderPointOverlay();
-        persistEditorVectorsToSupabase();
-    });
 
     bindClick('btnToggleEditShapePoints', () => toggleShapePointEdit(activeVectorId));
     bindClick('btnApplyShapePointCount', () => {
@@ -6517,13 +6485,6 @@ function initKeyboardShortcuts() {
             if (noMods && !e.shiftKey && key === 'h' && getActionableSelectedVectors().length > 0) {
                 e.preventDefault();
                 toggleVectorVisibility(null, null);
-                return;
-            }
-
-            // Toggle Wall Points Editing: W
-            if (noMods && !e.shiftKey && key === 'w') {
-                e.preventDefault();
-                toggleWallPointEdit();
                 return;
             }
 
