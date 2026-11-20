@@ -1508,11 +1508,13 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    gap: 12px;
+    padding: 0 14px;
     font-size: 11.5px;
     user-select: none;
     z-index: 50;
     color: var(--me-text-muted);
+    overflow: hidden;
 }
 .me-status-left {
     color: var(--me-forest-dark);
@@ -1520,6 +1522,15 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+#canvasHint {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     min-width: 0;
 }
 .me-shortcuts-pill {
@@ -1582,6 +1593,8 @@ html, body {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 .me-zbtn {
     width: 24px;
@@ -1597,6 +1610,8 @@ html, body {
     font-weight: 700;
     cursor: pointer;
     transition: all 0.12s;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 .me-zbtn:hover {
     background: var(--me-sage-bg);
