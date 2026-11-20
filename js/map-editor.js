@@ -5996,6 +5996,8 @@ function setupPanelCollapseToggles() {
     const btnCollapseLeft = document.getElementById('btnToggleCollapseLeft');
     const btnCollapseLeftPlot = document.getElementById('btnToggleCollapseLeftPlot');
     const btnCollapseRight = document.getElementById('btnToggleCollapseRight');
+    const btnReopenLeft = document.getElementById('btnReopenLeftPanel');
+    const btnReopenRight = document.getElementById('btnReopenRightPanel');
     const panelLeft = document.getElementById('panelLeft');
     const panelRight = document.getElementById('panelRight');
 
@@ -6005,6 +6007,7 @@ function setupPanelCollapseToggles() {
         const isCollapsed = panelLeft.classList.contains('collapsed');
         if (btnCollapseLeft) btnCollapseLeft.textContent = isCollapsed ? '▶' : '◀';
         if (btnCollapseLeftPlot) btnCollapseLeftPlot.textContent = isCollapsed ? '▶' : '◀';
+        if (btnReopenLeft) btnReopenLeft.classList.toggle('is-visible', isCollapsed);
         setTimeout(autoFitCanvas, 220);
     };
 
@@ -6013,12 +6016,15 @@ function setupPanelCollapseToggles() {
         panelRight.classList.toggle('collapsed');
         const isCollapsed = panelRight.classList.contains('collapsed');
         if (btnCollapseRight) btnCollapseRight.textContent = isCollapsed ? '◀' : '▶';
+        if (btnReopenRight) btnReopenRight.classList.toggle('is-visible', isCollapsed);
         setTimeout(autoFitCanvas, 220);
     };
 
     if (btnCollapseLeft) btnCollapseLeft.addEventListener('click', toggleLeft);
     if (btnCollapseLeftPlot) btnCollapseLeftPlot.addEventListener('click', toggleLeft);
     if (btnCollapseRight) btnCollapseRight.addEventListener('click', toggleRight);
+    if (btnReopenLeft) btnReopenLeft.addEventListener('click', toggleLeft);
+    if (btnReopenRight) btnReopenRight.addEventListener('click', toggleRight);
 }
 
 function applyZoom(newZoom, originX = null, originY = null) {
