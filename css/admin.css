@@ -426,6 +426,13 @@ html, body {
     display: flex;
 }
 
+#viewAdminProfile {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 8px 12px 24px;
+    box-sizing: border-box;
+}
+
 /* ==============================================================================
    4. COMPACT KPI CARDS (Slim, Flat, Balanced)
    ============================================================================== */
