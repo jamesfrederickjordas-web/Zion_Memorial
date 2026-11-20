@@ -4638,6 +4638,23 @@ function setupPlotBuilderToolbar() {
         });
     }
 
+    document.querySelectorAll('.builder-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-step-target');
+            const delta = parseInt(btn.getAttribute('data-step'), 10) || 0;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const minVal = parseInt(input.min, 10) || 1;
+            const maxVal = parseInt(input.max, 10) || 99;
+            const curVal = parseInt(input.value, 10) || minVal;
+            const nextVal = Math.max(minVal, Math.min(maxVal, curVal + delta));
+            if (nextVal !== curVal) {
+                input.value = String(nextVal);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    });
+
     // Status select
     const statusSelect = document.getElementById('builderPlotStatus');
     if (statusSelect) {

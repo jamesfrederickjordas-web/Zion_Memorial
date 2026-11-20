@@ -1061,16 +1061,61 @@ html, body {
     color: #475569;
 }
 
-.builder-num-input {
-    width: 58px;
+.builder-stepper {
+    display: inline-flex;
+    align-items: stretch;
     height: 28px;
-    padding: 4px 4px 4px 8px;
-    box-sizing: border-box;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
+    overflow: hidden;
+    background: #ffffff;
+}
+.builder-num-input {
+    width: 34px;
+    height: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
     font-size: 0.8rem;
-    text-align: left;
+    text-align: center;
     font-weight: 700;
+    color: #0f172a;
+    background: transparent;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.builder-num-input::-webkit-inner-spin-button,
+.builder-num-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.builder-stepper-btns {
+    display: flex;
+    flex-direction: column;
+    width: 18px;
+    border-left: 1px solid #cbd5e1;
+    background: #f8fafc;
+}
+.builder-step-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 7px;
+    line-height: 1;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.builder-step-btn + .builder-step-btn {
+    border-top: 1px solid #e2e8f0;
+}
+.builder-step-btn:hover {
+    background: #e2e8f0;
     color: #0f172a;
 }
 
