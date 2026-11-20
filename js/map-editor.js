@@ -1023,6 +1023,8 @@ function normalizeEditorVector(v) {
         v.fenceInclude = !v.fenceExclude;
         v.label = String(v.label || '');
         v.src = ZMGFence.buildPartSvgDataUrl(v);
+    } else if (v.custom && v.preserveCustomSrc) {
+        delete v.points;
     } else if (v.custom && window.ZMGFence) {
         const cols = Number(v.cols) || 20;
         const rows = Number(v.rows) || 20;
@@ -6315,7 +6317,7 @@ function cloneVectorForInsertion(src, stepIdx, usedAreaNums, usedPrefixes, exist
             copy.name = fullName;
             copy.desc = `${fullName} memorial section`;
             copy.id = `area-custom-${n}-${uid}`;
-            if (window.ZMGFence) {
+            if (window.ZMGFence && !copy.preserveCustomSrc) {
                 copy.src = ZMGFence.buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect);
             }
         }

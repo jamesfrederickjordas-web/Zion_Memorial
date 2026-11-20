@@ -1440,9 +1440,13 @@
                     custom: true,
                     visible: p.visible !== false
                 };
-                copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
-                    ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
-                    : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area));
+                if (copy.preserveCustomSrc && copy.src) {
+                    delete copy.points;
+                } else {
+                    copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
+                        ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
+                        : (copy.src || buildAreaSvgDataUrl(copy.cols || 6, copy.rows || 5, copy.area));
+                }
                 return copy;
             }
             return { ...p, visible: p.visible !== false };
