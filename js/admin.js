@@ -1686,7 +1686,7 @@ function renderDeceasedTable(records) {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No deceased records found. Click "+ Add Deceased Record" to record an interment.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No deceased records found. Add interments from the Reservations view.</td></tr>`;
         return;
     }
 
