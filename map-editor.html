@@ -647,42 +647,23 @@
                     <div class="me-coords-row">
                         <div class="me-field-group" style="flex: 1;">
                             <label class="me-field-label">Width (cols)</label>
-                            <input type="number" class="me-input" id="inspPlotWidth" min="1" max="16" value="1">
+                            <input type="number" class="me-input" id="inspPlotWidth" min="1" max="16" value="1" readonly>
                         </div>
                         <div class="me-field-group" style="flex: 1;">
                             <label class="me-field-label">Height (rows)</label>
-                            <input type="number" class="me-input" id="inspPlotHeight" min="1" max="20" value="2">
+                            <input type="number" class="me-input" id="inspPlotHeight" min="1" max="20" value="2" readonly>
                         </div>
                     </div>
 
                     <div class="me-coords-row">
                         <div class="me-field-group" style="flex: 1;">
                             <label class="me-field-label">Col (X)</label>
-                            <input type="number" class="me-input" id="inspPlotCol" min="1" max="40" value="1">
+                            <input type="number" class="me-input" id="inspPlotCol" min="1" max="40" value="1" readonly>
                         </div>
                         <div class="me-field-group" style="flex: 1;">
                             <label class="me-field-label">Row (Y)</label>
-                            <input type="number" class="me-input" id="inspPlotRow" min="1" max="40" value="1">
+                            <input type="number" class="me-input" id="inspPlotRow" min="1" max="40" value="1" readonly>
                         </div>
-                    </div>
-
-                    <div class="me-field-group">
-                        <label class="me-field-label">Quick Status</label>
-                        <div style="display: flex; gap: 6px;">
-                            <button type="button" class="btn-quick-status btn-status-avail" id="btnQuickStatusAvail"> Avail</button>
-                            <button type="button" class="btn-quick-status btn-status-res" id="btnQuickStatusRes"> Res</button>
-                            <button type="button" class="btn-quick-status btn-status-occ" id="btnQuickStatusOcc"> Occ</button>
-                        </div>
-                    </div>
-
-                    <div class="me-field-group">
-                        <label class="me-field-label">Availability Status</label>
-                        <select id="inspPlotStatusSelect" class="me-select">
-                            <option value="available">Available</option>
-                            <option value="reserved">Reserved</option>
-                            <option value="occupied">Occupied</option>
-                            <option value="maintenance">Maintenance</option>
-                        </select>
                     </div>
 
                     <div class="me-coords-row">

@@ -1062,12 +1062,14 @@ html, body {
 }
 
 .builder-num-input {
-    width: 44px;
-    padding: 4px 6px;
+    width: 58px;
+    height: 28px;
+    padding: 4px 4px 4px 8px;
+    box-sizing: border-box;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
     font-size: 0.8rem;
-    text-align: center;
+    text-align: left;
     font-weight: 700;
     color: #0f172a;
 }
