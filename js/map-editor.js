@@ -4500,6 +4500,26 @@ function initPlotSystem() {
     if (btnRes) btnRes.addEventListener('click', () => setQuickStatus('reserved'));
     if (btnOcc) btnOcc.addEventListener('click', () => setQuickStatus('occupied'));
 
+    const statusSelectEl = document.getElementById('inspPlotStatusSelect');
+    if (statusSelectEl) {
+        statusSelectEl.addEventListener('change', () => {
+            syncQuickStatusButtons(statusSelectEl.value);
+        });
+    }
+
+    const catSelectEl = document.getElementById('inspPlotCategorySelect');
+    if (catSelectEl) {
+        catSelectEl.addEventListener('change', () => {
+            const spec = CATEGORY_DEFAULT_SPECS[catSelectEl.value];
+            if (spec) {
+                const pEl = document.getElementById('inspPlotPrice');
+                const dEl = document.getElementById('inspPlotDown');
+                if (pEl) pEl.value = spec.price;
+                if (dEl) dEl.value = spec.down;
+            }
+        });
+    }
+
     // Setup Builder Tool Palette & Interactive Grid handlers
     setupPlotBuilderToolbar();
     setupAreaGridInteractions();
@@ -4644,10 +4664,7 @@ function setupPlotBuilderToolbar() {
     const btnRedo = document.getElementById('btnRedoPlot');
     if (btnRedo) btnRedo.addEventListener('click', redoPlotAction);
 
-    // Auto-Fill, Save to DB, and Clear Section action buttons
-    const btnAutoFill = document.getElementById('btnAutoFillPlots');
-    if (btnAutoFill) btnAutoFill.addEventListener('click', autoFillPlotsInCurrentSection);
-
+    // Save to DB and Clear Section action buttons
     const btnSaveDb = document.getElementById('btnSavePlotsDb');
     if (btnSaveDb) btnSaveDb.addEventListener('click', saveCurrentPlotLayoutToDatabase);
 
@@ -5634,10 +5651,34 @@ function selectPlot(id) {
     const pW = (plot.coordinates?.col_span || plot.coordinates?.width || 1);
     const pH = (plot.coordinates?.row_span || plot.coordinates?.height || 1);
 
+    const sectionSelect = document.getElementById('editorSectionSelect');
+    const shapeInfo = sectionSelect ? SECTION_SHAPE_MAP[sectionSelect.value] : null;
+    const maxCols = Number(shapeInfo?.cols) || 60;
+    const maxRows = Number(shapeInfo?.rows) || 60;
+    const setMax = (id, m) => { const el = document.getElementById(id); if (el) el.max = String(m); };
+    setMax('inspPlotCol', maxCols);
+    setMax('inspPlotWidth', maxCols);
+    setMax('inspPlotRow', maxRows);
+    setMax('inspPlotHeight', maxRows);
+
     setVal('inspPlotCol', pCol);
     setVal('inspPlotRow', pRow);
     setVal('inspPlotWidth', pW);
     setVal('inspPlotHeight', pH);
+    syncQuickStatusButtons(plot.status);
+}
+
+function syncQuickStatusButtons(status) {
+    const s = String(status || '').toLowerCase();
+    const map = {
+        btnQuickStatusAvail: 'available',
+        btnQuickStatusRes: 'reserved',
+        btnQuickStatusOcc: 'occupied'
+    };
+    Object.keys(map).forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.toggle('active', s === map[id]);
+    });
 }
 
 function setQuickStatus(status) {
@@ -5647,6 +5688,7 @@ function setQuickStatus(status) {
     plot.status = status;
     const statusSelect = document.getElementById('inspPlotStatusSelect');
     if (statusSelect) statusSelect.value = status;
+    syncQuickStatusButtons(status);
 
     saveActivePlotChanges();
 }
@@ -5684,16 +5726,38 @@ async function saveActivePlotChanges() {
 
     const previousState = { ...plot, coordinates: { ...(plot.coordinates || {}) } };
 
+    const newCode = (document.getElementById('inspPlotCode')?.value || '').trim();
+    if (newCode && newCode !== plot.plot_identifier) {
+        const dup = currentPlotsList.some(p => p.id !== plot.id && String(p.plot_identifier || '').toLowerCase() === newCode.toLowerCase());
+        if (dup) {
+            if (typeof showNotification === 'function') {
+                showNotification('Duplicate Plot ID', `"${newCode}" already exists in this section.`, 'warning');
+            }
+            return;
+        }
+        plot.plot_identifier = newCode;
+    }
+
     plot.status = document.getElementById('inspPlotStatusSelect')?.value || plot.status;
     plot.category = document.getElementById('inspPlotCategorySelect')?.value || plot.category;
     plot.price = parseFloat(document.getElementById('inspPlotPrice')?.value) || plot.price;
     plot.down_payment = parseFloat(document.getElementById('inspPlotDown')?.value) || plot.down_payment;
+    syncQuickStatusButtons(plot.status);
 
-    plot.col_num = parseInt(document.getElementById('inspPlotCol')?.value) || plot.col_num;
-    plot.row_num = parseInt(document.getElementById('inspPlotRow')?.value) || plot.row_num;
+    const sectionSelectEl = document.getElementById('editorSectionSelect');
+    const shapeInfo = sectionSelectEl ? SECTION_SHAPE_MAP[sectionSelectEl.value] : null;
+    const maxCols = Number(shapeInfo?.cols) || 60;
+    const maxRows = Number(shapeInfo?.rows) || 60;
 
-    const newW = parseInt(document.getElementById('inspPlotWidth')?.value) || 1;
-    const newH = parseInt(document.getElementById('inspPlotHeight')?.value) || 1;
+    const rawW = Math.max(1, Math.min(maxCols, parseInt(document.getElementById('inspPlotWidth')?.value, 10) || 1));
+    const rawH = Math.max(1, Math.min(maxRows, parseInt(document.getElementById('inspPlotHeight')?.value, 10) || 1));
+    const rawCol = Math.max(1, Math.min(maxCols - rawW + 1, parseInt(document.getElementById('inspPlotCol')?.value, 10) || plot.col_num || 1));
+    const rawRow = Math.max(1, Math.min(maxRows - rawH + 1, parseInt(document.getElementById('inspPlotRow')?.value, 10) || plot.row_num || 1));
+
+    plot.col_num = rawCol;
+    plot.row_num = rawRow;
+    const newW = rawW;
+    const newH = rawH;
 
     plot.coordinates = {
         col_span: newW,
@@ -5717,6 +5781,7 @@ async function saveActivePlotChanges() {
         await supabaseClient
             .from('memorial_spaces')
             .update({
+                plot_identifier: plot.plot_identifier,
                 status: plot.status,
                 category: plot.category,
                 price: plot.price,

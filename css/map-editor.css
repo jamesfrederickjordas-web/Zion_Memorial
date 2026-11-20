@@ -1377,18 +1377,27 @@ html, body {
 /* Quick Status Buttons in Inspector */
 .btn-quick-status {
     flex: 1;
-    padding: 6px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    line-height: 1.2;
+    padding: 5px 8px;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
     font-size: 0.74rem;
     font-weight: 700;
     cursor: pointer;
     background: #ffffff;
+    color: #334155;
     transition: all 0.15s ease;
 }
-.btn-status-avail:hover { background: #16a34a; color: #ffffff; border-color: #16a34a; }
-.btn-status-res:hover { background: #eab308; color: #0f172a; border-color: #eab308; }
-.btn-status-occ:hover { background: #dc2626; color: #ffffff; border-color: #dc2626; }
+.btn-status-avail:hover,
+.btn-status-avail.active { background: #16a34a; color: #ffffff; border-color: #16a34a; }
+.btn-status-res:hover,
+.btn-status-res.active { background: #eab308; color: #0f172a; border-color: #eab308; }
+.btn-status-occ:hover,
+.btn-status-occ.active { background: #dc2626; color: #ffffff; border-color: #dc2626; }
 .me-plot-stage {
     width: 100%;
     max-width: 1100px;
