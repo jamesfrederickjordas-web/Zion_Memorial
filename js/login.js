@@ -3,10 +3,56 @@
 // =========================================
 
 function initLogin() {
+    // If redirected back from a Supabase password recovery email to the site root, forward to reset-password.html
+    if (
+        (window.location.hash && window.location.hash.includes('type=recovery')) ||
+        new URLSearchParams(window.location.search).get('type') === 'recovery'
+    ) {
+        window.location.replace('reset-password.html' + window.location.search + window.location.hash);
+        return;
+    }
+
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth?.onAuthStateChange) {
+        supabaseClient.auth.onAuthStateChange((event) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                window.location.replace('reset-password.html' + window.location.search + window.location.hash);
+            }
+        });
+    }
+
     const loginModal = document.getElementById("loginModal");
     const loginBtn = document.getElementById("loginBtn");
     const loginClose = document.querySelector(".login-close");
     const showRegisterLink = document.getElementById("showRegisterLink");
+    const loginPanel = document.getElementById("loginPanel");
+    const forgotPanel = document.getElementById("forgotPasswordPanel");
+    const forgotLink = document.getElementById("forgotPasswordLink");
+    const backToLoginLink = document.getElementById("backToLoginLink");
+    const forgotForm = document.getElementById("forgotPasswordForm");
+    const forgotStatus = document.getElementById("forgotPasswordStatus");
+
+    function showLoginView() {
+        if (loginPanel) loginPanel.style.display = "block";
+        if (forgotPanel) forgotPanel.style.display = "none";
+        if (forgotStatus) {
+            forgotStatus.style.display = "none";
+            forgotStatus.textContent = "";
+        }
+    }
+
+    function showForgotView() {
+        if (loginPanel) loginPanel.style.display = "none";
+        if (forgotPanel) forgotPanel.style.display = "block";
+        const loginEmailVal = document.getElementById("loginEmail")?.value?.trim();
+        const forgotEmailInput = document.getElementById("forgotEmail");
+        if (forgotEmailInput && loginEmailVal && !forgotEmailInput.value) {
+            forgotEmailInput.value = loginEmailVal;
+        }
+        if (forgotStatus) {
+            forgotStatus.style.display = "none";
+            forgotStatus.textContent = "";
+        }
+    }
 
     // Helper: determine if user is staff or admin and redirect accordingly
     async function redirectByUserRole(user, fallbackEmail = '') {
@@ -78,6 +124,7 @@ function initLogin() {
                 }
             }
             positionModal(loginModal, loginBtn);
+            showLoginView();
             loginModal.style.display = "block";
             const registerModal = document.getElementById("registerModal");
             if (registerModal) registerModal.style.display = "none";
@@ -110,7 +157,67 @@ function initLogin() {
 
     // Close login
     if (loginClose) {
-        loginClose.onclick = () => loginModal.style.display = "none";
+        loginClose.onclick = () => {
+            loginModal.style.display = "none";
+            showLoginView();
+        };
+    }
+
+    // Forgot Password view toggle
+    if (forgotLink) {
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForgotView();
+        });
+    }
+
+    if (backToLoginLink) {
+        backToLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginView();
+        });
+    }
+
+    // Handle Forgot Password email verification request
+    if (forgotForm) {
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("forgotEmail")?.value?.trim();
+            const submitBtn = document.getElementById("forgotSubmitBtn");
+            if (!email) return;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Sending...";
+            }
+            if (forgotStatus) {
+                forgotStatus.style.display = "none";
+                forgotStatus.className = "forgot-status";
+            }
+
+            try {
+                const redirectTo = window.location.origin + "/reset-password.html";
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+                if (error) throw error;
+
+                if (forgotStatus) {
+                    forgotStatus.className = "forgot-status success";
+                    forgotStatus.textContent = "Verification link sent! Please check your Gmail/email inbox (and spam folder) to change your password.";
+                    forgotStatus.style.display = "block";
+                }
+            } catch (err) {
+                if (forgotStatus) {
+                    forgotStatus.className = "forgot-status error";
+                    forgotStatus.textContent = "Failed to send reset link: " + (err.message || "Please try again.");
+                    forgotStatus.style.display = "block";
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Send Reset Link";
+                }
+            }
+        });
     }
 
     // Switch to register

@@ -6,7 +6,8 @@
     position: fixed;
     background: white;
     width: 320px;
-    height: 500px;
+    min-height: 500px;
+    height: auto;
     border-radius: 6px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
     z-index: 6000;
@@ -190,4 +191,33 @@
 
 .close-btn:hover {
     color: #333;
+}
+
+.forgot-desc {
+    font-size: 0.84rem;
+    color: #555;
+    line-height: 1.45;
+    margin: 0 0 16px 0;
+    text-align: left;
+}
+
+.forgot-status {
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    margin-bottom: 14px;
+    text-align: left;
+}
+
+.forgot-status.success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+}
+
+.forgot-status.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
 }
