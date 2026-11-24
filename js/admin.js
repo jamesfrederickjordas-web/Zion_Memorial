@@ -1702,7 +1702,7 @@ function renderDeceasedTable(records) {
                 <div class="admin-actions">
                     <button type="button" class="btn-action-text" title="View Deceased Details" onclick="viewDeceasedDetailsAdmin(${rec.id})">View</button>
                     ${currentAdminPortalRole === 'admin' ? `
-                        <button type="button" class="btn-action-text btn-action-danger" title="Delete Record" onclick="deleteDeceasedRecordAdmin(${rec.id}, '${escapeHtml(rec.deceased_name)}')">Delete</button>
+                        <button type="button" class="btn-action-text btn-action-danger" title="Delete Record" onclick="deleteDeceasedRecordAdmin('${escapeHtml(String(rec.id))}', '${escapeHtml(rec.deceased_name)}')">Delete</button>
                     ` : ''}
                 </div>
             </td>
@@ -1760,13 +1760,30 @@ window.deleteDeceasedRecordAdmin = async function(recordId, name) {
             targetPlotIdentifier = cachedSp?.plot_identifier;
         }
 
-        // 2. Delete the record from public.memorial_records
-        const { error } = await supabaseClient
+        // 2. Delete the record from public.memorial_records and verify at least 1 row was actually deleted
+        const numericId = Number(recordId);
+        const targetId = Number.isFinite(numericId) && String(numericId) === String(recordId).trim() ? numericId : recordId;
+
+        const { data: deletedRows, error } = await supabaseClient
             .from('memorial_records')
             .delete()
-            .eq('id', recordId);
+            .eq('id', targetId)
+            .select('id');
 
         if (error) throw error;
+
+        if (!deletedRows || deletedRows.length === 0) {
+            // Fallback to SECURITY DEFINER RPC if RLS blocked direct DELETE
+            const { data: rpcDeleted, error: rpcErr } = await supabaseClient
+                .rpc('admin_delete_memorial_record', { p_record_id: Number(targetId) });
+
+            if (rpcErr || !rpcDeleted) {
+                throw new Error(
+                    rpcErr?.message ||
+                    'Record could not be deleted (blocked by database RLS policy). Please run sql/13_admin_delete_deceased_rpc.sql in Supabase SQL Editor.'
+                );
+            }
+        }
 
         // 3. Update in-memory deceased cache immediately
         adminDeceasedCache = (adminDeceasedCache || []).filter(x => String(x.id) !== String(recordId));
