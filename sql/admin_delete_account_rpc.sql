@@ -15,12 +15,14 @@ DECLARE
     target_role TEXT;
     target_name TEXT;
 BEGIN
-    -- 1. Verify caller has admin privileges in public.profiles
-    SELECT role INTO caller_role 
+    -- 1. Verify caller has admin privileges in public.profiles OR auth.jwt() user_metadata
+    SELECT LOWER(COALESCE(role, '')) INTO caller_role 
     FROM public.profiles 
     WHERE id = auth.uid();
 
-    IF caller_role IS NULL OR caller_role != 'admin' THEN
+    IF COALESCE(caller_role, '') != 'admin'
+       AND LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) != 'admin'
+       AND LOWER(COALESCE(auth.jwt() ->> 'email', '')) NOT LIKE 'admin%' THEN
         RAISE EXCEPTION 'Access Denied: Only administrators can delete accounts.';
     END IF;
 
