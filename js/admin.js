@@ -7891,6 +7891,15 @@ function setupWalkInReservationModal() {
         refreshGcashAmounts();
     };
 
+    const sectionSelect = document.getElementById('walkInSectionSelect');
+    if (sectionSelect) {
+        sectionSelect.addEventListener('change', () => {
+            renderWalkInPlotsForSection(sectionSelect.value);
+            if (cashPaidInput) delete cashPaidInput.dataset.userEdited;
+            computeFinancials();
+        });
+    }
+
     if (plotSelect) {
         plotSelect.addEventListener('change', () => {
             if (cashPaidInput) delete cashPaidInput.dataset.userEdited;
@@ -8165,8 +8174,55 @@ function setupWalkInReservationModal() {
     }
 }
 
+function renderWalkInPlotsForSection(sectionFilter = '') {
+    const select = document.getElementById('walkInPlotSelect');
+    if (!select) return;
+
+    const list = sectionFilter
+        ? adminAvailablePlotsCache.filter(s => (s.section_name || 'Other') === sectionFilter)
+        : adminAvailablePlotsCache;
+
+    if (list.length === 0) {
+        select.innerHTML = '<option value="">-- No Available Plots in This Section --</option>';
+        return;
+    }
+
+    const formatOpt = (s) => `
+        <option value="${s.id}">
+            ${s.plot_identifier} (${s.category || 'Standard'}) - ₱ ${Number(s.price || 65000).toLocaleString()}
+        </option>`;
+
+    if (sectionFilter) {
+        select.innerHTML = `<option value="">-- Select Plot (${list.length} available) --</option>` +
+            list.map(formatOpt).join('');
+        return;
+    }
+
+    // Group by section_name using <optgroup> when viewing All Sections
+    const grouped = new Map();
+    list.forEach(s => {
+        const sec = s.section_name || 'Other';
+        if (!grouped.has(sec)) grouped.set(sec, []);
+        grouped.get(sec).push(s);
+    });
+
+    const sortedSections = Array.from(grouped.keys()).sort((a, b) => {
+        const na = parseInt((a.match(/Area\s+(\d+)/i) || [])[1], 10);
+        const nb = parseInt((b.match(/Area\s+(\d+)/i) || [])[1], 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return a.localeCompare(b);
+    });
+
+    select.innerHTML = `<option value="">-- Select Available Plot (${list.length} total) --</option>` +
+        sortedSections.map(sec => {
+            const items = grouped.get(sec);
+            return `<optgroup label="${escapeHtml(sec)} (${items.length})">${items.map(formatOpt).join('')}</optgroup>`;
+        }).join('');
+}
+
 async function loadWalkInPlotsDropdown() {
     const select = document.getElementById('walkInPlotSelect');
+    const sectionSelect = document.getElementById('walkInSectionSelect');
     if (!select) return;
 
     try {
@@ -8182,16 +8238,28 @@ async function loadWalkInPlotsDropdown() {
         adminAvailablePlotsCache = spaces || [];
 
         if (adminAvailablePlotsCache.length === 0) {
+            if (sectionSelect) sectionSelect.innerHTML = '<option value="">-- No Sections Available --</option>';
             select.innerHTML = '<option value="">-- No Available Plots Currently in Inventory --</option>';
             return;
         }
 
-        select.innerHTML = '<option value="">-- Select Available Plot --</option>' +
-            adminAvailablePlotsCache.map(s => `
-                <option value="${s.id}">
-                    ${s.plot_identifier} - ${s.section_name} (${s.category}) [₱ ${Number(s.price || 65000).toLocaleString()}]
-                </option>
-            `).join('');
+        if (sectionSelect) {
+            const counts = new Map();
+            adminAvailablePlotsCache.forEach(s => {
+                const sec = s.section_name || 'Other';
+                counts.set(sec, (counts.get(sec) || 0) + 1);
+            });
+            const sortedSections = Array.from(counts.keys()).sort((a, b) => {
+                const na = parseInt((a.match(/Area\s+(\d+)/i) || [])[1], 10);
+                const nb = parseInt((b.match(/Area\s+(\d+)/i) || [])[1], 10);
+                if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                return a.localeCompare(b);
+            });
+            sectionSelect.innerHTML = `<option value="">-- All Sections (${adminAvailablePlotsCache.length}) --</option>` +
+                sortedSections.map(sec => `<option value="${escapeHtml(sec)}">${escapeHtml(sec)} (${counts.get(sec)})</option>`).join('');
+        }
+
+        renderWalkInPlotsForSection(sectionSelect ? sectionSelect.value : '');
 
     } catch (err) {
         console.error('Failed to load available plots:', err);
@@ -10678,6 +10746,15 @@ window.transferReservationAdmin = async function(reservationId) {
 
     // Populate available plots for relocation
     const plotSelect = document.getElementById('adminTransferTargetPlotSelect');
+    const sectionSelect = document.getElementById('walkInSectionSelect');
+    if (sectionSelect) {
+        sectionSelect.addEventListener('change', () => {
+            renderWalkInPlotsForSection(sectionSelect.value);
+            if (cashPaidInput) delete cashPaidInput.dataset.userEdited;
+            computeFinancials();
+        });
+    }
+
     if (plotSelect) {
         plotSelect.innerHTML = '<option value="">Loading available plots...</option>';
         try {

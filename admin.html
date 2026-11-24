@@ -379,11 +379,19 @@
         </div>
         <form id="adminCreateWalkInResForm" class="admin-modal-body" style="padding: 20px;">
             <!-- Plot Selection -->
-            <div class="form-group" style="margin-bottom: 14px;">
-                <label>Select Available Plot *</label>
-                <select id="walkInPlotSelect" class="admin-select" required style="width: 100%;">
-                    <option value="">-- Choose Available Space --</option>
-                </select>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Select Section / Lawn</label>
+                    <select id="walkInSectionSelect" class="admin-select" style="width: 100%;">
+                        <option value="">-- All Sections --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Select Available Plot *</label>
+                    <select id="walkInPlotSelect" class="admin-select" required style="width: 100%;">
+                        <option value="">-- Choose Available Space --</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Purchaser Information -->
