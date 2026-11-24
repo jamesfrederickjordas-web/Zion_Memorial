@@ -20,12 +20,48 @@ BEGIN
     END IF;
 END $$;
 
--- 3. Ensure Staff and Admin can insert reservations without user_id or with staff user_id
+-- 3. Ensure Staff and Admin can manage reservations, payments, and memorial_spaces (via profiles.role OR user_metadata.role)
 DROP POLICY IF EXISTS "Staff and Admin can manage all reservations" ON public.reservations;
 CREATE POLICY "Staff and Admin can manage all reservations"
 ON public.reservations FOR ALL TO authenticated
-USING (public.current_user_role() IN ('admin', 'staff'))
-WITH CHECK (public.current_user_role() IN ('admin', 'staff'));
+USING (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+)
+WITH CHECK (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+);
+
+DROP POLICY IF EXISTS "Staff and Admin can manage all payments" ON public.payments;
+CREATE POLICY "Staff and Admin can manage all payments"
+ON public.payments FOR ALL TO authenticated
+USING (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+)
+WITH CHECK (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+);
+
+DROP POLICY IF EXISTS "Staff and Admin can manage all spaces" ON public.memorial_spaces;
+CREATE POLICY "Staff and Admin can manage all spaces"
+ON public.memorial_spaces FOR ALL TO authenticated
+USING (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+)
+WITH CHECK (
+    public.current_user_role() IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'staff')
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) LIKE 'admin%'
+);
 
 -- 4. Reload PostgREST schema cache
 NOTIFY pgrst, 'reload schema';

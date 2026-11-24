@@ -7860,7 +7860,13 @@ function setupWalkInReservationModal() {
     const computeFinancials = () => {
         const plotId = plotSelect?.value;
         const selectedPlot = adminAvailablePlotsCache.find(p => String(p.id) === String(plotId));
-        if (!selectedPlot) return;
+        if (!selectedPlot) {
+            if (totalPriceInput) totalPriceInput.value = '0.00';
+            if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = '0.00';
+            if (monthlyAmortInput) monthlyAmortInput.value = '0.00';
+            refreshGcashAmounts();
+            return;
+        }
 
         const price = Number(selectedPlot.price || 65000);
         const isFull = payMode?.value === 'FULL_PAYMENT';
@@ -8052,7 +8058,7 @@ function setupWalkInReservationModal() {
                 if (resErr) throw resErr;
 
                 // 2. Insert into payments
-                await supabaseClient
+                const { error: payErr } = await supabaseClient
                     .from('payments')
                     .insert([{
                         reservation_id: newRes.id,
@@ -8064,10 +8070,11 @@ function setupWalkInReservationModal() {
                         status: 'COMPLETED',
                         paid_at: new Date().toISOString()
                     }]);
+                if (payErr) throw payErr;
 
                 // 3. If deceased details provided (required for At-Need, optional for Pre-Need), insert into memorial_records
                 if (decFullName) {
-                    await supabaseClient
+                    const { error: decErr } = await supabaseClient
                         .from('memorial_records')
                         .insert([{
                             space_id: spaceId,
@@ -8079,20 +8086,16 @@ function setupWalkInReservationModal() {
                             gender: (['Male', 'Female', 'Other'].includes(decGender)) ? decGender : 'Other',
                             epitaph: decEpitaph || null
                         }]);
+                    if (decErr) throw decErr;
                 }
 
                 // 4. Update plot space status
-                if (isAtNeed && decFullName) {
-                    await supabaseClient
-                        .from('memorial_spaces')
-                        .update({ status: 'occupied', updated_at: new Date().toISOString() })
-                        .eq('id', spaceId);
-                } else {
-                    await supabaseClient
-                        .from('memorial_spaces')
-                        .update({ status: 'reserved', updated_at: new Date().toISOString() })
-                        .eq('id', spaceId);
-                }
+                const nextSpaceStatus = (isAtNeed && decFullName) ? 'occupied' : 'reserved';
+                const { error: spaceErr } = await supabaseClient
+                    .from('memorial_spaces')
+                    .update({ status: nextSpaceStatus, updated_at: new Date().toISOString() })
+                    .eq('id', spaceId);
+                if (spaceErr) throw spaceErr;
 
                 // 5. Generate Official PDF Receipt
                 if (typeof generateAndDownloadReceiptPDF === 'function') {
@@ -8171,7 +8174,8 @@ async function loadWalkInPlotsDropdown() {
             .from('memorial_spaces')
             .select('id, plot_identifier, section_name, category, price, down_payment')
             .eq('status', 'available')
-            .order('plot_identifier', { ascending: true });
+            .order('plot_identifier', { ascending: true })
+            .limit(5000);
 
         if (error) throw error;
 
