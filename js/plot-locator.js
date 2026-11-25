@@ -199,6 +199,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         autoFitMapToViewport();
     }
+
+    // 4. Auto-adapt whenever Admin saves map layout or plot updates
+    const refreshFromCloud = async () => {
+        await loadAllPlotsData();
+        renderEntireCemeteryMapWithPlots();
+    };
+    window.addEventListener('focus', refreshFromCloud);
+    window.addEventListener('storage', (e) => {
+        if (e.key === MAP_VECTOR_STORAGE_KEY || e.key === 'zion_cemetery_fence_config_v1') {
+            renderEntireCemeteryMapWithPlots();
+        }
+    });
+    if (typeof supabaseClient !== 'undefined' && typeof supabaseClient.channel === 'function') {
+        try {
+            supabaseClient
+                .channel('zmg-plot-locator-live-sync')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'memorial_spaces'
+                }, () => {
+                    refreshFromCloud();
+                })
+                .subscribe();
+        } catch (_) {}
+    }
 });
 
 function syncCustomAreasToLocator(layersOverride) {

@@ -267,11 +267,38 @@ document.addEventListener('DOMContentLoaded', () => {
 const ZMG_DB_MAP_CONFIG_ID = 'ZMG-MAP-VECTOR-LAYOUT-CONFIG';
 
 // Exposed global init for dynamic component loaders
+let __zmgDashRealtimeBound = false;
 window.initVectorMapSystem = function() {
     loadSavedVectorLayout();
     renderVectorMapElements();
     setupMapEditorEvents();
     syncMapVectorLayoutWithSupabase();
+
+    if (!__zmgDashRealtimeBound) {
+        __zmgDashRealtimeBound = true;
+        window.addEventListener('focus', () => syncMapVectorLayoutWithSupabase());
+        window.addEventListener('storage', (e) => {
+            if (e.key === MAP_VECTOR_STORAGE_KEY || e.key === 'zion_cemetery_fence_config_v1') {
+                loadSavedVectorLayout();
+                renderVectorMapElements();
+            }
+        });
+        if (typeof supabaseClient !== 'undefined' && typeof supabaseClient.channel === 'function') {
+            try {
+                supabaseClient
+                    .channel('zmg-client-dashboard-map-sync')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'memorial_spaces',
+                        filter: `plot_identifier=eq.${ZMG_DB_MAP_CONFIG_ID}`
+                    }, () => {
+                        syncMapVectorLayoutWithSupabase();
+                    })
+                    .subscribe();
+            } catch (_) {}
+        }
+    }
 
     // Check if ?editMap=true query param is present
     const urlParams = new URLSearchParams(window.location.search);
@@ -475,6 +502,64 @@ function renderDashboardBg(targetCanvas = null, bgImgId = null) {
     }
 }
 
+const __zmgDashAlphaCache = new Map();
+function getDashAlphaSample(imgEl) {
+    if (!imgEl || !imgEl.complete || imgEl.naturalWidth <= 0) return null;
+    if (__zmgDashAlphaCache.has(imgEl.src)) return __zmgDashAlphaCache.get(imgEl.src);
+    try {
+        const cw = 128;
+        const ch = Math.max(16, Math.round(128 * (imgEl.naturalHeight / imgEl.naturalWidth)));
+        const c = document.createElement('canvas');
+        c.width = cw;
+        c.height = ch;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(imgEl, 0, 0, cw, ch);
+        const entry = { cw, ch, data: ctx.getImageData(0, 0, cw, ch).data };
+        __zmgDashAlphaCache.set(imgEl.src, entry);
+        return entry;
+    } catch (_) {
+        return null;
+    }
+}
+
+function findOpaqueDashboardLayerAtPoint(canvas, clientX, clientY, fallbackLayer) {
+    if (!canvas || !Array.isArray(currentVectorLayout)) return fallbackLayer;
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = (canvasRect.width || canvas.offsetWidth || 1) / (canvas.offsetWidth || 1);
+    const scaleY = (canvasRect.height || canvas.offsetHeight || 1) / (canvas.offsetHeight || 1);
+    const bx = (clientX - canvasRect.left) / (scaleX || 1);
+    const by = (clientY - canvasRect.top) / (scaleY || 1);
+
+    const desc = [...currentVectorLayout]
+        .filter(l => l && l.visible !== false && isPlotVector(l, l.src))
+        .sort((a, b) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
+
+    for (const cand of desc) {
+        const el = canvas.querySelector(`.map-vector-element[data-vector-id="${cand.id}"]`);
+        if (!el) continue;
+        const w = el.offsetWidth || 1;
+        const h = el.offsetHeight || 1;
+        const cx = el.offsetLeft + w / 2;
+        const cy = el.offsetTop + h / 2;
+        const dx = bx - cx;
+        const dy = by - cy;
+        const rad = -(Number(cand.rotate) || 0) * Math.PI / 180;
+        const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+        const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+        const u = lx / w + 0.5;
+        const vv = ly / h + 0.5;
+        if (u < 0 || u > 1 || vv < 0 || vv > 1) continue;
+        const sample = getDashAlphaSample(el);
+        if (!sample) return cand;
+        const px = Math.max(0, Math.min(sample.cw - 1, Math.floor(u * sample.cw)));
+        const py = Math.max(0, Math.min(sample.ch - 1, Math.floor(vv * sample.ch)));
+        if (sample.data[(py * sample.cw + px) * 4 + 3] > 12) {
+            return cand;
+        }
+    }
+    return fallbackLayer;
+}
+
 // Render all vector layers on canvas (supports both dashboard canvas & modal canvas)
 function renderVectorMapElements() {
     const targetCanvases = [
@@ -550,7 +635,7 @@ function renderVectorMapElements() {
                     startVectorDrag(e, v);
                 });
             } else {
-                // Client view — only plot vectors are interactive (default + custom areas)
+                // Client view — only plot vectors are interactive (transparent bounding-box corners pass through)
                 if (isPlotVector(v, v.src)) {
                     img.title = `${v.name} - ${v.desc || v.name} [Click to select this lawn category]`;
                     img.style.cursor = 'pointer';
@@ -558,14 +643,15 @@ function renderVectorMapElements() {
 
                     img.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        const hit = findOpaqueDashboardLayerAtPoint(canvas, e.clientX, e.clientY, v);
+                        if (!hit || !isPlotVector(hit, hit.src)) return;
+                        const hitAreaId = hit.area || null;
                         if (isModal) {
-                            // Inside modal: highlight vector and switch category
-                            if (areaId && typeof window.selectCemeteryArea === 'function') {
-                                window.selectCemeteryArea(areaId, false);
+                            if (hitAreaId && typeof window.selectCemeteryArea === 'function') {
+                                window.selectCemeteryArea(hitAreaId, false);
                             }
                         } else {
-                            // On dashboard: select area & trigger animated transition to reservation map
-                            handleClientVectorClick(v, e);
+                            handleClientVectorClick(hit, e);
                         }
                     });
                 } else {

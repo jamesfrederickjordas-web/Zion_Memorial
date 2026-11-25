@@ -1960,6 +1960,7 @@ body::-webkit-scrollbar {
 
 /* Floating Clean Zone Badge Above Area */
 .pd-area-floating-label {
+    pointer-events: none;
     position: absolute;
     top: -24px;
     left: 50%;
