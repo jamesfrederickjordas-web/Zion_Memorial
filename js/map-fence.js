@@ -1472,6 +1472,21 @@
                 };
                 if (copy.preserveCustomSrc && copy.src) {
                     delete copy.points;
+                    if (String(copy.area) === '16' && typeof copy.src === 'string' && copy.src.startsWith('data:image/svg+xml')) {
+                        try {
+                            const isB64 = copy.src.includes(';base64,');
+                            const raw = isB64
+                                ? decodeURIComponent(escape(atob(copy.src.split(';base64,')[1])))
+                                : decodeURIComponent(copy.src.split(',')[1] || '');
+                            const recolored = raw.replace(/#[0-9a-fA-F]{6}/g, (hex) => {
+                                const r = parseInt(hex.slice(1, 3), 16);
+                                const g = parseInt(hex.slice(3, 5), 16);
+                                const b = parseInt(hex.slice(5, 7), 16);
+                                return (b > r + 25) ? '#f5e4c3' : hex;
+                            });
+                            copy.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(recolored)));
+                        } catch (_) {}
+                    }
                 } else {
                     copy.src = (Array.isArray(copy.points) && copy.points.length >= MIN_POLYGON_POINTS)
                         ? buildAreaSvgDataUrl(copy.cols || 20, copy.rows || 20, copy.area, copy.points, copy.shapeAspect)
