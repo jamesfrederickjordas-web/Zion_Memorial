@@ -147,6 +147,25 @@ function initMaintenancePage() {
 
                 if (error) throw error;
 
+                // Dual-guarantee notification to Admin & Staff accounts
+                try {
+                    const { data: staffUsers } = await supabaseClient
+                        .from('profiles')
+                        .select('id')
+                        .in('role', ['admin', 'staff']);
+                    if (staffUsers && staffUsers.length > 0) {
+                        const rows = staffUsers.map(u => ({
+                            user_id: u.id,
+                            title: `New Maintenance Request: ${visitType}`,
+                            message: `${user.email || 'A client'} requested ${visitType} for ${schedDate}.`,
+                            category: 'maintenance',
+                            type: 'info',
+                            link_action: 'maintenance'
+                        }));
+                        await supabaseClient.from('notifications').insert(rows);
+                    }
+                } catch (_) {}
+
                 if (typeof window.showSuccessModal === 'function') {
                     window.showSuccessModal('Work Order Submitted', `Your ${visitType} request for ${schedDate} has been scheduled. Cemetery staff will inspect and tend to your plot.`);
                 } else {

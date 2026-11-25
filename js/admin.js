@@ -118,15 +118,161 @@ function setupAdminRealtimeAutoSync() {
         try {
             const channel = supabaseClient.channel('zmg-admin-live-sync');
             ['memorial_spaces', 'reservations', 'memorial_records', 'payments', 'profiles', 'maintenance_visits', 'support_tickets'].forEach(table => {
-                channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
                     scheduleAdminAutoRefresh();
+                    if (table === 'maintenance_visits' && payload?.eventType === 'INSERT') {
+                        showAdminLiveToast({
+                            title: 'New Maintenance / Visit Request',
+                            message: `${payload.new?.visit_type || 'Grounds Care'} scheduled for ${payload.new?.scheduled_date || 'upcoming date'}.`,
+                            category: 'maintenance'
+                        });
+                    } else if (table === 'reservations' && payload?.eventType === 'INSERT') {
+                        showAdminLiveToast({
+                            title: 'New Reservation Request',
+                            message: `Reservation #${payload.new?.reservation_number || ''} submitted by a client.`,
+                            category: 'reservation'
+                        });
+                    } else if (table === 'payments' && payload?.eventType === 'INSERT') {
+                        showAdminLiveToast({
+                            title: 'New Payment Submitted',
+                            message: `Payment of ₱${Number(payload.new?.amount || 0).toLocaleString()} received for review.`,
+                            category: 'payment'
+                        });
+                    } else if (table === 'support_tickets' && payload?.eventType === 'INSERT') {
+                        showAdminLiveToast({
+                            title: 'New Support Ticket',
+                            message: `${payload.new?.subject || 'Client inquiry'} submitted.`,
+                            category: 'support'
+                        });
+                    }
                 });
+            });
+            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+                if (window.__zmgAdminUserId && payload?.new?.user_id === window.__zmgAdminUserId) {
+                    loadAdminNotifications();
+                }
             });
             channel.subscribe();
         } catch (err) {
             console.warn('Admin realtime subscription notice:', err);
         }
     }
+
+    initAdminNotifications();
+    setInterval(() => {
+        loadAdminNotifications();
+        if (document.getElementById('viewMaintenance')?.style.display !== 'none' && typeof loadAdminMaintenanceTable === 'function') {
+            loadAdminMaintenanceTable();
+        }
+    }, 20000);
+}
+
+let __adminNotifsCache = [];
+let __adminNotifInitialized = false;
+
+function showAdminLiveToast(notif) {
+    if (!notif) return;
+    if (typeof showNotification === 'function') {
+        showNotification(notif.title || 'New Activity', notif.message || '', 'info');
+    }
+}
+
+async function initAdminNotifications() {
+    if (__adminNotifInitialized) return;
+    __adminNotifInitialized = true;
+
+    const bellBtn = document.getElementById('adminNotifBellBtn');
+    const dropdown = document.getElementById('adminNotifDropdown');
+    const markAllBtn = document.getElementById('adminMarkAllReadBtn');
+
+    if (bellBtn && dropdown) {
+        bellBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = dropdown.style.display === 'block';
+            dropdown.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen) loadAdminNotifications();
+        });
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', async () => {
+            if (!window.__zmgAdminUserId || typeof supabaseClient === 'undefined') return;
+            await supabaseClient
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('user_id', window.__zmgAdminUserId)
+                .eq('is_read', false);
+            await loadAdminNotifications();
+        });
+    }
+
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+            window.__zmgAdminUserId = user.id;
+            await loadAdminNotifications();
+        }
+    } catch (_) {}
+}
+
+async function loadAdminNotifications() {
+    if (typeof supabaseClient === 'undefined' || !window.__zmgAdminUserId) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('notifications')
+            .select('*')
+            .eq('user_id', window.__zmgAdminUserId)
+            .order('created_at', { ascending: false })
+            .limit(25);
+        if (error) return;
+        __adminNotifsCache = data || [];
+        const unread = __adminNotifsCache.filter(n => !n.is_read).length;
+        const badge = document.getElementById('adminNotifBadge');
+        if (badge) {
+            badge.textContent = unread > 99 ? '99+' : String(unread);
+            badge.style.display = unread > 0 ? 'inline-flex' : 'none';
+        }
+        renderAdminNotificationsDropdown();
+    } catch (_) {}
+}
+
+function renderAdminNotificationsDropdown() {
+    const listEl = document.getElementById('adminNotifList');
+    if (!listEl) return;
+    if (!__adminNotifsCache.length) {
+        listEl.innerHTML = `<div style="padding: 18px; text-align: center; color: #64748b; font-size: 0.82rem;">No notifications yet.</div>`;
+        return;
+    }
+    listEl.innerHTML = __adminNotifsCache.map(n => `
+        <div class="admin-notif-item" data-id="${n.id}" data-link="${escapeHtml(n.link_action || n.category || '')}" style="padding: 9px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; background: ${n.is_read ? '#ffffff' : '#f0fdf4'}; border: 1px solid ${n.is_read ? '#e2e8f0' : '#bbf7d0'};">
+            <div style="display: flex; justify-content: space-between; gap: 6px; align-items: center;">
+                <strong style="font-size: 0.8rem; color: #1e293b;">${escapeHtml(n.title || 'Update')}</strong>
+                <span style="font-size: 0.68rem; color: #64748b;">${n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+            </div>
+            <div style="font-size: 0.76rem; color: #475569; margin-top: 2px;">${escapeHtml(n.message || '')}</div>
+        </div>
+    `).join('');
+
+    listEl.querySelectorAll('.admin-notif-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const id = item.getAttribute('data-id');
+            const link = (item.getAttribute('data-link') || '').toLowerCase();
+            if (id && typeof supabaseClient !== 'undefined') {
+                await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+                loadAdminNotifications();
+            }
+            const dropdown = document.getElementById('adminNotifDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+            if (link.includes('maint')) document.getElementById('tabAdminMaintenance')?.click();
+            else if (link.includes('support')) document.getElementById('tabAdminSupport')?.click();
+            else if (link.includes('reserv') || link.includes('pay')) document.getElementById('tabAdminReservation')?.click();
+        });
+    });
 }
 
 function startHeaderClock() {
@@ -1203,6 +1349,25 @@ window.approveReservationAdmin = async function(reservationId) {
             .eq('id', reservationId);
 
         if (error) throw error;
+
+        try {
+            const { data: resRow } = await supabaseClient
+                .from('reservations')
+                .select('user_id, reservation_number')
+                .eq('id', reservationId)
+                .maybeSingle();
+            if (resRow?.user_id) {
+                await sendDirectNotification(
+                    resRow.user_id,
+                    'Reservation Approved! 🎉',
+                    `Your reservation #${resRow.reservation_number || reservationId} has been approved by admin.`,
+                    'reservation',
+                    'success',
+                    'myreservation',
+                    reservationId
+                );
+            }
+        } catch (_) {}
 
         await logAdminAction('RESERVATION_APPROVED', 'reservations', reservationId, `Approved plot reservation #${reservationId}`);
 
@@ -6509,6 +6674,25 @@ window.approveReservationAdmin = async function(reservationId) {
             .eq('id', reservationId);
 
         if (error) throw error;
+
+        try {
+            const { data: resRow } = await supabaseClient
+                .from('reservations')
+                .select('user_id, reservation_number')
+                .eq('id', reservationId)
+                .maybeSingle();
+            if (resRow?.user_id) {
+                await sendDirectNotification(
+                    resRow.user_id,
+                    'Reservation Approved! 🎉',
+                    `Your reservation #${resRow.reservation_number || reservationId} has been approved by admin.`,
+                    'reservation',
+                    'success',
+                    'myreservation',
+                    reservationId
+                );
+            }
+        } catch (_) {}
 
         await logAdminAction('RESERVATION_APPROVED', 'reservations', reservationId, `Approved plot reservation #${reservationId}`);
 
