@@ -1244,6 +1244,65 @@ function renderVectorMap() {
     // Remove all old vector elements (preserve blueprint & bg image)
     board.querySelectorAll('.me-vec-element').forEach(el => el.remove());
 
+    // Pixel-alpha hit-testing helper so transparent bounding-box corners pass clicks through to layers underneath
+    const vecAlphaCache = window.__zmgVecAlphaCache || (window.__zmgVecAlphaCache = new Map());
+    const getAlphaSample = (imgEl) => {
+        const key = imgEl.src;
+        if (vecAlphaCache.has(key)) return vecAlphaCache.get(key);
+        if (!imgEl.complete || imgEl.naturalWidth <= 0) return null;
+        try {
+            const cw = 128;
+            const ch = Math.max(16, Math.round(128 * (imgEl.naturalHeight / imgEl.naturalWidth)));
+            const c = document.createElement('canvas');
+            c.width = cw;
+            c.height = ch;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(imgEl, 0, 0, cw, ch);
+            const data = ctx.getImageData(0, 0, cw, ch).data;
+            const entry = { cw, ch, data };
+            vecAlphaCache.set(key, entry);
+            return entry;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const isOpaqueAtPoint = (v, imgEl, clientX, clientY) => {
+        if (!imgEl || v.visible === false) return false;
+        const rect = imgEl.getBoundingClientRect();
+        const cx = (rect.left + rect.right) / 2;
+        const cy = (rect.top + rect.bottom) / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        const rad = -(Number(v.rotate) || 0) * Math.PI / 180;
+        const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+        const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+        const boardRect = board.getBoundingClientRect();
+        const scale = (boardRect.width || BOARD_WIDTH) / BOARD_WIDTH;
+        const w = (imgEl.offsetWidth || 1) * scale;
+        const h = (imgEl.offsetHeight || 1) * scale;
+        const u = lx / w + 0.5;
+        const vv = ly / h + 0.5;
+        if (u < 0 || u > 1 || vv < 0 || vv > 1) return false;
+        const sample = getAlphaSample(imgEl);
+        if (!sample) return true;
+        const px = Math.max(0, Math.min(sample.cw - 1, Math.floor(u * sample.cw)));
+        const py = Math.max(0, Math.min(sample.ch - 1, Math.floor(vv * sample.ch)));
+        return sample.data[(py * sample.cw + px) * 4 + 3] > 12;
+    };
+
+    const findOpaqueLayerAtPoint = (clientX, clientY, fallbackLayer) => {
+        const desc = [...vectorLayers].sort((a, b) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
+        for (const cand of desc) {
+            if (cand.visible === false) continue;
+            const el = board.querySelector(`.me-vec-element[data-vector-id="${cand.id}"]`);
+            if (el && isOpaqueAtPoint(cand, el, clientX, clientY)) {
+                return cand;
+            }
+        }
+        return fallbackLayer;
+    };
+
     // Sort by zIndex ascending so higher z-index paints on top
     const sorted = [...vectorLayers].sort((a, b) => (Number(a.zIndex) || 0) - (Number(b.zIndex) || 0));
 
@@ -1255,20 +1314,27 @@ function renderVectorMap() {
         img.alt = v.name;
         img.dataset.vectorId = v.id;
         img.draggable = false;
-        img.addEventListener('load', scheduleFence);
+        img.addEventListener('load', () => {
+            getAlphaSample(img);
+            scheduleFence();
+        });
         if (v.area) {
             img.dataset.areaId = String(v.area);
             img.title = `${v.name} - double-click to edit its plots`;
             img.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                openAreaInPlotEditor(v);
+                const hit = findOpaqueLayerAtPoint(e.clientX, e.clientY, v);
+                if (hit && hit.area) openAreaInPlotEditor(hit);
+                else if (hit && hit.kind === 'decor') openEditPartModal(hit.id);
             });
         } else if (v.kind === 'decor') {
             img.dataset.partId = String(v.id);
             img.title = `${v.name} - double-click to edit shape & style`;
             img.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                openEditPartModal(v.id);
+                const hit = findOpaqueLayerAtPoint(e.clientX, e.clientY, v);
+                if (hit && hit.kind === 'decor') openEditPartModal(hit.id);
+                else if (hit && hit.area) openAreaInPlotEditor(hit);
             });
         }
 
@@ -1279,22 +1345,23 @@ function renderVectorMap() {
         img.style.opacity = `${v.opacity ?? 1.0}`;
         img.style.zIndex = `${v.zIndex || 5}`;
 
-        // Mousedown selects & starts dragging (supports Shift / Ctrl multi-select)
+        // Mousedown selects & starts dragging (transparent pixels pass through to opaque layer underneath)
         img.addEventListener('mousedown', (e) => {
             e.stopPropagation();
+            const targetLayer = findOpaqueLayerAtPoint(e.clientX, e.clientY, v);
             const isMultiKey = e.shiftKey || e.ctrlKey || e.metaKey;
             if (isMultiKey) {
-                toggleSelectVector(v.id);
+                toggleSelectVector(targetLayer.id);
             } else {
-                if (!selectedVectorIds.has(v.id)) {
-                    selectVector(v.id, false);
+                if (!selectedVectorIds.has(targetLayer.id)) {
+                    selectVector(targetLayer.id, false);
                 } else {
-                    activeVectorId = v.id;
+                    activeVectorId = targetLayer.id;
                     syncSelectionUI();
                     updateVectorInspector();
                 }
             }
-            startVectorDrag(e, v);
+            startVectorDrag(e, targetLayer);
         });
 
         board.appendChild(img);

@@ -2273,6 +2273,7 @@ function renderAdminLocMapBoard() {
             partImg.style.transform = `rotate(${v.rotate || 0}deg)`;
             partImg.style.opacity = String(v.opacity ?? 1);
             partImg.style.zIndex = String(v.zIndex || (isEntrance ? 25 : 6));
+            partImg.style.pointerEvents = 'none';
             partImg.addEventListener('load', () => {
                 if (window.ZMGFence) {
                     window.ZMGFence.render(board, layout, { clamp: false, padding: 64 });
@@ -2319,6 +2320,7 @@ function renderAdminLocMapBoard() {
         areaContainer.style.width = `${v.width}%`;
         areaContainer.style.aspectRatio = `${shapeMeta.widthPx} / ${shapeMeta.heightPx}`;
         areaContainer.style.transform = `rotate(${v.rotate || 0}deg)`;
+        areaContainer.style.pointerEvents = 'none';
         if (v.zIndex) areaContainer.style.zIndex = String(v.zIndex);
 
         if (sectionFilterVal !== 'ALL' && !sectionName.toLowerCase().includes(sectionFilterVal.toLowerCase())) {
@@ -2348,6 +2350,7 @@ function renderAdminLocMapBoard() {
         gridLayer.className = 'admin-loc-area-plots-grid';
         gridLayer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         gridLayer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        gridLayer.style.pointerEvents = 'none';
 
         plots.forEach(plot => {
             const status = (plot.status || 'available').toLowerCase();
@@ -2370,6 +2373,7 @@ function renderAdminLocMapBoard() {
 
             slot.style.gridColumn = `${colNum} / span ${w}`;
             slot.style.gridRow = `${rowNum} / span ${h}`;
+            slot.style.pointerEvents = 'auto';
             slot.title = `${plot.plot_identifier} • ${sectionName} • ${status.toUpperCase()}`;
 
             const label = document.createElement('span');

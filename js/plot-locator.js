@@ -572,6 +572,7 @@ function renderEntireCemeteryMapWithPlots() {
         areaContainer.style.width = `${v.width}%`;
         areaContainer.style.aspectRatio = `${shapeMeta.widthPx} / ${shapeMeta.heightPx}`;
         areaContainer.style.transform = `rotate(${v.rotate || 0}deg)`;
+        areaContainer.style.pointerEvents = 'none';
         if (v.zIndex) areaContainer.style.zIndex = String(v.zIndex);
 
         // 2. Vector Shape Silhouette Backdrop Image
@@ -598,6 +599,7 @@ function renderEntireCemeteryMapWithPlots() {
         gridLayer.className = 'pd-area-plots-grid';
         gridLayer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         gridLayer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        gridLayer.style.pointerEvents = 'none';
 
         // 4. Render Every Plot Inside this Area
         plots.forEach(plot => {
@@ -621,6 +623,7 @@ function renderEntireCemeteryMapWithPlots() {
 
             slot.style.gridColumn = `${colNum} / span ${w}`;
             slot.style.gridRow = `${rowNum} / span ${h}`;
+            slot.style.pointerEvents = 'auto';
             slot.title = `${plot.plot_identifier} • ${sectionName} • ${status.toUpperCase()} • Click to view`;
 
             // Plot number label
