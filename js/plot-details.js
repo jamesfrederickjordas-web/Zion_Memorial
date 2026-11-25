@@ -1147,7 +1147,8 @@ function openBookingModalForPlot(plot) {
     const customDpInput = document.getElementById('customDownPayment');
     if (customDpInput) {
         customDpInput.value = dp.toFixed(2);
-        customDpInput.min = "100";
+        customDpInput.min = "0";
+        customDpInput.step = "any";
     }
 
     setText('bookDisplayPlotCode', plot.plot_identifier);
@@ -1284,20 +1285,31 @@ async function handleReservationSubmit(e) {
 
         const spaceId = document.getElementById('bookSpaceId').value;
         const plotCode = document.getElementById('bookPlotIdentifier').value;
-        const basePrice = parseFloat(document.getElementById('bookPlotPrice').value) || 0;
-        const maintenanceFee = 2500.00;
-        const cemeteryTax = 1200.00;
-        const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+        const priceEl = document.getElementById('bookPlotPrice');
+        const basePrice = parseFloat(priceEl?.value) || 0;
+        const category = priceEl?.dataset?.category || '';
         const isFullPayment = paymentOption === 'FULL_PAYMENT';
-        const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
-        const totalDiscount = spotDiscount + promoCodeDiscountAmount;
-        const price = Math.max(100, grossPrice - totalDiscount);
+        const customDpInput = document.getElementById('customDownPayment');
+        const hasCustomDp = customDpInput && customDpInput.value !== '' && !Number.isNaN(parseFloat(customDpInput.value));
+        const term = paymentOption === 'INSTALLMENT' ? (parseInt(document.getElementById('installmentTerm')?.value, 10) || 60) : 0;
+
+        const submitPricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+            ? window.ZMG_PRICING.computePlanPricing({
+                lotPrice: basePrice,
+                category,
+                planType,
+                paymentOption,
+                termMonths: term || 60,
+                customDownPayment: hasCustomDp ? parseFloat(customDpInput.value) : undefined,
+                promoDiscount: promoCodeDiscountAmount
+            })
+            : null;
+        const price = submitPricing ? (isFullPayment ? submitPricing.spotCashPrice : submitPricing.contractPrice) : basePrice;
         const manualRef = (document.getElementById('bookPaymentRefNumber')?.value || '').trim();
         const counterRef = (document.getElementById('counterCashReceiptNumber')?.value || '').trim();
         const gcashQrRef = (document.getElementById('zmgGcashQrRefNumber')?.value || '').trim();
         const isCash = paymentChannel === 'Cash';
-        const customDpInput = document.getElementById('customDownPayment');
-        let dp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : (parseFloat(document.getElementById('bookPlotDownPayment')?.value) || 0);
+        let dp = submitPricing ? submitPricing.downPayment : (hasCustomDp ? parseFloat(customDpInput.value) : 0);
         if (isNaN(dp) || dp < 0) dp = 0;
 
         // Deceased Details
@@ -1344,7 +1356,6 @@ async function handleReservationSubmit(e) {
             }
         }
 
-        const term = paymentOption === 'INSTALLMENT' ? (parseInt(document.getElementById('installmentTerm')?.value) || 60) : 0;
         const amountNow = paymentOption === 'INSTALLMENT' ? (dp > 0 ? dp : price) : price;
         const isGcashQr = !isCash && !document.getElementById('zmgGcashSubMethodAutoDebit')?.checked;
         const hasGcashAutoDebit = Boolean(document.getElementById('zmgGcashSubMethodAutoDebit')?.checked);

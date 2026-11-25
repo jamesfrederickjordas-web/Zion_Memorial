@@ -1428,7 +1428,8 @@ function openBookingModalForPlot(plot) {
     }
     if (dpInput) {
         dpInput.value = dp.toFixed(2);
-        dpInput.min = "100";
+        dpInput.min = "0";
+        dpInput.step = "any";
     }
 
     calculateAmortization();
@@ -1532,27 +1533,31 @@ async function submitPlotReservation(form) {
 
         const spaceId = document.getElementById('bookSpaceId')?.value;
         const plotCode = document.getElementById('bookPlotIdentifier')?.value;
-        const basePrice = Number(document.getElementById('bookPlotPrice')?.value || 0);
-        const maintenanceFee = 2500.00;
-        const cemeteryTax = 1200.00;
-        const grossPrice = basePrice + maintenanceFee + cemeteryTax;
+        const priceEl = document.getElementById('bookPlotPrice');
+        const basePrice = Number(priceEl?.value || 0);
+        const category = priceEl?.dataset?.category || '';
         const isFullPayment = paymentOption === 'FULL_PAYMENT';
-        const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
-        const totalDiscount = spotDiscount + promoCodeDiscountAmount;
-        const price = Math.max(100, grossPrice - totalDiscount);
+        const dpEl = document.getElementById('customDownPayment');
+        const hasCustomDp = dpEl && dpEl.value !== '' && !Number.isNaN(Number(dpEl.value));
+        const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
+
+        const submitPricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+            ? window.ZMG_PRICING.computePlanPricing({
+                lotPrice: basePrice,
+                category,
+                planType,
+                paymentOption,
+                termMonths: term,
+                customDownPayment: hasCustomDp ? Number(dpEl.value) : undefined,
+                promoDiscount: promoCodeDiscountAmount
+            })
+            : null;
+        const price = submitPricing ? (isFullPayment ? submitPricing.spotCashPrice : submitPricing.contractPrice) : basePrice;
         const manualRef = (document.getElementById('bookPaymentRefNumber')?.value || '').trim();
         const counterRef = (document.getElementById('counterCashReceiptNumber')?.value || '').trim();
         const gcashQrRef = (document.getElementById('zmgGcashQrRefNumber')?.value || '').trim();
         const isCash = paymentChannel === 'Cash';
-        const dp = Number(document.getElementById('customDownPayment')?.value || 0);
-        const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
-        if (paymentOption === 'INSTALLMENT' && dp < 100) {
-            alert('Minimum down payment is ₱100.00.');
-            if (btnText) btnText.style.display = 'inline-block';
-            if (btnLoader) btnLoader.style.display = 'none';
-            if (submitBtn) submitBtn.disabled = false;
-            return;
-        }
+        const dp = submitPricing ? submitPricing.downPayment : Number(dpEl?.value || 0);
 
         // Deceased Details
         const deceasedFirstName = document.getElementById('bookDeceasedFirstName')?.value?.trim() || '';
