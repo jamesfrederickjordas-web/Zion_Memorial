@@ -8038,31 +8038,57 @@ function setupWalkInReservationModal() {
                         .maybeSingle();
                     if (matchedUser?.id) targetUserId = matchedUser.id;
                 }
-                if (!targetUserId) {
-                    targetUserId = currentStaffUser?.id || null;
+                if (!targetUserId && currentStaffUser?.id) {
+                    // Ensure current staff/admin user exists in public.profiles so FK reservations_user_id_fkey succeeds
+                    try {
+                        await supabaseClient
+                            .from('profiles')
+                            .upsert({
+                                id: currentStaffUser.id,
+                                email: currentStaffUser.email || null,
+                                full_name: currentStaffUser.user_metadata?.full_name || currentStaffUser.email?.split('@')[0] || 'Administrator',
+                                username: currentStaffUser.user_metadata?.username || currentStaffUser.email?.split('@')[0] || 'admin',
+                                role: currentAdminPortalRole || 'admin',
+                                updated_at: new Date().toISOString()
+                            }, { onConflict: 'id' });
+                    } catch (_) {}
+                    targetUserId = currentStaffUser.id;
                 }
 
-                // 1. Insert into reservations
-                const { data: newRes, error: resErr } = await supabaseClient
+                // 1. Insert into reservations (with automatic user_id: null fallback if FK still rejects)
+                const baseResPayload = {
+                    user_id: targetUserId,
+                    reservation_number: resNumber,
+                    space_id: spaceId,
+                    plan_type: isAtNeed ? 'AT-NEED' : 'PRE-NEED',
+                    payment_method: paymentMethod,
+                    installment_term_months: mode === 'FULL_PAYMENT' ? 0 : term,
+                    total_price: totalPrice,
+                    down_payment_amount: cashTendered,
+                    monthly_amortization: mode === 'FULL_PAYMENT' ? 0 : monthlyAmort,
+                    total_paid: cashTendered,
+                    balance: balance,
+                    status: 'APPROVED',
+                    reservation_date: new Date().toISOString().split('T')[0],
+                    notes: combinedNotes
+                };
+
+                let { data: newRes, error: resErr } = await supabaseClient
                     .from('reservations')
-                    .insert([{
-                        user_id: targetUserId,
-                        reservation_number: resNumber,
-                        space_id: spaceId,
-                        plan_type: isAtNeed ? 'AT-NEED' : 'PRE-NEED',
-                        payment_method: paymentMethod,
-                        installment_term_months: mode === 'FULL_PAYMENT' ? 0 : term,
-                        total_price: totalPrice,
-                        down_payment_amount: cashTendered,
-                        monthly_amortization: mode === 'FULL_PAYMENT' ? 0 : monthlyAmort,
-                        total_paid: cashTendered,
-                        balance: balance,
-                        status: 'APPROVED',
-                        reservation_date: new Date().toISOString().split('T')[0],
-                        notes: combinedNotes
-                    }])
+                    .insert([baseResPayload])
                     .select()
                     .single();
+
+                if (resErr && /reservations_user_id_fkey|foreign key/i.test(resErr.message || '')) {
+                    targetUserId = null;
+                    const retry = await supabaseClient
+                        .from('reservations')
+                        .insert([{ ...baseResPayload, user_id: null }])
+                        .select()
+                        .single();
+                    newRes = retry.data;
+                    resErr = retry.error;
+                }
 
                 if (resErr) throw resErr;
 
@@ -8083,18 +8109,25 @@ function setupWalkInReservationModal() {
 
                 // 3. If deceased details provided (required for At-Need, optional for Pre-Need), insert into memorial_records
                 if (decFullName) {
-                    const { error: decErr } = await supabaseClient
+                    const decPayload = {
+                        space_id: spaceId,
+                        family_contact_id: targetUserId,
+                        deceased_name: decFullName,
+                        birth_date: decDOB || null,
+                        death_date: decDOD || null,
+                        burial_date: decBurial || null,
+                        gender: (['Male', 'Female', 'Other'].includes(decGender)) ? decGender : 'Other',
+                        epitaph: decEpitaph || null
+                    };
+                    let { error: decErr } = await supabaseClient
                         .from('memorial_records')
-                        .insert([{
-                            space_id: spaceId,
-                            family_contact_id: targetUserId,
-                            deceased_name: decFullName,
-                            birth_date: decDOB || null,
-                            death_date: decDOD || null,
-                            burial_date: decBurial || null,
-                            gender: (['Male', 'Female', 'Other'].includes(decGender)) ? decGender : 'Other',
-                            epitaph: decEpitaph || null
-                        }]);
+                        .insert([decPayload]);
+                    if (decErr && /foreign key|family_contact_id/i.test(decErr.message || '')) {
+                        const retryDec = await supabaseClient
+                            .from('memorial_records')
+                            .insert([{ ...decPayload, family_contact_id: null }]);
+                        decErr = retryDec.error;
+                    }
                     if (decErr) throw decErr;
                 }
 
