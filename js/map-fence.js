@@ -1184,10 +1184,39 @@
         };
     }
 
-    // { 'Area 14 - Lawn of Joy': { ...SECTION_SHAPE_MAP-compatible entry... } }
+    const AREA_NAME_MIGRATIONS = {
+        'area 14 - rectangle 19': 'Area 14 - Lawn of Harmony',
+        'area 15 - rectangle 18': 'Area 15 - Lawn of Mercy',
+        'area 16 - rectangle 28': 'Area 16 - Lawn of Blessing',
+        'area 17 - rectangle 32': 'Area 17 - Lawn of Promise'
+    };
+
+    function normalizeSectionName(name) {
+        if (!name || typeof name !== 'string') return name;
+        const trimmed = name.trim();
+        return AREA_NAME_MIGRATIONS[trimmed.toLowerCase()] || trimmed;
+    }
+
+    function sectionNameAliases(name) {
+        const canonical = normalizeSectionName(name);
+        const out = canonical ? [canonical] : [];
+        Object.keys(AREA_NAME_MIGRATIONS).forEach(oldKey => {
+            if (AREA_NAME_MIGRATIONS[oldKey] === canonical) {
+                // Title-cased legacy form stored in DB
+                const titled = oldKey.replace(/\b([a-z])/g, (_, ch) => ch.toUpperCase());
+                if (!out.includes(titled)) out.push(titled);
+            }
+        });
+        return out;
+    }
+
+    // { 'Area 14 - Lawn of Harmony': { ...SECTION_SHAPE_MAP-compatible entry... } }
     function customShapeEntries(layers) {
         const out = {};
-        customAreaLayers(layers).forEach(v => { out[v.name] = shapeEntryFromLayer(v); });
+        customAreaLayers(layers).forEach(v => {
+            const name = normalizeSectionName(v.name);
+            out[name] = shapeEntryFromLayer(v);
+        });
         return out;
     }
 
@@ -1437,6 +1466,7 @@
             if (isCustomArea(p)) {
                 const copy = {
                     ...p,
+                    name: normalizeSectionName(p.name),
                     custom: true,
                     visible: p.visible !== false
                 };
@@ -1578,6 +1608,8 @@
         isCustomArea,
         customAreaLayers,
         shapeEntryFromLayer,
+        normalizeSectionName,
+        sectionNameAliases,
         customShapeEntries,
         readStoredLayers
     };

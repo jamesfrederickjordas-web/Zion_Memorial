@@ -468,13 +468,25 @@ async function loadPlotsForSection(sectionName, shapeInfo) {
 
     try {
         if (typeof supabaseClient !== 'undefined') {
-            const { data: dbPlots, error } = await supabaseClient
+            const aliases = (window.ZMGFence && typeof window.ZMGFence.sectionNameAliases === 'function')
+                ? window.ZMGFence.sectionNameAliases(sectionName)
+                : [sectionName];
+            let query = supabaseClient
                 .from('memorial_spaces')
-                .select('*')
-                .ilike('section_name', `%${sectionName}%`)
-                .order('plot_identifier', { ascending: true });
+                .select('*');
+            if (aliases.length > 1) {
+                query = query.in('section_name', aliases);
+            } else {
+                query = query.ilike('section_name', `%${sectionName}%`);
+            }
+            const { data: dbPlots, error } = await query.order('plot_identifier', { ascending: true });
 
             if (!error && dbPlots && dbPlots.length > 0) {
+                dbPlots.forEach(p => {
+                    if (window.ZMGFence && typeof window.ZMGFence.normalizeSectionName === 'function') {
+                        p.section_name = window.ZMGFence.normalizeSectionName(p.section_name);
+                    }
+                });
                 currentPlotsList = dbPlots;
             }
         }

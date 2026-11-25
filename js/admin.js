@@ -2199,6 +2199,9 @@ async function loadAdminLocMapData() {
                 if (isPrimaryCfg) hasPrimaryMapConfig = true;
             }
             if (!p.section_name || p.section_name.includes('__SYSTEM')) return;
+            if (window.ZMGFence && typeof window.ZMGFence.normalizeSectionName === 'function') {
+                p.section_name = window.ZMGFence.normalizeSectionName(p.section_name);
+            }
             if (!dbGrouped[p.section_name]) dbGrouped[p.section_name] = [];
             dbGrouped[p.section_name].push(p);
         });
