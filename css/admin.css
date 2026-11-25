@@ -2339,6 +2339,139 @@ html, body {
     border-color: #0057ff;
 }
 
+/* ==============================================================================
+   TELEVISION (LARGE DISPLAY >= 1800px / 4K) & CELLPHONE (<= 900px) RESPONSIVE
+   ============================================================================== */
+@media (min-width: 1800px) {
+    html { font-size: 17px; }
+    .admin-sidebar { width: 250px; }
+    .kpi-value { font-size: 1.55rem; }
+    .admin-data-table th,
+    .admin-data-table td { padding: 9px 12px; font-size: 0.85rem; }
+    #viewAdminProfile { max-width: 1380px; }
+}
+
+@media (min-width: 2400px) {
+    html { font-size: 20px; }
+    .admin-sidebar { width: 280px; }
+    #viewAdminProfile { max-width: 1620px; }
+}
+
+@media (max-width: 900px) {
+    body.admin-body,
+    .admin-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        max-height: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--sidebar-border);
+        overflow: visible;
+    }
+
+    .admin-brand-header {
+        padding: 10px 14px;
+    }
+
+    .admin-nav {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 6px 10px 8px;
+        gap: 6px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-section-header,
+    .nav-separator,
+    .admin-sidebar-footer {
+        display: none;
+    }
+
+    .admin-nav-item,
+    a.admin-nav-item {
+        flex-shrink: 0;
+        white-space: nowrap;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 0.78rem;
+        border-left: none;
+        background: rgba(255, 255, 255, 0.55);
+    }
+
+    .admin-nav-item.active {
+        border-left: none;
+    }
+
+    .admin-main-viewport {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .admin-top-header {
+        padding: 10px 14px;
+        height: auto;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .admin-content-inner {
+        padding: 10px 10px 24px;
+        overflow: visible;
+    }
+
+    .kpi-cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+
+    .table-section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .table-controls {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .table-controls > * {
+        flex: 1 1 140px;
+        min-width: 0;
+    }
+
+    #viewAdminProfile > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .admin-modal-card {
+        width: calc(100vw - 20px) !important;
+        max-width: 100% !important;
+        max-height: 92dvh !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .kpi-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .admin-header-clock {
+        display: none;
+    }
+}
+
 .zmg-drop-zone-icon {
     margin-bottom: 8px;
 }

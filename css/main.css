@@ -169,3 +169,33 @@ body::-webkit-scrollbar {
     line-height: 1.8;
     color: #333;
 }
+
+/* Mobile & Television Responsive */
+@media (max-width: 900px) {
+    .info-section {
+        flex-direction: column;
+        padding: 24px 0;
+        gap: 20px;
+    }
+    .quick-access-box {
+        width: 100%;
+        height: auto;
+        min-height: 160px;
+        box-sizing: border-box;
+    }
+    .access-icons {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1800px) {
+    .container { max-width: 1520px; }
+    body { font-size: 17px; }
+}
+
+@media (min-width: 2400px) {
+    .container { max-width: 1860px; }
+    body { font-size: 20px; }
+}

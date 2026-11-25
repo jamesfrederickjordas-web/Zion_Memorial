@@ -2303,11 +2303,29 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 900px) {
+    body,
+    .main-content {
+        flex-direction: column !important;
+        height: auto !important;
+        overflow-y: auto !important;
+    }
+    .map-section {
+        width: 100% !important;
+        min-height: 55vh;
+    }
     .legend-section {
-        width: 250px;
-        min-width: 230px;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-height: none !important;
+        border-left: none !important;
+        border-top: 1px solid #cbd5e1;
     }
     .pd-zoom-hint { display: none; }
+}
+
+@media (min-width: 1800px) {
+    .legend-section { width: 380px; }
+    .pd-area-floating-label { font-size: 0.82rem; }
 }
 
 

@@ -89,3 +89,53 @@ nav a.active-nav {
 .btn-login:hover {
     background-color: #2d8e45;
 }
+
+/* Responsive Header for Mobile & TV */
+@media (max-width: 960px) {
+    header {
+        padding: 12px 16px;
+    }
+    .header-content {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 0;
+        gap: 10px;
+    }
+    .main-logo {
+        position: static;
+        height: 54px;
+        width: 54px;
+    }
+    nav {
+        order: 3;
+        width: 100%;
+    }
+    nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+    }
+    nav li {
+        margin: 2px 4px;
+    }
+    nav a {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+    .header-buttons {
+        position: static;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .header-buttons .btn {
+        padding: 7px 12px;
+        margin-left: 0;
+        font-size: 0.85rem;
+    }
+}
+
+@media (min-width: 1800px) {
+    header { padding: 32px 80px; }
+    nav a { font-size: 1.05rem; }
+}

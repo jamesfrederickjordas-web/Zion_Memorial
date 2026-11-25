@@ -1552,3 +1552,19 @@ header {
     font-weight: 800;
     margin-right: 4px;
 }
+
+@media (min-width: 1800px) {
+    .dashboard-content { max-width: 1680px; margin: 0 auto; }
+    .welcome-title { font-size: 2.5rem; }
+}
+
+@media (min-width: 2400px) {
+    .dashboard-content { max-width: 2040px; }
+    .welcome-title { font-size: 2.9rem; }
+}
+
+@media (max-width: 600px) {
+    .grounds-pill-list { grid-template-columns: 1fr; }
+    .dashboard-header-row { gap: 10px; margin-bottom: 14px; }
+    .welcome-title { font-size: 1.45rem; }
+}
