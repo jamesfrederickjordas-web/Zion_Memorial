@@ -1128,7 +1128,7 @@
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
                 '<defs><clipPath id="areaClip"><polygon points="' + ptAttr + '"/></clipPath></defs>' +
-                '<polygon points="' + ptAttr + '" fill="#cfe3c9"/>' +
+                '<polygon points="' + ptAttr + '" fill="#6e8b6d"/>' +
                 '<g clip-path="url(#areaClip)">' +
                 '<polygon points="' + ptAttr + '" fill="none" stroke="#1e3a29" stroke-width="18" stroke-dasharray="12 8" opacity="0.16"/>' +
                 '<polygon points="' + ptAttr + '" fill="none" stroke="#2d4a36" stroke-width="10" stroke-linejoin="miter"/>' +
@@ -1138,7 +1138,7 @@
         } else {
             svg =
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
-                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="#cfe3c9" stroke="#2d4a36" stroke-width="6"/>' +
+                '<rect x="3" y="3" width="' + (W - 6) + '" height="' + (H - 6) + '" fill="#6e8b6d" stroke="#2d4a36" stroke-width="6"/>' +
                 '<rect x="14" y="14" width="' + (W - 28) + '" height="' + (H - 28) + '" fill="none" stroke="#2d4a36" stroke-width="2" stroke-dasharray="12 8" opacity="0.55"/>' +
                 '<text x="' + (W / 2) + '" y="' + (H / 2 + fontSize / 3) + '" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="' + fontSize + '" fill="#1e3a29">' + label + '</text>' +
                 '</svg>';
