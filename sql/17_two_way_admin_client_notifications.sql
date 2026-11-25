@@ -199,13 +199,17 @@ AFTER INSERT ON public.reservations
 FOR EACH ROW
 EXECUTE FUNCTION public.trg_notify_admin_new_reservation();
 
--- 3B. New Payment submitted by client
+-- 3B. New Payment submitted by client (look up user_id via reservation_id)
 CREATE OR REPLACE FUNCTION public.trg_notify_admin_new_payment()
 RETURNS TRIGGER AS $$
 DECLARE
     v_client TEXT;
 BEGIN
-    SELECT COALESCE(full_name, username, 'Client') INTO v_client FROM public.profiles WHERE id = NEW.user_id;
+    SELECT COALESCE(p.full_name, p.username, 'Client') INTO v_client
+    FROM public.reservations r
+    LEFT JOIN public.profiles p ON p.id = r.user_id
+    WHERE r.id = NEW.reservation_id;
+
     PERFORM public.notify_all_staff_and_admins(
         'New Payment Submitted',
         COALESCE(v_client, 'A client') || ' submitted a payment of ₱' || TO_CHAR(COALESCE(NEW.amount, 0), 'FM999,999,990.00') || ' (' || COALESCE(NEW.payment_method, 'Payment') || ').',
@@ -291,24 +295,29 @@ EXECUTE FUNCTION public.trg_notify_admin_support_ticket();
 -- 4. ADMIN -> CLIENT TRIGGERS (Payment Verification + Plot Transfer)
 CREATE OR REPLACE FUNCTION public.trg_notify_client_payment_update()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_user_id UUID;
 BEGIN
-    IF OLD.status IS DISTINCT FROM NEW.status AND NEW.user_id IS NOT NULL THEN
-        IF LOWER(COALESCE(NEW.status, '')) IN ('paid', 'verified', 'approved', 'completed') THEN
-            INSERT INTO public.notifications (user_id, title, message, category, type, link_action, reference_id)
-            VALUES (
-                NEW.user_id,
-                'Payment Confirmed ✅',
-                'Your payment of ₱' || TO_CHAR(COALESCE(NEW.amount, 0), 'FM999,999,990.00') || ' has been verified by admin.',
-                'payment', 'success', 'myreservation', NEW.id::text
-            );
-        ELSIF LOWER(COALESCE(NEW.status, '')) IN ('rejected', 'failed') THEN
-            INSERT INTO public.notifications (user_id, title, message, category, type, link_action, reference_id)
-            VALUES (
-                NEW.user_id,
-                'Payment Requires Attention',
-                'Your payment of ₱' || TO_CHAR(COALESCE(NEW.amount, 0), 'FM999,999,990.00') || ' was marked as ' || LOWER(NEW.status) || '.',
-                'payment', 'danger', 'myreservation', NEW.id::text
-            );
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        SELECT user_id INTO v_user_id FROM public.reservations WHERE id = NEW.reservation_id;
+        IF v_user_id IS NOT NULL THEN
+            IF LOWER(COALESCE(NEW.status, '')) IN ('paid', 'verified', 'approved', 'completed') THEN
+                INSERT INTO public.notifications (user_id, title, message, category, type, link_action, reference_id)
+                VALUES (
+                    v_user_id,
+                    'Payment Confirmed ✅',
+                    'Your payment of ₱' || TO_CHAR(COALESCE(NEW.amount, 0), 'FM999,999,990.00') || ' has been verified by admin.',
+                    'payment', 'success', 'myreservation', NEW.id::text
+                );
+            ELSIF LOWER(COALESCE(NEW.status, '')) IN ('rejected', 'failed') THEN
+                INSERT INTO public.notifications (user_id, title, message, category, type, link_action, reference_id)
+                VALUES (
+                    v_user_id,
+                    'Payment Requires Attention',
+                    'Your payment of ₱' || TO_CHAR(COALESCE(NEW.amount, 0), 'FM999,999,990.00') || ' was marked as ' || LOWER(NEW.status) || '.',
+                    'payment', 'danger', 'myreservation', NEW.id::text
+                );
+            END IF;
         END IF;
     END IF;
     RETURN NEW;

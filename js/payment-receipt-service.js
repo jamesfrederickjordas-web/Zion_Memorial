@@ -1616,6 +1616,24 @@ async function loadPaymentHistoryIntoTab() {
 
             if (payError) throw payError;
             payments = payData || [];
+
+            // Fallback: include any reservation with total_paid > 0 that lacks a payments row
+            const coveredResIds = new Set(payments.map(p => p.reservation_id));
+            (reservations || []).forEach(r => {
+                if (Number(r.total_paid || 0) > 0 && !coveredResIds.has(r.id)) {
+                    payments.push({
+                        id: `RES-${r.id}`,
+                        reservation_id: r.id,
+                        payment_reference: (String(r.notes || '').match(/\[Ref:\s*([^\]]+)\]/i)?.[1]) || r.reservation_number || `RES-${r.id}`,
+                        amount: Number(r.total_paid),
+                        payment_type: r.payment_method === 'FULL_PAYMENT' ? 'FULL_PAYMENT' : 'DOWN_PAYMENT',
+                        payment_method: String(r.notes || '').toLowerCase().includes('cash') ? 'Cash' : 'GCash',
+                        status: 'COMPLETED',
+                        paid_at: r.updated_at || r.created_at || new Date().toISOString(),
+                        created_at: r.created_at || new Date().toISOString()
+                    });
+                }
+            });
         }
 
         if (payments.length === 0) {
@@ -2541,7 +2559,7 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
             try {
                 if (typeof supabaseClient !== 'undefined') {
                     // 1. Insert into public.payments as PENDING until Admin/Staff verifies proof & reference
-                    await supabaseClient.from('payments').insert([{
+                    const { error: payInsErr } = await supabaseClient.from('payments').insert([{
                         reservation_id: res.id,
                         schedule_id: schedule?.id || null,
                         payment_reference: refVal,
@@ -2553,6 +2571,7 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
                         paid_at: null,
                         receipt_url: localProofDataUrl || null
                     }]);
+                    if (payInsErr) throw payInsErr;
                 }
 
                 modal.classList.remove('active');
