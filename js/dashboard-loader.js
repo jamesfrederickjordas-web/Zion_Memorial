@@ -2313,12 +2313,16 @@ async function loadClientMaintenanceVisits() {
 window.cancelClientMaintenanceVisit = async function(visitId) {
     if (!await showConfirmModal({ title: "Cancel Service Request", message: "Are you sure you want to cancel this scheduled service request?", confirmText: "Cancel Request", cancelText: "Keep", type: "warning", danger: true })) return;
     try {
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('maintenance_visits')
             .update({ status: 'cancelled' })
-            .eq('id', visitId);
+            .eq('id', visitId)
+            .select('id, status');
 
         if (error) throw error;
+        if (!data || data.length === 0) {
+            throw new Error('Could not cancel this request. Please ensure the latest maintenance RLS SQL policy is applied.');
+        }
         alert('Service request cancelled.');
         loadClientMaintenanceVisits();
     } catch (err) {

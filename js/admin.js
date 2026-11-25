@@ -78,6 +78,12 @@ function scheduleAdminAutoRefresh() {
         __adminAutoRefreshing = true;
         try {
             await loadAdminData();
+            if (typeof loadAdminMaintenanceTable === 'function') {
+                await loadAdminMaintenanceTable();
+            }
+            if (typeof loadAdminTicketsTable === 'function' && document.getElementById('viewTickets')?.style.display !== 'none') {
+                await loadAdminTicketsTable();
+            }
         } catch (err) {
             console.warn('Admin auto-refresh notice:', err);
         } finally {
@@ -8923,11 +8929,24 @@ async function loadAdminMaintenanceTable() {
             console.warn('Maintenance PostgREST join failed, applying fallback query:', error);
             const { data: rawVisits, error: fallbackErr } = await supabaseClient
                 .from('maintenance_visits')
-                .select('*, memorial_spaces(id, plot_identifier, section_name, category)')
+                .select('*')
                 .order('scheduled_date', { ascending: false });
 
             if (fallbackErr) throw fallbackErr;
             visits = rawVisits || [];
+
+            const spaceIds = [...new Set(visits.map(v => v.space_id).filter(Boolean))];
+            if (spaceIds.length > 0) {
+                const { data: spaces } = await supabaseClient
+                    .from('memorial_spaces')
+                    .select('id, plot_identifier, section_name, category')
+                    .in('id', spaceIds);
+                const spaceMap = {};
+                (spaces || []).forEach(s => { spaceMap[s.id] = s; });
+                visits.forEach(v => {
+                    if (v.space_id && spaceMap[v.space_id]) v.memorial_spaces = spaceMap[v.space_id];
+                });
+            }
 
             const userIds = [...new Set(visits.map(v => v.requested_by).filter(Boolean))];
             if (userIds.length > 0) {
