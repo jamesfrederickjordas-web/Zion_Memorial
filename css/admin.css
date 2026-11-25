@@ -1174,10 +1174,59 @@ html, body {
     color: var(--primary-green);
     font-size: 0.74rem;
     font-weight: 600;
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 4px;
     cursor: pointer;
     display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#viewAccounts .table-section-header {
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+#viewAccounts .table-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#viewAccounts #adminSearchAccountsInput {
+    min-width: 230px;
+}
+
+#adminAccountsDataTable th,
+#adminAccountsDataTable td {
+    vertical-align: middle;
+}
+
+#adminAccountsDataTable .acc-money {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+#adminAccountsDataTable .acc-plots-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    max-width: 250px;
+}
+
+#adminAccountsDataTable .acc-actions-wrap {
+    display: inline-flex;
+    gap: 5px;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
     align-items: center;
     gap: 4px;
     transition: all 0.12s ease;

@@ -4005,8 +4005,8 @@ function renderAccountsTable() {
             // Find reservations for this online client
             const clientRes = adminReservationsCache.filter(r => r.user_id === item.id);
             const plotsText = clientRes.length === 0
-                ? '<span style="color: #94a3b8; font-size: 0.78rem;">No plots booked</span>'
-                : clientRes.map(r => `<span class="admin-badge available" style="margin-right: 4px; font-size: 0.72rem;">${escapeHtml(r.memorial_spaces?.plot_identifier || 'Plot')}</span>`).join(' ');
+                ? '<span style="color: #94a3b8; font-size: 0.78rem; white-space: nowrap;">No plots booked</span>'
+                : `<div class="acc-plots-wrap">${clientRes.map(r => `<span class="admin-badge available" style="font-size: 0.71rem; white-space: nowrap;">${escapeHtml(r.memorial_spaces?.plot_identifier || 'Plot')}</span>`).join('')}</div>`;
 
             const totalPaid = clientRes.reduce((acc, r) => acc + Number(r.total_paid || 0), 0);
             const totalBal = clientRes.reduce((acc, r) => acc + Number(r.balance || 0), 0);
@@ -4016,23 +4016,21 @@ function renderAccountsTable() {
             html += `
                 <tr id="row-account-${item.id}">
                     <td>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="sidebar-user-avatar" style="width: 28px; height: 28px; font-size: 0.75rem; background: #e2e8f0; color: #1e293b;">
+                        <div style="display: flex; align-items: center; gap: 9px;">
+                            <div class="sidebar-user-avatar" style="width: 28px; height: 28px; font-size: 0.75rem; background: #e2e8f0; color: #1e293b; flex-shrink: 0;">
                                 ${(item.full_name || 'U')[0].toUpperCase()}
                             </div>
-                            <div>
-                                <strong style="color: #0f172a;">${escapeHtml(item.full_name || 'Client')}</strong>
-                            </div>
+                            <strong style="color: #0f172a; white-space: nowrap;">${escapeHtml(item.full_name || 'Client')}</strong>
                         </div>
                     </td>
-                    <td><code>${escapeHtml(item.username || '-')}</code></td>
-                    <td>${escapeHtml(item.phone || '-')}</td>
+                    <td><code style="font-size: 0.8rem;">${escapeHtml(item.username || '-')}</code></td>
+                    <td style="white-space: nowrap;">${escapeHtml(item.phone || '-')}</td>
                     <td>${plotsText}</td>
-                    <td><strong style="color: #16a34a;">P ${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                    <td><strong style="color: ${totalBal > 0 ? '#d97706' : '#16a34a'};">P ${totalBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td class="acc-money"><span style="color: #16a34a;">₱ ${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></td>
+                    <td class="acc-money"><span style="color: ${totalBal > 0 ? '#d97706' : '#16a34a'};">₱ ${totalBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></td>
                     <td><span class="admin-badge ${isSuspended ? 'suspended' : 'active-status'}">${status}</span></td>
                     <td style="text-align: center;">
-                        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                        <div class="acc-actions-wrap">
                             <button type="button" class="btn-expand-ledger ${isExpanded ? 'expanded' : ''}" onclick="toggleAccountDrawer('${item.id}')">
                                 ${isExpanded ? 'Close Ledger' : 'Payments &amp; Dues'}
                             </button>
@@ -4050,31 +4048,27 @@ function renderAccountsTable() {
             html += `
                 <tr id="row-account-${item.id}">
                     <td>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div>
-                                <strong style="color: #0f172a;">${escapeHtml(item.client_name)}</strong>
-                                <span class="admin-badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.65rem; margin-left: 4px;">Walk-In Cash</span>
-                            </div>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <strong style="color: #0f172a; white-space: nowrap;">${escapeHtml(item.client_name)}</strong>
+                            <span class="admin-badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.65rem; white-space: nowrap;">Walk-In Cash</span>
                         </div>
                     </td>
-                    <td>${escapeHtml(item.phone || '-')}</td>
+                    <td style="white-space: nowrap;">${escapeHtml(item.phone || '-')}</td>
                     <td>
-                        <strong>${escapeHtml(item.plot_identifier)}</strong>
+                        <strong style="white-space: nowrap;">${escapeHtml(item.plot_identifier)}</strong>
                         <small style="color: #64748b; display: block; font-size: 0.72rem;">${escapeHtml(item.section_name)}</small>
                     </td>
-                    <td><span class="admin-badge available" style="font-size: 0.72rem;">Cash Over Counter</span></td>
-                    <td>P ${item.total_price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td><strong style="color: #16a34a;">P ${item.total_paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                    <td><strong style="color: ${item.balance > 0 ? '#d97706' : '#16a34a'};">P ${item.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                    <td><span class="admin-badge available" style="font-size: 0.72rem; white-space: nowrap;">Cash Over Counter</span></td>
+                    <td class="acc-money">₱ ${item.total_price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="acc-money"><span style="color: #16a34a;">₱ ${item.total_paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></td>
+                    <td class="acc-money"><span style="color: ${item.balance > 0 ? '#d97706' : '#16a34a'};">₱ ${item.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></td>
                     <td style="text-align: center;">
-                        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                        <div class="acc-actions-wrap">
                             <button type="button" class="btn-expand-ledger ${isExpanded ? 'expanded' : ''}" onclick="toggleAccountDrawer('${item.id}')">
                                 ${isExpanded ? 'Close Ledger' : 'Payments &amp; Dues'}
                             </button>
-                            <button type="button" class="btn-action-text btn-action-success" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openAddDeceasedModalForReservation('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.space_id || ''}', '${escapeHtml(item.plot_identifier || '')}')"> Add Deceased
-                            </button>
-                            <button type="button" class="btn-admin-add" style="padding: 4px 8px; font-size: 0.75rem; background: #2d4a36;" onclick="openReceiveCounterPaymentModal('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.monthly_amortization || 1191.44}')"> Receive Cash
-                            </button>
+                            <button type="button" class="btn-action-text btn-action-success" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openAddDeceasedModalForReservation('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.space_id || ''}', '${escapeHtml(item.plot_identifier || '')}')">Add Deceased</button>
+                            <button type="button" class="btn-admin-add" style="padding: 4px 8px; font-size: 0.75rem; background: #2d4a36; white-space: nowrap;" onclick="openReceiveCounterPaymentModal('${item.reservation_id}', '${escapeHtml(item.client_name)}', '${item.monthly_amortization || 1191.44}')">Receive Cash</button>
                         </div>
                     </td>
                 </tr>
