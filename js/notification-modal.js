@@ -658,21 +658,24 @@
             }
         };
 
-        const runValidation = (shouldShowAlert = false) => {
+        const runValidation = (shouldShowAlert = false, updateBounds = true) => {
             const bVal = bInput?.value || null;
             const dVal = dInput?.value || null;
             const uVal = uInput?.value || null;
 
-            // Dynamic attribute constraints for native pickers
-            if (bInput) {
-                bInput.max = dVal ? (dVal < todayStr ? dVal : todayStr) : todayStr;
-            }
-            if (dInput) {
-                dInput.max = (uVal && uVal < todayStr) ? uVal : todayStr;
-                dInput.min = bVal || '';
-            }
-            if (uInput) {
-                uInput.min = dVal || bVal || '';
+            // Only update native min/max bounds when a full date is committed (change/blur),
+            // never mid-typing on `input`, because mutating min/max resets Chromium's date segments.
+            if (updateBounds) {
+                if (bInput && document.activeElement !== bInput) {
+                    bInput.max = dVal ? (dVal < todayStr ? dVal : todayStr) : todayStr;
+                }
+                if (dInput && document.activeElement !== dInput) {
+                    dInput.max = (uVal && uVal < todayStr) ? uVal : todayStr;
+                    dInput.min = bVal || '';
+                }
+                if (uInput && document.activeElement !== uInput) {
+                    uInput.min = dVal || bVal || '';
+                }
             }
 
             const res = checkDateChronology(bVal, dVal, uVal);
@@ -718,20 +721,8 @@
         [bInput, dInput, uInput].forEach(inp => {
             if (!inp || inp.dataset.chronologyBound) return;
             inp.dataset.chronologyBound = 'true';
-            inp.addEventListener('input', () => runValidation(false));
-            inp.addEventListener('change', () => runValidation(false));
-            inp.addEventListener('focus', () => {
-                // Refresh bounds on focus
-                const curB = bInput?.value || null;
-                const curD = dInput?.value || null;
-                const curU = uInput?.value || null;
-                if (bInput) bInput.max = curD ? (curD < todayStr ? curD : todayStr) : todayStr;
-                if (dInput) {
-                    dInput.max = (curU && curU < todayStr) ? curU : todayStr;
-                    dInput.min = curB || '';
-                }
-                if (uInput) uInput.min = curD || curB || '';
-            });
+            inp.addEventListener('change', () => runValidation(false, true));
+            inp.addEventListener('blur', () => runValidation(false, true));
         });
 
         // Run initial setup to set max constraints on birth & death
