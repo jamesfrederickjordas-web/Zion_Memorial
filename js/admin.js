@@ -394,17 +394,19 @@ async function loadAdminData() {
 
 async function loadKPISummary() {
     try {
-        const [spacesCountRes, availCountRes, resCountRes, occupiedCountRes] = await Promise.all([
+        const [spacesCountRes, availCountRes, resCountRes, occupiedRecordsRes] = await Promise.all([
             supabaseClient.from('memorial_spaces').select('*', { count: 'exact', head: true }).neq('section_name', '__SYSTEM_MAP_CONFIG__'),
             supabaseClient.from('memorial_spaces').select('*', { count: 'exact', head: true }).eq('status', 'available').neq('section_name', '__SYSTEM_MAP_CONFIG__'),
-            supabaseClient.from('reservations').select('*', { count: 'exact', head: true }).neq('status', 'CANCELLED'),
-            supabaseClient.from('memorial_spaces').select('*', { count: 'exact', head: true }).eq('status', 'occupied').neq('section_name', '__SYSTEM_MAP_CONFIG__')
+            supabaseClient.from('reservations').select('*', { count: 'exact', head: true }).not('status', 'in', '("CANCELLED","REJECTED")'),
+            supabaseClient.from('memorial_records').select('space_id')
         ]);
 
         const total = spacesCountRes.count ?? (adminSpacesCache.length || 1777);
         const available = availCountRes.count ?? 1772;
         const reservations = resCountRes.count ?? 4;
-        const occupied = occupiedCountRes.count ?? 4;
+        const occupied = occupiedRecordsRes.data
+            ? new Set(occupiedRecordsRes.data.map(r => r.space_id).filter(Boolean)).size
+            : (adminDeceasedCache ? new Set(adminDeceasedCache.map(r => r.space_id).filter(Boolean)).size : 0);
 
         setText('kpiTotalPlots', total.toLocaleString());
         setText('kpiAvailablePlots', available.toLocaleString());
