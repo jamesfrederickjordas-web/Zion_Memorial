@@ -482,8 +482,8 @@ function generateGenericSectionBlueprint(sectionName, shapeInfo) {
 
     const pW = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 1)));
     const pH = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 2)));
-    const price = shapeInfo.defaultPrice || (isCondo ? 35000 : (isFamily ? 220000 : (isMaus ? 150000 : (isSpecial ? 85000 : (isSupreme ? 65000 : 55000)))));
-    const dp = shapeInfo.defaultDown || (isCondo ? 5250 : Math.round(price * 0.15));
+    const price = shapeInfo.defaultPrice || (isCondo ? 45000 : ((isFamily || isMaus) ? 1000000 : (isSpecial ? 120000 : (isSupreme ? 80000 : 65000))));
+    const dp = shapeInfo.defaultDown || (isCondo ? 8280 : ((isFamily || isMaus) ? 184000 : (isSpecial ? 22080 : (isSupreme ? 14720 : 11960))));
     const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
     let seq = 1;
 
@@ -1245,6 +1245,7 @@ function setupBookingModalAndAmortization() {
             const isAtNeed = r.value === 'AT-NEED';
             const notice = document.getElementById('atNeedPriorityNotice');
             if (notice) notice.style.display = isAtNeed ? 'block' : 'none';
+            calculateAmortization();
         });
     });
 
@@ -1368,8 +1369,12 @@ function openBookingModalForPlot(plot) {
     setText('bookDisplayPlotCode', plot.plot_identifier);
     setText('bookDisplaySection', `${plot.section_name} | ${plot.category || 'Memorial Space'}`);
 
-    const price = Number(plot.price || 85000);
-    const dp = 100.00;
+    const price = Number(plot.price || 65000);
+    const cat = plot.category || '';
+    const initialPricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+        ? window.ZMG_PRICING.computePlanPricing({ lotPrice: price, category: cat, planType: 'PRE-NEED', paymentOption: 'INSTALLMENT', termMonths: 60 })
+        : null;
+    const dp = Number(plot.down_payment) > 0 ? Number(plot.down_payment) : (initialPricing ? initialPricing.defaultDown20 : Math.round(price * 0.92 * 0.20));
 
     setText('bookDisplayPrice', `₱ ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
 
@@ -1381,7 +1386,10 @@ function openBookingModalForPlot(plot) {
 
     if (elSpaceId) elSpaceId.value = plot.id;
     if (elCode) elCode.value = plot.plot_identifier;
-    if (elPrice) elPrice.value = price;
+    if (elPrice) {
+        elPrice.value = price;
+        elPrice.dataset.category = cat;
+    }
     activePromoCode = '';
     promoCodeDiscountAmount = 0;
     currentPaymentProofDataUrl = '';
@@ -1438,42 +1446,62 @@ if (typeof window.setupDynamicPaymentChannelPanel === 'function') {
 }
 
 function calculateAmortization() {
-    const basePrice = Number(document.getElementById('bookPlotPrice')?.value || 85000);
-    const maintenanceFee = 2500.00;
-    const cemeteryTax = 1200.00;
-    const grossPrice = basePrice + maintenanceFee + cemeteryTax;
-
-    const isFullPayment = document.querySelector('input[name="paymentOption"]:checked')?.value === 'FULL_PAYMENT';
-    const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
-    const totalDiscount = spotDiscount + promoCodeDiscountAmount;
-    const netPrice = Math.max(100, grossPrice - totalDiscount);
+    const priceEl = document.getElementById('bookPlotPrice');
+    const basePrice = Number(priceEl?.value || 65000);
+    const category = priceEl?.dataset?.category || '';
+    const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
+    const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
+    const isFullPayment = paymentOption === 'FULL_PAYMENT';
 
     const dpInput = document.getElementById('customDownPayment');
-    const rawDp = dpInput && dpInput.value !== '' ? Number(dpInput.value) : 100;
-    const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
+    const hasCustomDp = dpInput && dpInput.value !== '' && !Number.isNaN(Number(dpInput.value));
     const term = parseInt(document.getElementById('installmentTerm')?.value || 60, 10);
 
-    const balance = isFullPayment ? 0 : Math.max(0, netPrice - dp);
-    const monthly = (term > 0 && !isFullPayment) ? (balance / term) : 0;
+    const pricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+        ? window.ZMG_PRICING.computePlanPricing({
+            lotPrice: basePrice,
+            category,
+            planType,
+            paymentOption,
+            termMonths: term,
+            customDownPayment: hasCustomDp ? Number(dpInput.value) : undefined,
+            promoDiscount: promoCodeDiscountAmount
+        })
+        : {
+            lotPrice: basePrice,
+            pmcf: Math.round(basePrice * 0.10 * 100) / 100,
+            isAtNeed: planType === 'AT-NEED',
+            planDiscount: Math.round(basePrice * (planType === 'AT-NEED' ? 0.08 : 0.18) * 100) / 100,
+            contractPrice: Math.max(0, basePrice * (planType === 'AT-NEED' ? 1.02 : 0.92) - promoCodeDiscountAmount),
+            spotCashDiscount: 0,
+            spotCashPrice: Math.max(0, basePrice * (planType === 'AT-NEED' ? 1.02 : 0.92) - promoCodeDiscountAmount),
+            downPayment: hasCustomDp ? Number(dpInput.value) : Math.round(basePrice * 0.92 * 0.20),
+            remainingBalance: 0,
+            monthlyPayment: 0
+        };
+
+    const finalNetPrice = isFullPayment ? pricing.spotCashPrice : pricing.contractPrice;
+    const totalSavings = pricing.spotCashDiscount + promoCodeDiscountAmount;
 
     const peso = (n) => '₱ ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    setText('displayBasePlotPrice', peso(basePrice));
-    setText('displayMaintenanceFee', peso(maintenanceFee));
-    setText('displayCemeteryTax', peso(cemeteryTax));
-    setText('displayNetContractPrice', peso(netPrice));
-    setText('bookDisplayPrice', peso(netPrice));
-    setText('calcTotalPrice', peso(netPrice));
-    setText('calcDownPayment', peso(dp));
-    setText('calcRemainingBalance', peso(balance));
-    setText('calcBalance', peso(balance));
-    setText('calcMonthlyAmortization', `${peso(monthly)} / mo`);
-    setText('calcMonthly', `${peso(monthly)} / mo`);
+    setText('displayBasePlotPrice', peso(pricing.lotPrice));
+    setText('displayMaintenanceFee', peso(pricing.pmcf));
+    setText('labelPlanDiscount', pricing.isAtNeed ? 'At-Need Discount (8% of Lot):' : 'Pre-Need Discount (18% of Lot):');
+    setText('displayCemeteryTax', '- ' + peso(pricing.planDiscount));
+    setText('displayNetContractPrice', peso(finalNetPrice));
+    setText('bookDisplayPrice', peso(finalNetPrice));
+    setText('calcTotalPrice', peso(finalNetPrice));
+    setText('calcDownPayment', peso(pricing.downPayment));
+    setText('calcRemainingBalance', peso(pricing.remainingBalance));
+    setText('calcBalance', peso(pricing.remainingBalance));
+    setText('calcMonthlyAmortization', `${peso(pricing.monthlyPayment)} / mo`);
+    setText('displayFullDue', peso(finalNetPrice));
 
     const rowPromo = document.getElementById('rowPromoDiscount');
     if (rowPromo) {
-        rowPromo.style.display = totalDiscount > 0 ? 'flex' : 'none';
-        setText('displayPromoDiscount', '- ' + peso(totalDiscount));
+        rowPromo.style.display = totalSavings > 0 ? 'flex' : 'none';
+        setText('displayPromoDiscount', '- ' + peso(totalSavings));
     }
 }
 

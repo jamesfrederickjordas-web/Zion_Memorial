@@ -88,6 +88,7 @@
                                 <option value="12">12 Months (1 Year)</option>
                                 <option value="24">24 Months (2 Years)</option>
                                 <option value="36">36 Months (3 Years)</option>
+                                <option value="48">48 Months (4 Years)</option>
                                 <option value="60" selected>60 Months (5 Years - Standard)</option>
                             </select>
                         </div>
@@ -137,22 +138,22 @@
                     </div>
                 </div>
 
-                <!-- Fee Breakdown (Base + Care + Tax) -->
+                <!-- Fee Breakdown (Lot Price + PMCF - Plan Discount) -->
                 <div class="fees-breakdown-box" style="margin-top: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px 14px; font-size: 0.82rem;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #64748b;">Base Memorial Space Value:</span>
+                        <span style="color: #64748b;">Lot Price:</span>
                         <strong id="displayBasePlotPrice" style="color: #1e293b;">₱ 0.00</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #64748b;">Perpetual Care &amp; Maintenance Fund:</span>
-                        <strong id="displayMaintenanceFee" style="color: #1e293b;">₱ 2,500.00</strong>
+                        <span style="color: #64748b;">PMCF (10% of Lot Price):</span>
+                        <strong id="displayMaintenanceFee" style="color: #1e293b;">₱ 0.00</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #64748b;">Cemetery &amp; Documentation Tax:</span>
-                        <strong id="displayCemeteryTax" style="color: #1e293b;">₱ 1,200.00</strong>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; color: #15803d;">
+                        <span id="labelPlanDiscount">Pre-Need Discount (18% of Lot):</span>
+                        <strong id="displayCemeteryTax">- ₱ 0.00</strong>
                     </div>
                     <div id="rowPromoDiscount" style="display: none; justify-content: space-between; margin-bottom: 5px; color: #15803d; font-weight: 700;">
-                        <span>Promotional / Spot Cash Savings:</span>
+                        <span>Spot Cash / Promo Savings:</span>
                         <strong id="displayPromoDiscount">-₱ 0.00</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #cbd5e1; font-weight: 800; font-size: 0.92rem; color: #1e3a29;">

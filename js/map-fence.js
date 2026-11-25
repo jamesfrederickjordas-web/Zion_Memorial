@@ -1581,4 +1581,119 @@
         customShapeEntries,
         readStoredLayers
     };
+
+    // Official Zion Memorial Garden Management Pricing & Computation Engine
+    const CATEGORY_RATES = {
+        'Condominium':      { lotPrice: 45000,   downPayment: 8280,   reservationFee: 1000 },
+        'Single Tiered':    { lotPrice: 65000,   downPayment: 11960,  reservationFee: 2000 },
+        'Single Teired':    { lotPrice: 65000,   downPayment: 11960,  reservationFee: 2000 },
+        'Supreme':          { lotPrice: 80000,   downPayment: 14720,  reservationFee: 3000 },
+        'Special Supreme':  { lotPrice: 120000,  downPayment: 22080,  reservationFee: 5000 },
+        'Mausoleum':        { lotPrice: 1000000, downPayment: 184000, reservationFee: 10000 },
+        'Family Estate Jr.': { lotPrice: 1000000, downPayment: 184000, reservationFee: 10000 }
+    };
+
+    const TERM_FACTORS = {
+        12: 0.09443025,
+        24: 0.05291938,
+        36: 0.03940580,
+        48: 0.03290006,
+        60: 0.02920199
+    };
+
+    const STRAIGHT_60_FACTOR = 0.03032482;
+
+    function getCategoryRate(category) {
+        const key = String(category || '').trim();
+        if (CATEGORY_RATES[key]) return CATEGORY_RATES[key];
+        const lower = key.toLowerCase();
+        if (lower.includes('condo')) return CATEGORY_RATES['Condominium'];
+        if (lower.includes('single')) return CATEGORY_RATES['Single Tiered'];
+        if (lower.includes('special')) return CATEGORY_RATES['Special Supreme'];
+        if (lower.includes('supreme')) return CATEGORY_RATES['Supreme'];
+        if (lower.includes('mausoleum') || lower.includes('family')) return CATEGORY_RATES['Mausoleum'];
+        return CATEGORY_RATES['Single Tiered'];
+    }
+
+    function computePlanPricing(opts = {}) {
+        const rate = getCategoryRate(opts.category);
+        const rawLot = Number(opts.lotPrice);
+        const lotPrice = (Number.isFinite(rawLot) && rawLot > 0) ? rawLot : rate.lotPrice;
+        const pmcf = Math.round(lotPrice * 0.10 * 100) / 100;
+        const listPrice = Math.round((lotPrice + pmcf) * 100) / 100;
+
+        const planStr = String(opts.planType || 'Pre-Need').toLowerCase();
+        const isAtNeed = planStr.includes('at-need') || planStr.includes('at_need');
+        const atNeedDiscount = Math.round(lotPrice * 0.08 * 100) / 100;
+        const preNeedDiscount = Math.round(lotPrice * 0.18 * 100) / 100;
+        const planDiscount = isAtNeed ? atNeedDiscount : preNeedDiscount;
+
+        const promoDiscount = Math.max(0, Number(opts.promoDiscount) || 0);
+        const basePlanPrice = Math.round((listPrice - planDiscount) * 100) / 100;
+        const contractPrice = Math.max(0, Math.round((basePlanPrice - promoDiscount) * 100) / 100);
+
+        const spotDiscountRate = isAtNeed ? 0 : 0.15;
+        const spotCashDiscount = Math.round(contractPrice * spotDiscountRate * 100) / 100;
+        const spotCashPrice = Math.round((contractPrice - spotCashDiscount) * 100) / 100;
+
+        const paymentOpt = String(opts.paymentOption || 'INSTALLMENT').toUpperCase();
+        const isFullPayment = paymentOpt === 'FULL_PAYMENT' || paymentOpt === 'SPOT_CASH';
+
+        const defaultDown20 = Math.round(contractPrice * 0.20 * 100) / 100;
+        const hasCustomDown = opts.customDownPayment !== undefined && opts.customDownPayment !== null && opts.customDownPayment !== '' && !Number.isNaN(Number(opts.customDownPayment));
+        const downPayment = isFullPayment
+            ? spotCashPrice
+            : (hasCustomDown ? Math.max(0, Math.min(contractPrice, Number(opts.customDownPayment))) : defaultDown20);
+
+        const reservationFee = rate.reservationFee;
+        const netDownPayment = Math.max(0, Math.round((downPayment - reservationFee) * 100) / 100);
+        const remainingBalance = isFullPayment ? 0 : Math.max(0, Math.round((contractPrice - downPayment) * 100) / 100);
+
+        const months = Math.max(1, parseInt(opts.termMonths, 10) || 12);
+        let monthlyPayment = 0;
+        if (!isFullPayment && remainingBalance > 0) {
+            if (downPayment === 0 && months === 60) {
+                monthlyPayment = Math.round(contractPrice * STRAIGHT_60_FACTOR * 100) / 100;
+            } else if (TERM_FACTORS[months]) {
+                monthlyPayment = Math.round(remainingBalance * TERM_FACTORS[months] * 100) / 100;
+            } else {
+                monthlyPayment = Math.round((remainingBalance / months) * 100) / 100;
+            }
+        }
+
+        const totalPayable = isFullPayment
+            ? spotCashPrice
+            : Math.round((downPayment + (monthlyPayment * months)) * 100) / 100;
+
+        return {
+            lotPrice,
+            pmcf,
+            listPrice,
+            isAtNeed,
+            planDiscount,
+            atNeedDiscount,
+            preNeedDiscount,
+            promoDiscount,
+            contractPrice,
+            spotDiscountRate,
+            spotCashDiscount,
+            spotCashPrice,
+            defaultDown20,
+            downPayment,
+            reservationFee,
+            netDownPayment,
+            remainingBalance,
+            months,
+            monthlyPayment,
+            totalPayable
+        };
+    }
+
+    window.ZMG_PRICING = {
+        CATEGORY_RATES,
+        TERM_FACTORS,
+        STRAIGHT_60_FACTOR,
+        getCategoryRate,
+        computePlanPricing
+    };
 })();

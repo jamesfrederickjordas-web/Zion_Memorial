@@ -4506,13 +4506,13 @@ const SECTION_SHAPE_MAP = {
 };
 
 const CATEGORY_DEFAULT_SPECS = {
-    'Single Teired':     { w: 1, h: 2, price: 42000, down: 6500 },
-    'Supreme':           { w: 2, h: 2, price: 65000, down: 9500 },
-    'Special Supreme':   { w: 2, h: 3, price: 85000, down: 12500 },
-    'Family Estate Jr.': { w: 6, h: 6, price: 240000, down: 35000 },
-    'Condominium':       { w: 1, h: 1, price: 35000, down: 5000 },
-    'Mausoleum':         { w: 3, h: 3, price: 180000, down: 25000 },
-    'Custom':            { w: 1, h: 1, price: 50000, down: 8000 }
+    'Single Teired':     { w: 1, h: 2, price: 65000,   down: 11960 },
+    'Supreme':           { w: 2, h: 2, price: 80000,   down: 14720 },
+    'Special Supreme':   { w: 2, h: 3, price: 120000,  down: 22080 },
+    'Family Estate Jr.': { w: 6, h: 6, price: 1000000, down: 184000 },
+    'Condominium':       { w: 1, h: 1, price: 45000,   down: 8280 },
+    'Mausoleum':         { w: 3, h: 3, price: 1000000, down: 184000 },
+    'Custom':            { w: 1, h: 1, price: 65000,   down: 11960 }
 };
 
 let BUILDER_STATE = {

@@ -21,8 +21,8 @@ const SECTION_SHAPE_MAP = {
         rows: 24,
         widthPx: 1109,
         heightPx: 1165,
-        defaultPrice: 55000,
-        defaultDown: 8250
+        defaultPrice: 65000,
+        defaultDown: 11960
     },
     'Area 2 - Lawn of Love': {
         area: '2',
@@ -34,8 +34,8 @@ const SECTION_SHAPE_MAP = {
         rows: 28,
         widthPx: 786,
         heightPx: 971,
-        defaultPrice: 85000,
-        defaultDown: 12500
+        defaultPrice: 120000,
+        defaultDown: 22080
     },
     'Area 3 - Lawn of Hope (Family Estate)': {
         area: '3',
@@ -47,8 +47,8 @@ const SECTION_SHAPE_MAP = {
         rows: 26,
         widthPx: 881,
         heightPx: 969,
-        defaultPrice: 220000,
-        defaultDown: 33000
+        defaultPrice: 1000000,
+        defaultDown: 184000
     },
     'Area 4 - Supreme Garden': {
         area: '4',
@@ -60,8 +60,8 @@ const SECTION_SHAPE_MAP = {
         rows: 26,
         widthPx: 894,
         heightPx: 964,
-        defaultPrice: 75000,
-        defaultDown: 11250
+        defaultPrice: 80000,
+        defaultDown: 14720
     },
     'Area 5 - Special Supreme Estate': {
         area: '5',
@@ -73,8 +73,8 @@ const SECTION_SHAPE_MAP = {
         rows: 28,
         widthPx: 782,
         heightPx: 964,
-        defaultPrice: 85000,
-        defaultDown: 12500
+        defaultPrice: 120000,
+        defaultDown: 22080
     },
     'Area 6 - Lawn of Peace': {
         area: '6',
@@ -86,8 +86,8 @@ const SECTION_SHAPE_MAP = {
         rows: 28,
         widthPx: 468,
         heightPx: 765,
-        defaultPrice: 55000,
-        defaultDown: 8250
+        defaultPrice: 65000,
+        defaultDown: 11960
     },
     'Area 7 - Lawn of Faith': {
         area: '7',
@@ -99,8 +99,8 @@ const SECTION_SHAPE_MAP = {
         rows: 26,
         widthPx: 462,
         heightPx: 697,
-        defaultPrice: 70000,
-        defaultDown: 10500
+        defaultPrice: 80000,
+        defaultDown: 14720
     },
     'Area 8 - Lawn of Grace': {
         area: '8',
@@ -112,8 +112,8 @@ const SECTION_SHAPE_MAP = {
         rows: 22,
         widthPx: 335,
         heightPx: 456,
-        defaultPrice: 65000,
-        defaultDown: 9750
+        defaultPrice: 80000,
+        defaultDown: 14720
     },
     'Area 9 - Lawn of Serenity': {
         area: '9',
@@ -125,8 +125,8 @@ const SECTION_SHAPE_MAP = {
         rows: 24,
         widthPx: 777,
         heightPx: 799,
-        defaultPrice: 80000,
-        defaultDown: 12000
+        defaultPrice: 120000,
+        defaultDown: 22080
     },
     'Area 10 - Condominium Block A': {
         area: '10',
@@ -138,8 +138,8 @@ const SECTION_SHAPE_MAP = {
         rows: 24,
         widthPx: 899,
         heightPx: 757,
-        defaultPrice: 35000,
-        defaultDown: 5250
+        defaultPrice: 45000,
+        defaultDown: 8280
     },
     'Area 11 - Lawn of Memories': {
         area: '11',
@@ -151,8 +151,8 @@ const SECTION_SHAPE_MAP = {
         rows: 36,
         widthPx: 417,
         heightPx: 1444,
-        defaultPrice: 85000,
-        defaultDown: 12500
+        defaultPrice: 120000,
+        defaultDown: 22080
     },
     'Area 12 - Mausoleum Court': {
         area: '12',
@@ -164,8 +164,8 @@ const SECTION_SHAPE_MAP = {
         rows: 24,
         widthPx: 691,
         heightPx: 669,
-        defaultPrice: 350000,
-        defaultDown: 50000
+        defaultPrice: 1000000,
+        defaultDown: 184000
     }
 };
 
@@ -214,12 +214,12 @@ function resolveInitialSectionFromUrl() {
 
 // ==============================================================================
 const CUSTOM_CATEGORY_DEFAULTS = {
-    'Single Teired':     { defaultPrice: 55000,  defaultDown: 8250 },
-    'Supreme':           { defaultPrice: 65000,  defaultDown: 9750 },
-    'Special Supreme':   { defaultPrice: 85000,  defaultDown: 12750 },
-    'Condominium':       { defaultPrice: 35000,  defaultDown: 5250 },
-    'Family Estate Jr.': { defaultPrice: 220000, defaultDown: 33000 },
-    'Mausoleum':         { defaultPrice: 350000, defaultDown: 52500 }
+    'Single Teired':     { defaultPrice: 65000,   defaultDown: 11960 },
+    'Supreme':           { defaultPrice: 80000,   defaultDown: 14720 },
+    'Special Supreme':   { defaultPrice: 120000,  defaultDown: 22080 },
+    'Condominium':       { defaultPrice: 45000,   defaultDown: 8280 },
+    'Family Estate Jr.': { defaultPrice: 1000000, defaultDown: 184000 },
+    'Mausoleum':         { defaultPrice: 1000000, defaultDown: 184000 }
 };
 
 function syncSectionDropdownOptions() {
@@ -1042,6 +1042,7 @@ function setupBookingModal() {
             document.querySelectorAll('input[name="planType"]').forEach(el => el.closest('.radio-card')?.classList.remove('active'));
             r.closest('.radio-card')?.classList.add('active');
             updatePlanTypeUi(r.value);
+            recalculateAmortization();
         });
     });
 
@@ -1106,12 +1107,18 @@ function openBookingModalForPlot(plot) {
     const modal = document.getElementById('reservationBookingModal');
     if (!modal || !plot) return;
 
-    const price = Number(plot.price || 0);
-    const dp = 100.00;
+    const price = Number(plot.price || 65000);
+    const cat = plot.category || '';
+    const initialPricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+        ? window.ZMG_PRICING.computePlanPricing({ lotPrice: price, category: cat, planType: 'PRE-NEED', paymentOption: 'INSTALLMENT', termMonths: 60 })
+        : null;
+    const dp = Number(plot.down_payment) > 0 ? Number(plot.down_payment) : (initialPricing ? initialPricing.defaultDown20 : Math.round(price * 0.92 * 0.20));
 
     document.getElementById('bookSpaceId').value = plot.id;
     document.getElementById('bookPlotIdentifier').value = plot.plot_identifier;
-    document.getElementById('bookPlotPrice').value = price;
+    const priceEl = document.getElementById('bookPlotPrice');
+    priceEl.value = price;
+    priceEl.dataset.category = cat;
     document.getElementById('bookPlotDownPayment').value = dp;
     activePromoCode = '';
     promoCodeDiscountAmount = 0;
@@ -1178,42 +1185,61 @@ function openBookingModalForPlot(plot) {
 }
 
 function recalculateAmortization() {
-    const basePrice = parseFloat(document.getElementById('bookPlotPrice')?.value) || 0;
-    const maintenanceFee = 2500.00;
-    const cemeteryTax = 1200.00;
-    const grossPrice = basePrice + maintenanceFee + cemeteryTax;
-
-    const isFullPayment = document.querySelector('input[name="paymentOption"]:checked')?.value === 'FULL_PAYMENT';
-    const spotDiscount = isFullPayment ? Math.round(grossPrice * 0.10) : 0;
-    const totalDiscount = spotDiscount + promoCodeDiscountAmount;
-    const netPrice = Math.max(100, grossPrice - totalDiscount);
+    const priceEl = document.getElementById('bookPlotPrice');
+    const basePrice = parseFloat(priceEl?.value) || 0;
+    const category = priceEl?.dataset?.category || '';
+    const planType = document.querySelector('input[name="planType"]:checked')?.value || 'PRE-NEED';
+    const paymentOption = document.querySelector('input[name="paymentOption"]:checked')?.value || 'INSTALLMENT';
+    const isFullPayment = paymentOption === 'FULL_PAYMENT';
 
     const customDpInput = document.getElementById('customDownPayment');
-    const rawDp = customDpInput && customDpInput.value !== '' ? parseFloat(customDpInput.value) : 100;
-    const dp = Math.max(100, isNaN(rawDp) ? 100 : rawDp);
-
+    const hasCustomDp = customDpInput && customDpInput.value !== '' && !Number.isNaN(parseFloat(customDpInput.value));
     const termSelect = document.getElementById('installmentTerm');
-    const term = parseInt(termSelect?.value) || 60;
+    const term = parseInt(termSelect?.value, 10) || 60;
 
-    const balance = isFullPayment ? 0 : Math.max(0, netPrice - dp);
-    const monthly = (term > 0 && !isFullPayment) ? (balance / term) : 0;
+    const pricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+        ? window.ZMG_PRICING.computePlanPricing({
+            lotPrice: basePrice,
+            category,
+            planType,
+            paymentOption,
+            termMonths: term,
+            customDownPayment: hasCustomDp ? parseFloat(customDpInput.value) : undefined,
+            promoDiscount: promoCodeDiscountAmount
+        })
+        : {
+            lotPrice: basePrice,
+            pmcf: Math.round(basePrice * 0.10 * 100) / 100,
+            isAtNeed: planType === 'AT-NEED',
+            planDiscount: Math.round(basePrice * (planType === 'AT-NEED' ? 0.08 : 0.18) * 100) / 100,
+            contractPrice: Math.max(0, basePrice * (planType === 'AT-NEED' ? 1.02 : 0.92) - promoCodeDiscountAmount),
+            spotCashDiscount: 0,
+            spotCashPrice: Math.max(0, basePrice * (planType === 'AT-NEED' ? 1.02 : 0.92) - promoCodeDiscountAmount),
+            downPayment: hasCustomDp ? parseFloat(customDpInput.value) : Math.round(basePrice * 0.92 * 0.20),
+            remainingBalance: 0,
+            monthlyPayment: 0
+        };
+
+    const finalNetPrice = isFullPayment ? pricing.spotCashPrice : pricing.contractPrice;
+    const totalSavings = pricing.spotCashDiscount + promoCodeDiscountAmount;
 
     const peso = (n) => '₱ ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    setText('displayBasePlotPrice', peso(basePrice));
-    setText('displayMaintenanceFee', peso(maintenanceFee));
-    setText('displayCemeteryTax', peso(cemeteryTax));
-    setText('displayNetContractPrice', peso(netPrice));
-    setText('bookDisplayPrice', peso(netPrice));
-    setText('calcDownPayment', peso(dp));
-    setText('calcRemainingBalance', peso(balance));
-    setText('calcMonthlyAmortization', `${peso(monthly)} / mo`);
-    setText('displayFullDue', peso(netPrice));
+    setText('displayBasePlotPrice', peso(pricing.lotPrice));
+    setText('displayMaintenanceFee', peso(pricing.pmcf));
+    setText('labelPlanDiscount', pricing.isAtNeed ? 'At-Need Discount (8% of Lot):' : 'Pre-Need Discount (18% of Lot):');
+    setText('displayCemeteryTax', '- ' + peso(pricing.planDiscount));
+    setText('displayNetContractPrice', peso(finalNetPrice));
+    setText('bookDisplayPrice', peso(finalNetPrice));
+    setText('calcDownPayment', peso(pricing.downPayment));
+    setText('calcRemainingBalance', peso(pricing.remainingBalance));
+    setText('calcMonthlyAmortization', `${peso(pricing.monthlyPayment)} / mo`);
+    setText('displayFullDue', peso(finalNetPrice));
 
     const rowPromo = document.getElementById('rowPromoDiscount');
     if (rowPromo) {
-        rowPromo.style.display = totalDiscount > 0 ? 'flex' : 'none';
-        setText('displayPromoDiscount', '- ' + peso(totalDiscount));
+        rowPromo.style.display = totalSavings > 0 ? 'flex' : 'none';
+        setText('displayPromoDiscount', '- ' + peso(totalSavings));
     }
 }
 

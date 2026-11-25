@@ -2132,8 +2132,8 @@ function generateAdminLocGenericBlueprint(sectionName, shapeInfo) {
 
     const pW = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 1)));
     const pH = isCondo ? 1 : (isFamily ? 4 : (isMaus ? 3 : (isSupreme ? 2 : 2)));
-    const price = isCondo ? 35000 : (isFamily ? 220000 : (isMaus ? 150000 : (isSpecial ? 85000 : (isSupreme ? 65000 : 55000))));
-    const dp = isCondo ? 5250 : Math.round(price * 0.15);
+    const price = isCondo ? 45000 : ((isFamily || isMaus) ? 1000000 : (isSpecial ? 120000 : (isSupreme ? 80000 : 65000)));
+    const dp = isCondo ? 8280 : ((isFamily || isMaus) ? 184000 : (isSpecial ? 22080 : (isSupreme ? 14720 : 11960)));
     const polyPts = Array.isArray(shapeInfo.points) && shapeInfo.points.length >= 3 ? shapeInfo.points : null;
     let seq = 1;
 
@@ -7891,16 +7891,23 @@ function setupWalkInReservationModal() {
 
     // Plan type toggle
     if (radioPreNeed) {
-        radioPreNeed.addEventListener('change', () => updateWalkInPlanTypeUi(false));
+        radioPreNeed.addEventListener('change', () => {
+            updateWalkInPlanTypeUi(false);
+            computeFinancials();
+        });
     }
     if (radioAtNeed) {
-        radioAtNeed.addEventListener('change', () => updateWalkInPlanTypeUi(true));
+        radioAtNeed.addEventListener('change', () => {
+            updateWalkInPlanTypeUi(true);
+            computeFinancials();
+        });
     }
     if (preNeedCard) {
         preNeedCard.addEventListener('click', () => {
             if (radioPreNeed) {
                 radioPreNeed.checked = true;
                 updateWalkInPlanTypeUi(false);
+                computeFinancials();
             }
         });
     }
@@ -7909,6 +7916,7 @@ function setupWalkInReservationModal() {
             if (radioAtNeed) {
                 radioAtNeed.checked = true;
                 updateWalkInPlanTypeUi(true);
+                computeFinancials();
             }
         });
     }
@@ -7925,24 +7933,38 @@ function setupWalkInReservationModal() {
             return;
         }
 
-        const price = Number(selectedPlot.price || 65000);
         const isFull = payMode?.value === 'FULL_PAYMENT';
         const term = parseInt(termMonthsSelect?.value || '60', 10);
-        const defaultDown = Number(selectedPlot.down_payment || 10200);
+        const planTypeVal = radioAtNeed?.checked ? 'AT-NEED' : 'PRE-NEED';
+        const hasCustomDown = Boolean(cashPaidInput && cashPaidInput.dataset.userEdited);
 
-        if (totalPriceInput) totalPriceInput.value = price.toFixed(2);
+        const pricing = (window.ZMG_PRICING && typeof window.ZMG_PRICING.computePlanPricing === 'function')
+            ? window.ZMG_PRICING.computePlanPricing({
+                lotPrice: selectedPlot.price,
+                category: selectedPlot.category,
+                planType: planTypeVal,
+                paymentOption: isFull ? 'FULL_PAYMENT' : 'INSTALLMENT',
+                termMonths: term,
+                customDownPayment: hasCustomDown ? cashPaidInput.value : undefined
+            })
+            : {
+                contractPrice: Number(selectedPlot.price || 65000),
+                spotCashPrice: Number(selectedPlot.price || 65000),
+                downPayment: Number(selectedPlot.down_payment || 11960),
+                monthlyPayment: term > 0 ? Math.max(0, Number(selectedPlot.price || 65000) - Number(selectedPlot.down_payment || 11960)) / term : 0
+            };
+
+        const contractPrice = isFull ? pricing.spotCashPrice : pricing.contractPrice;
+        if (totalPriceInput) totalPriceInput.value = contractPrice.toFixed(2);
 
         if (isFull) {
-            if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = price.toFixed(2);
+            if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = pricing.spotCashPrice.toFixed(2);
             if (monthlyAmortInput) monthlyAmortInput.value = '0.00';
             if (termMonthsSelect) termMonthsSelect.disabled = true;
         } else {
             if (termMonthsSelect) termMonthsSelect.disabled = false;
-            if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = defaultDown.toFixed(2);
-            const down = parseFloat(cashPaidInput?.value) || defaultDown;
-            const remaining = Math.max(0, price - down);
-            const monthly = term > 0 ? (remaining / term) : 0;
-            if (monthlyAmortInput) monthlyAmortInput.value = monthly.toFixed(2);
+            if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = pricing.downPayment.toFixed(2);
+            if (monthlyAmortInput) monthlyAmortInput.value = pricing.monthlyPayment.toFixed(2);
         }
 
         refreshGcashAmounts();
@@ -11069,12 +11091,12 @@ const DEFAULT_PROMOTIONS = [
 ];
 
 const DEFAULT_CATEGORY_PRICES = {
-    'Single Tiered': { defaultPrice: 55000, defaultDown: 8250, label: 'Single Tiered Lawn' },
-    'Special Supreme': { defaultPrice: 85000, defaultDown: 12500, label: 'Special Supreme Estate' },
-    'Supreme': { defaultPrice: 75000, defaultDown: 11250, label: 'Supreme Garden' },
-    'Family Estate Jr.': { defaultPrice: 180000, defaultDown: 27000, label: 'Family Estate Jr. Lawn' },
-    'Condominium': { defaultPrice: 45000, defaultDown: 6750, label: 'Condominium Niches & Vaults' },
-    'Mausoleum': { defaultPrice: 180000, defaultDown: 27000, label: 'Mausoleum Court Estate' }
+    'Single Tiered': { defaultPrice: 65000, defaultDown: 11960, label: 'Single Tiered Lawn' },
+    'Special Supreme': { defaultPrice: 120000, defaultDown: 22080, label: 'Special Supreme Estate' },
+    'Supreme': { defaultPrice: 80000, defaultDown: 14720, label: 'Supreme Garden' },
+    'Family Estate Jr.': { defaultPrice: 1000000, defaultDown: 184000, label: 'Family Estate Jr. Lawn' },
+    'Condominium': { defaultPrice: 45000, defaultDown: 8280, label: 'Condominium Niches & Vaults' },
+    'Mausoleum': { defaultPrice: 1000000, defaultDown: 184000, label: 'Mausoleum Court Estate' }
 };
 
 let adminPromotionsCache = [];
