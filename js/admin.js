@@ -9107,43 +9107,75 @@ async function loadAdminMaintenanceTable() {
             `)
             .order('scheduled_date', { ascending: false });
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
             visits = data;
         } else {
-            console.warn('Maintenance PostgREST join failed, applying fallback query:', error);
+            if (error) console.warn('Maintenance PostgREST join failed, applying fallback query:', error);
             const { data: rawVisits, error: fallbackErr } = await supabaseClient
                 .from('maintenance_visits')
                 .select('*')
                 .order('scheduled_date', { ascending: false });
 
-            if (fallbackErr) throw fallbackErr;
-            visits = rawVisits || [];
-
-            const spaceIds = [...new Set(visits.map(v => v.space_id).filter(Boolean))];
-            if (spaceIds.length > 0) {
-                const { data: spaces } = await supabaseClient
-                    .from('memorial_spaces')
-                    .select('id, plot_identifier, section_name, category')
-                    .in('id', spaceIds);
-                const spaceMap = {};
-                (spaces || []).forEach(s => { spaceMap[s.id] = s; });
-                visits.forEach(v => {
-                    if (v.space_id && spaceMap[v.space_id]) v.memorial_spaces = spaceMap[v.space_id];
-                });
+            if (!fallbackErr && rawVisits && rawVisits.length > 0) {
+                visits = rawVisits;
+            } else {
+                // Guaranteed RPC fallback if RLS policy on table is stale
+                try {
+                    const { data: rpcRows, error: rpcErr } = await supabaseClient.rpc('get_admin_maintenance_visits');
+                    if (!rpcErr && Array.isArray(rpcRows)) {
+                        visits = rpcRows.map(r => ({
+                            ...r,
+                            memorial_spaces: r.plot_identifier ? {
+                                id: r.space_id,
+                                plot_identifier: r.plot_identifier,
+                                section_name: r.section_name,
+                                category: r.category
+                            } : null,
+                            profiles: (r.client_full_name || r.client_username) ? {
+                                id: r.requested_by,
+                                full_name: r.client_full_name,
+                                username: r.client_username,
+                                phone: r.client_phone
+                            } : null
+                        }));
+                    } else if (fallbackErr) {
+                        throw fallbackErr;
+                    }
+                } catch (rpcCatchErr) {
+                    if (fallbackErr) throw fallbackErr;
+                    console.warn('Maintenance RPC fallback notice:', rpcCatchErr);
+                }
             }
 
-            const userIds = [...new Set(visits.map(v => v.requested_by).filter(Boolean))];
-            if (userIds.length > 0) {
-                const { data: profs } = await supabaseClient
-                    .from('profiles')
-                    .select('id, full_name, username, phone')
-                    .in('id', userIds);
+            if (visits.length > 0 && !visits[0].memorial_spaces) {
+                const spaceIds = [...new Set(visits.map(v => v.space_id).filter(Boolean))];
+                if (spaceIds.length > 0) {
+                    const { data: spaces } = await supabaseClient
+                        .from('memorial_spaces')
+                        .select('id, plot_identifier, section_name, category')
+                        .in('id', spaceIds);
+                    const spaceMap = {};
+                    (spaces || []).forEach(s => { spaceMap[s.id] = s; });
+                    visits.forEach(v => {
+                        if (v.space_id && spaceMap[v.space_id]) v.memorial_spaces = spaceMap[v.space_id];
+                    });
+                }
+            }
 
-                const map = {};
-                (profs || []).forEach(p => { map[p.id] = p; });
-                visits.forEach(v => {
-                    if (v.requested_by && map[v.requested_by]) v.profiles = map[v.requested_by];
-                });
+            if (visits.length > 0 && !visits[0].profiles) {
+                const userIds = [...new Set(visits.map(v => v.requested_by).filter(Boolean))];
+                if (userIds.length > 0) {
+                    const { data: profs } = await supabaseClient
+                        .from('profiles')
+                        .select('id, full_name, username, phone')
+                        .in('id', userIds);
+
+                    const map = {};
+                    (profs || []).forEach(p => { map[p.id] = p; });
+                    visits.forEach(v => {
+                        if (v.requested_by && map[v.requested_by]) v.profiles = map[v.requested_by];
+                    });
+                }
             }
         }
 

@@ -4,13 +4,24 @@
 -- =========================================================================
 -- Run this script once in the Supabase SQL Editor.
 
+-- 0. Ensure current_user_role() is case-insensitive & trimmed
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS TEXT AS $$
+    SELECT LOWER(TRIM(role)) FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
 -- 1. Maintenance Visits RLS (Clients can view, request, AND cancel own requests; Staff/Admin can manage all)
 ALTER TABLE public.maintenance_visits ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view visits they requested" ON public.maintenance_visits;
 CREATE POLICY "Users can view visits they requested"
 ON public.maintenance_visits FOR SELECT TO authenticated
-USING (requested_by = auth.uid() OR public.current_user_role() IN ('admin', 'staff'));
+USING (requested_by = auth.uid() OR public.current_user_role() IN ('admin', 'staff', 'administrator'));
+
+DROP POLICY IF EXISTS "Users can request maintenance visits" ON public.maintenance_visits;
+CREATE POLICY "Users can request maintenance visits"
+ON public.maintenance_visits FOR INSERT TO authenticated
+WITH CHECK (requested_by = auth.uid() OR public.current_user_role() IN ('admin', 'staff', 'administrator'));
 
 DROP POLICY IF EXISTS "Users can cancel own scheduled maintenance visits" ON public.maintenance_visits;
 CREATE POLICY "Users can cancel own scheduled maintenance visits"
@@ -21,8 +32,58 @@ WITH CHECK (requested_by = auth.uid() AND status = 'cancelled');
 DROP POLICY IF EXISTS "Staff can view and update maintenance visits" ON public.maintenance_visits;
 CREATE POLICY "Staff can view and update maintenance visits"
 ON public.maintenance_visits FOR ALL TO authenticated
-USING (public.current_user_role() IN ('admin', 'staff'))
-WITH CHECK (public.current_user_role() IN ('admin', 'staff'));
+USING (public.current_user_role() IN ('admin', 'staff', 'administrator'))
+WITH CHECK (public.current_user_role() IN ('admin', 'staff', 'administrator'));
+
+-- 1B. Guaranteed Admin/Staff RPC to fetch all maintenance visits
+CREATE OR REPLACE FUNCTION public.get_admin_maintenance_visits()
+RETURNS TABLE (
+    id BIGINT,
+    space_id BIGINT,
+    requested_by UUID,
+    visit_type TEXT,
+    scheduled_date DATE,
+    status TEXT,
+    notes TEXT,
+    proof_image_url TEXT,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ,
+    plot_identifier TEXT,
+    section_name TEXT,
+    category TEXT,
+    client_full_name TEXT,
+    client_username TEXT,
+    client_phone TEXT
+) AS $$
+BEGIN
+    IF public.current_user_role() NOT IN ('admin', 'staff', 'administrator') THEN
+        RAISE EXCEPTION 'Access denied: admin or staff role required';
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        mv.id,
+        mv.space_id,
+        mv.requested_by,
+        mv.visit_type,
+        mv.scheduled_date,
+        mv.status,
+        mv.notes,
+        mv.proof_image_url,
+        mv.completed_at,
+        mv.created_at,
+        ms.plot_identifier,
+        ms.section_name,
+        ms.category,
+        p.full_name,
+        p.username,
+        p.phone
+    FROM public.maintenance_visits mv
+    LEFT JOIN public.memorial_spaces ms ON ms.id = mv.space_id
+    LEFT JOIN public.profiles p ON p.id = mv.requested_by
+    ORDER BY mv.scheduled_date DESC, mv.id DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Helper function to notify all Admin & Staff users
 CREATE OR REPLACE FUNCTION public.notify_all_staff_and_admins(
