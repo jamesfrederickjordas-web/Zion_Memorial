@@ -66,7 +66,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupAdminProfileModule();
     setupAdminCharts();
     await loadAdminData();
+    setupAdminRealtimeAutoSync();
 });
+
+let __adminAutoRefreshTimer = null;
+let __adminAutoRefreshing = false;
+function scheduleAdminAutoRefresh() {
+    if (__adminAutoRefreshTimer) clearTimeout(__adminAutoRefreshTimer);
+    __adminAutoRefreshTimer = setTimeout(async () => {
+        if (__adminAutoRefreshing) return;
+        __adminAutoRefreshing = true;
+        try {
+            await loadAdminData();
+        } catch (err) {
+            console.warn('Admin auto-refresh notice:', err);
+        } finally {
+            __adminAutoRefreshing = false;
+        }
+    }, 600);
+}
+
+function setupAdminRealtimeAutoSync() {
+    // 1. Refresh when returning to this browser tab / window (e.g. after editing in Map Editor)
+    window.addEventListener('focus', scheduleAdminAutoRefresh);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') scheduleAdminAutoRefresh();
+    });
+
+    // 2. Refresh when localStorage map/plot layout keys change in another tab
+    window.addEventListener('storage', (e) => {
+        if (!e.key) return;
+        if (
+            e.key === 'zion_cemetery_map_vector_layout_v2' ||
+            e.key.startsWith('zion_section_plots_v1_')
+        ) {
+            scheduleAdminAutoRefresh();
+        }
+    });
+
+    // 3. Refresh when clicking the Dashboard nav tab
+    document.getElementById('tabAdminDashboard')?.addEventListener('click', scheduleAdminAutoRefresh);
+
+    // 4. Live Supabase Realtime subscription across core tables
+    if (typeof supabaseClient !== 'undefined' && typeof supabaseClient.channel === 'function') {
+        try {
+            const channel = supabaseClient.channel('zmg-admin-live-sync');
+            ['memorial_spaces', 'reservations', 'memorial_records', 'payments', 'profiles', 'maintenance_visits', 'support_tickets'].forEach(table => {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+                    scheduleAdminAutoRefresh();
+                });
+            });
+            channel.subscribe();
+        } catch (err) {
+            console.warn('Admin realtime subscription notice:', err);
+        }
+    }
+}
 
 function startHeaderClock() {
     const clockEl = document.getElementById('adminHeaderClock');
