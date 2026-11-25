@@ -1823,6 +1823,7 @@ html, body {
 }
 
 .admin-loc-area-floating-label {
+    pointer-events: none;
     position: absolute;
     top: -24px;
     left: 50%;

@@ -922,9 +922,8 @@ html, body {
     filter: brightness(1.06) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
 }
 .me-vec-element.selected {
-    outline: 3px solid var(--me-gold);
-    outline-offset: 3px;
-    filter: brightness(1.04);
+    outline: none;
+    filter: drop-shadow(0 0 3px #c4a661) drop-shadow(0 0 2px #8c6d23) brightness(1.05);
 }
 .me-multi-badge {
     display: inline-flex;

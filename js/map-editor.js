@@ -1269,18 +1269,16 @@ function renderVectorMap() {
 
     const isOpaqueAtPoint = (v, imgEl, clientX, clientY) => {
         if (!imgEl || v.visible === false) return false;
-        const rect = imgEl.getBoundingClientRect();
-        const cx = (rect.left + rect.right) / 2;
-        const cy = (rect.top + rect.bottom) / 2;
-        const dx = clientX - cx;
-        const dy = clientY - cy;
+        const pt = clientToBoardPx(clientX, clientY);
+        const w = imgEl.offsetWidth || 1;
+        const h = imgEl.offsetHeight || 1;
+        const cx = imgEl.offsetLeft + w / 2;
+        const cy = imgEl.offsetTop + h / 2;
+        const dx = pt.x - cx;
+        const dy = pt.y - cy;
         const rad = -(Number(v.rotate) || 0) * Math.PI / 180;
         const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
         const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
-        const boardRect = board.getBoundingClientRect();
-        const scale = (boardRect.width || BOARD_WIDTH) / BOARD_WIDTH;
-        const w = (imgEl.offsetWidth || 1) * scale;
-        const h = (imgEl.offsetHeight || 1) * scale;
         const u = lx / w + 0.5;
         const vv = ly / h + 0.5;
         if (u < 0 || u > 1 || vv < 0 || vv > 1) return false;
