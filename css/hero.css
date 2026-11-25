@@ -35,5 +35,6 @@
 .hero-text h1 {
     font-size: 3rem;
     margin: 0;
-    font-family: serif;
+    font-family: 'Lora', Georgia, serif;
+    letter-spacing: -0.01em;
 }

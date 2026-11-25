@@ -52,8 +52,20 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
+}
+
+.admin-brand-title,
+.table-section-header h2,
+.admin-modal-header h3 {
+    font-family: 'Lora', Georgia, serif;
+    letter-spacing: -0.01em;
+}
+
+code {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-variant-numeric: tabular-nums;
 }
 
 html, body {

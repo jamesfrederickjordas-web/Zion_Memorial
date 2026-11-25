@@ -18,7 +18,8 @@ html::-webkit-scrollbar {
 }
 
 body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
     background-image: url('../assets/images/backgrounds/Background.png');
     background-size: cover;
     background-position: center;
@@ -30,6 +31,15 @@ body {
     min-height: 100vh;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+}
+
+h1, .page-header h1, .section-heading, .welcome-title {
+    font-family: 'Lora', Georgia, serif;
+    letter-spacing: -0.01em;
+}
+
+button, input, select, textarea {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body::-webkit-scrollbar {
