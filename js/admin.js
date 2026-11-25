@@ -1088,11 +1088,11 @@ function renderReservationsTable(reservations) {
 
         return `
             <tr>
-                <td><strong>${escapeHtml(r.reservation_number || `ZMG-${r.id}`)}</strong></td>
+                <td style="white-space: nowrap;"><strong>${escapeHtml(r.reservation_number || `ZMG-${r.id}`)}</strong></td>
                 <td>${escapeHtml(clientName)}</td>
-                <td>${escapeHtml(space.plot_identifier || 'N/A')}</td>
+                <td style="white-space: nowrap;">${escapeHtml(space.plot_identifier || 'N/A')}</td>
                 <td>${escapeHtml(space.category || '-')}</td>
-                <td>${(r.plan_type || '').toUpperCase() === 'AT-NEED'
+                <td style="white-space: nowrap;">${(r.plan_type || '').toUpperCase() === 'AT-NEED'
                     ? '<span class="admin-badge" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; font-weight: 700; border-radius: 4px;">URGENT AT-NEED</span>'
                     : '<span class="admin-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px;">Pre-Need</span>'}</td>
                 <td><span class="admin-badge ${badgeClass}">${escapeHtml(r.status)}</span></td>
@@ -1103,14 +1103,14 @@ function renderReservationsTable(reservations) {
                             <button type="button" class="btn-action-text" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #0284c7; color: #ffffff; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer; text-decoration: none;" onclick="window.viewAdminPaymentProof(${paymentId})" title="Click to view GCash payment screenshot">View Screenshot</button>
                         </div>
                     ` : (latestPayment?.payment_reference ? `
-                        <small style="color: #64748b; font-size: 0.72rem; display: block; margin-top: 2px;">Ref: ${escapeHtml(latestPayment.payment_reference)}</small>
+                        <small style="color: #64748b; font-size: 0.72rem; display: block; margin-top: 2px; word-break: break-all;">Ref: ${escapeHtml(latestPayment.payment_reference)}</small>
                     ` : (r.payment_method === 'Cash' || (r.notes || '').includes('Cash') ? `
                         <small style="color: #166534; font-size: 0.72rem; display: block; margin-top: 2px;">Cash at Counter</small>
                     ` : ''))}
                 </td>
                 <td>${escapeHtml(space.section_name || '-')}</td>
-                <td style="text-align: center;">
-                    <div class="admin-actions">
+                <td style="text-align: center; white-space: nowrap;">
+                    <div class="admin-actions" style="flex-wrap: nowrap; justify-content: center;">
                         ${hasProof ? `
                             <button type="button" class="btn-action-text" style="color: #0284c7; font-weight: 700;" title="View payment screenshot" onclick="window.viewAdminPaymentProof(${paymentId})">Screenshot</button>
                         ` : ''}
@@ -1121,10 +1121,6 @@ function renderReservationsTable(reservations) {
                         ${(r.status !== 'CANCELLED' && r.status !== 'REJECTED') ? `
                             <button type="button" class="btn-action-text btn-action-transfer" style="color: #2d4a36; font-weight: 600;" title="Transfer Rights or Relocate Plot" onclick="transferReservationAdmin(${r.id})">Transfer</button>
                         ` : ''}
-                        ${deceasedTag}
-                        <button type="button" class="btn-action-text" title="View Details" onclick="viewReservationDetailsAdmin(${r.id})">View</button>
-                    </div>
-                </td>
                         ${deceasedTag}
                         <button type="button" class="btn-action-text" title="View Details" onclick="viewReservationDetailsAdmin(${r.id})">View</button>
                     </div>
