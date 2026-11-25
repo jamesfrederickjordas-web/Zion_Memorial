@@ -481,7 +481,7 @@
             </div>
 
             <!-- Financial Terms -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div id="walkInPaymentModeGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                 <div>
                     <label>Payment Mode *</label>
                     <select id="walkInPaymentMode" class="admin-select" style="width: 100%;">
@@ -489,7 +489,7 @@
                         <option value="FULL_PAYMENT">Full Spot Cash Payment</option>
                     </select>
                 </div>
-                <div>
+                <div id="walkInTermGroup">
                     <label>Amortization Term</label>
                     <select id="walkInTermMonths" class="admin-select" style="width: 100%;">
                         <option value="12">12 Months (1 Year)</option>
@@ -501,7 +501,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div id="walkInPricesGrid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
                 <div>
                     <label>Total Price (₱)</label>
                     <input type="number" id="walkInTotalPrice" class="admin-input" readonly style="background: #f1f5f9;">
@@ -510,7 +510,7 @@
                     <label id="walkInAmountDueLabel">Amount Paid Today (₱) *</label>
                     <input type="number" id="walkInCashPaid" class="admin-input" step="100" required>
                 </div>
-                <div>
+                <div id="walkInMonthlyGroup">
                     <label>Monthly Amortization (₱)</label>
                     <input type="number" id="walkInMonthlyAmort" class="admin-input" readonly style="background: #f1f5f9;">
                 </div>

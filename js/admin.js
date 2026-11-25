@@ -8115,15 +8115,25 @@ function setupWalkInReservationModal() {
     const computeFinancials = () => {
         const plotId = plotSelect?.value;
         const selectedPlot = adminAvailablePlotsCache.find(p => String(p.id) === String(plotId));
+        const isFull = payMode?.value === 'FULL_PAYMENT' || Boolean(radioAtNeed?.checked);
+        const termGroup = document.getElementById('walkInTermGroup');
+        const monthlyGroup = document.getElementById('walkInMonthlyGroup');
+        const modeGrid = document.getElementById('walkInPaymentModeGrid');
+        const pricesGrid = document.getElementById('walkInPricesGrid');
+        if (termGroup) termGroup.style.display = isFull ? 'none' : '';
+        if (monthlyGroup) monthlyGroup.style.display = isFull ? 'none' : '';
+        if (modeGrid) modeGrid.style.gridTemplateColumns = isFull ? '1fr' : '1fr 1fr';
+        if (pricesGrid) pricesGrid.style.gridTemplateColumns = isFull ? '1fr 1fr' : '1fr 1fr 1fr';
+
         if (!selectedPlot) {
             if (totalPriceInput) totalPriceInput.value = '0.00';
             if (cashPaidInput && !cashPaidInput.dataset.userEdited) cashPaidInput.value = '0.00';
             if (monthlyAmortInput) monthlyAmortInput.value = '0.00';
+            if (termMonthsSelect) termMonthsSelect.disabled = isFull;
             refreshGcashAmounts();
             return;
         }
 
-        const isFull = payMode?.value === 'FULL_PAYMENT';
         const term = parseInt(termMonthsSelect?.value || '60', 10);
         const planTypeVal = radioAtNeed?.checked ? 'AT-NEED' : 'PRE-NEED';
         const hasCustomDown = Boolean(cashPaidInput && cashPaidInput.dataset.userEdited);
