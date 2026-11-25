@@ -8226,16 +8226,23 @@ async function loadWalkInPlotsDropdown() {
     if (!select) return;
 
     try {
-        const { data: spaces, error } = await supabaseClient
-            .from('memorial_spaces')
-            .select('id, plot_identifier, section_name, category, price, down_payment')
-            .eq('status', 'available')
-            .order('plot_identifier', { ascending: true })
-            .limit(5000);
+        let allSpaces = [];
+        const pageSize = 1000;
+        for (let offset = 0; offset < 20000; offset += pageSize) {
+            const { data: batch, error } = await supabaseClient
+                .from('memorial_spaces')
+                .select('id, plot_identifier, section_name, category, price, down_payment')
+                .eq('status', 'available')
+                .order('plot_identifier', { ascending: true })
+                .range(offset, offset + pageSize - 1);
 
-        if (error) throw error;
+            if (error) throw error;
+            if (!batch || batch.length === 0) break;
+            allSpaces = allSpaces.concat(batch);
+            if (batch.length < pageSize) break;
+        }
 
-        adminAvailablePlotsCache = spaces || [];
+        adminAvailablePlotsCache = allSpaces;
 
         if (adminAvailablePlotsCache.length === 0) {
             if (sectionSelect) sectionSelect.innerHTML = '<option value="">-- No Sections Available --</option>';
