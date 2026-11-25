@@ -1376,11 +1376,12 @@ async function handleReservationSubmit(e) {
             return;
         }
 
-        const isImmediatelyPaid = isCash || isGcashQr || Boolean(attachedProof) || Boolean(manualRef);
+        // Only Staff Counter Cash is immediately paid; online GCash/Bank proofs require Admin verification first
+        const isImmediatelyPaid = isCash;
         const totalPaidRecorded = isImmediatelyPaid ? amountNow : 0.00;
         const balanceRecorded = isImmediatelyPaid ? Math.max(0, price - amountNow) : price;
-        const monthly = term > 0 ? (balanceRecorded / term) : 0;
-        const paymentTag = isImmediatelyPaid ? 'PAID' : 'UNPAID';
+        const monthly = term > 0 ? (submitPricing ? submitPricing.monthlyPayment : (balanceRecorded / term)) : 0;
+        const paymentTag = isImmediatelyPaid ? 'PAID' : (Boolean(attachedProof) || Boolean(gcashQrRef) || Boolean(manualRef) ? 'PENDING VERIFICATION' : 'UNPAID');
         const paymentReference = isCash
             ? (counterRef || manualRef || `CSH-COUNTER-${Date.now().toString(36).toUpperCase()}`)
             : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`);

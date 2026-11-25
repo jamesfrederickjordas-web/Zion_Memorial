@@ -1462,7 +1462,8 @@ function setupBookingModalAndAmortization(user) {
                 balance = 0;
             }
 
-            const isImmediatelyPaid = isStaffCashPaid || isBankTestPaid || isGcashQr;
+            // Only Staff Counter Cash is immediately paid; online GCash/Bank proofs require Admin verification first
+            const isImmediatelyPaid = isStaffCashPaid;
             const amountNow = isStaffCashPaid ? staffCashReceivedInput : (downPayment > 0 ? downPayment : totalPrice);
             // For GCash, initial insert sets total_paid=0 & balance=totalPrice; server RPC zmg_apply_payment_to_reservation atomically applies amountNow once Xendit confirms SUCCEEDED
             const totalPaidRecorded = isImmediatelyPaid ? amountNow : 0.00;
@@ -1558,7 +1559,7 @@ function setupBookingModalAndAmortization(user) {
                 }
 
                 const deceasedTagNote = fullDeceasedName ? ` [Interred: ${fullDeceasedName}${deceasedDeathDate ? ` (DOD: ${deceasedDeathDate})` : ''}]` : '';
-                const finalReservationNotes = `[Channel: ${isBank ? `Bank Transfer (${bankName})` : (isGcashQr ? 'GCash QR' : paymentChannel)}]${isGcashQr ? ` [Receipt Tag: PAID] (GCash QR Ref: ${paymentReference})` : (isGcash ? ` (GCash Auto-Debit Linked: ${gcashSender})` : (isBankTestPaid ? ` [Receipt Tag: PAID] (Test Mode Bank Authorized: ${bankName} | Ref: ${paymentReference})` : (isStaffCashPaid ? ` [Receipt Tag: PAID] (Staff Counter Cash Paid: ₱${amountNow} | Client: ${staffClientNameInput || 'Walk-in'} <${staffClientEmailInput}>)` : ' [Receipt Tag: UNPAID] (Pay Over the Counter)')))}.${deceasedTagNote} ${notes}`.trim();
+                const finalReservationNotes = `[Channel: ${isBank ? `Bank Transfer (${bankName})` : (isGcashQr ? 'GCash QR' : paymentChannel)}]${isGcashQr ? ` [Receipt Tag: PENDING VERIFICATION] (GCash QR Ref: ${paymentReference})` : (isGcash ? ` (GCash Auto-Debit Linked: ${gcashSender})` : (isBankTestPaid ? ` [Receipt Tag: PENDING VERIFICATION] (Bank Transfer: ${bankName} | Ref: ${paymentReference})` : (isStaffCashPaid ? ` [Receipt Tag: PAID] (Staff Counter Cash Paid: ₱${amountNow} | Client: ${staffClientNameInput || 'Walk-in'} <${staffClientEmailInput}>)` : ' [Receipt Tag: UNPAID] (Pay Over the Counter)')))}.${deceasedTagNote} ${notes}`.trim();
 
                 // 1. Insert into public.reservations
                 const { data: newReservation, error: insertError } = await supabaseClient

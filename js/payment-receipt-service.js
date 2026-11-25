@@ -2534,42 +2534,25 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
                 ? (res.payment_method === 'INSTALLMENT' ? 'DOWN_PAYMENT' : 'FULL_PAYMENT')
                 : (action === 'pay_balance' ? 'FULL_PAYMENT' : 'INSTALLMENT');
 
-            const newTotalPaid = Number((Number(res.total_paid || 0) + payAmt).toFixed(2));
-            const newBalance = Number(Math.max(0, Number(res.total_price || 0) - newTotalPaid).toFixed(2));
-            const newStatus = newBalance <= 0 ? 'COMPLETED' : res.status;
+            const newTotalPaid = Number(res.total_paid || 0);
+            const newBalance = Number(res.balance ?? res.total_price ?? 0);
+            const newStatus = res.status;
 
             try {
                 if (typeof supabaseClient !== 'undefined') {
-                    // 1. Insert into public.payments
+                    // 1. Insert into public.payments as PENDING until Admin/Staff verifies proof & reference
                     await supabaseClient.from('payments').insert([{
                         reservation_id: res.id,
+                        schedule_id: schedule?.id || null,
                         payment_reference: refVal,
                         amount: payAmt,
                         payment_type: paymentType,
                         payment_method: 'GCash',
-                        status: 'COMPLETED',
+                        status: 'PENDING',
                         due_date: schedule?.due_date || new Date().toISOString().split('T')[0],
-                        paid_at: new Date().toISOString(),
+                        paid_at: null,
                         receipt_url: localProofDataUrl || null
                     }]);
-
-                    // 2. Update payment_schedules if applicable
-                    if (schedule?.id) {
-                        await supabaseClient.from('payment_schedules').update({
-                            status: 'PAID',
-                            payment_reference: refVal,
-                            paid_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        }).eq('id', schedule.id);
-                    }
-
-                    // 3. Update reservation balance & total_paid
-                    await supabaseClient.from('reservations').update({
-                        total_paid: newTotalPaid,
-                        balance: newBalance,
-                        status: newStatus,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', res.id);
                 }
 
                 modal.classList.remove('active');
@@ -2741,7 +2724,7 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                 }
             }
 
-            // 3. Direct DB fallback
+            // 3. Direct DB fallback (PENDING until Admin/Staff verifies)
             if (!handled && typeof supabaseClient !== 'undefined') {
                 try {
                     await supabaseClient.from('payments').insert([{
@@ -2751,25 +2734,9 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                         amount: payAmt,
                         payment_type: paymentType,
                         payment_method: 'Bank Transfer',
-                        status: 'COMPLETED',
-                        paid_at: new Date().toISOString()
+                        status: 'PENDING',
+                        paid_at: null
                     }]);
-
-                    if (schedule?.id) {
-                        await supabaseClient.from('payment_schedules').update({
-                            status: 'PAID',
-                            payment_reference: refNumber,
-                            paid_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        }).eq('id', schedule.id);
-                    }
-
-                    await supabaseClient.from('reservations').update({
-                        total_paid: newTotalPaid,
-                        balance: newBalance,
-                        status: newStatus,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', res.id);
                 } catch (dbErr) {
                     console.error('Direct DB fallback failed:', dbErr);
                 }

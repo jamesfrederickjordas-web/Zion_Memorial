@@ -11228,16 +11228,61 @@ window.viewAdminPaymentProof = async function(paymentId) {
                 approveBtn.textContent = 'Verifying...';
                 try {
                     const nowIso = new Date().toISOString();
+                    const wasAlreadyCompleted = String(p.status || '').toUpperCase() === 'COMPLETED';
                     await supabaseClient.from('payments').update({ status: 'COMPLETED', paid_at: nowIso }).eq('id', p.id);
+
+                    if (p.schedule_id) {
+                        await supabaseClient.from('payment_schedules').update({
+                            status: 'PAID',
+                            payment_reference: p.payment_reference,
+                            paid_at: nowIso,
+                            updated_at: nowIso
+                        }).eq('id', p.schedule_id);
+                    }
+
                     if (p.reservation_id) {
-                        const targetStatus = p.reservations?.status === 'COMPLETED' ? 'COMPLETED' : 'APPROVED';
-                        await supabaseClient.from('reservations').update({ status: targetStatus, updated_at: nowIso }).eq('id', p.reservation_id);
+                        const { data: freshRes } = await supabaseClient
+                            .from('reservations')
+                            .select('id, user_id, reservation_number, total_price, total_paid, balance, status, notes')
+                            .eq('id', p.reservation_id)
+                            .maybeSingle();
+
+                        const totalPrice = Number(freshRes?.total_price ?? p.reservations?.total_price ?? 0);
+                        const prevPaid = Number(freshRes?.total_paid ?? p.reservations?.total_paid ?? 0);
+                        const payAmt = wasAlreadyCompleted ? 0 : Number(p.amount || 0);
+                        const newTotalPaid = Number(Math.min(totalPrice || (prevPaid + payAmt), prevPaid + payAmt).toFixed(2));
+                        const newBalance = Number(Math.max(0, totalPrice - newTotalPaid).toFixed(2));
+                        const targetStatus = newBalance <= 0 && totalPrice > 0
+                            ? 'COMPLETED'
+                            : ((freshRes?.status || p.reservations?.status) === 'COMPLETED' ? 'COMPLETED' : 'APPROVED');
+                        const updatedNotes = String(freshRes?.notes || p.reservations?.notes || '')
+                            .replace(/\[Receipt Tag:\s*(?:PENDING VERIFICATION|UNPAID)\]/gi, '[Receipt Tag: PAID]');
+
+                        await supabaseClient.from('reservations').update({
+                            total_paid: newTotalPaid,
+                            balance: newBalance,
+                            status: targetStatus,
+                            notes: updatedNotes,
+                            updated_at: nowIso
+                        }).eq('id', p.reservation_id);
+
+                        if (freshRes?.user_id) {
+                            await sendDirectNotification(
+                                freshRes.user_id,
+                                'Payment Verified & Approved ✅',
+                                `Your payment of ${formatPeso(p.amount)} (Ref: ${p.payment_reference || 'N/A'}) for reservation #${freshRes.reservation_number || p.reservation_id} has been verified by admin.`,
+                                'payment',
+                                'success',
+                                'myreservation',
+                                p.id
+                            );
+                        }
                     }
                     await logAdminAction('VERIFY_PAYMENT_PROOF', 'payments', p.id, `Verified payment ref ${p.payment_reference} of ${formatPeso(p.amount)}`);
                     alert('Payment and reservation successfully verified and approved.');
                     modal.style.display = 'none';
                     modal.classList.remove('active');
-                    await loadReservationsTable();
+                    await loadAdminData();
                 } catch (e) {
                     alert('Verification error: ' + e.message);
                 } finally {
