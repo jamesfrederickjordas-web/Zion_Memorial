@@ -85,6 +85,73 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 1C. Support Tickets RLS & Guaranteed Admin/Staff RPC
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own support tickets" ON public.support_tickets;
+CREATE POLICY "Users can view own support tickets"
+ON public.support_tickets FOR SELECT TO authenticated
+USING (user_id = auth.uid() OR public.current_user_role() IN ('admin', 'staff', 'administrator'));
+
+DROP POLICY IF EXISTS "Users can create support tickets" ON public.support_tickets;
+CREATE POLICY "Users can create support tickets"
+ON public.support_tickets FOR INSERT TO authenticated
+WITH CHECK (user_id = auth.uid() OR user_id IS NULL OR public.current_user_role() IN ('admin', 'staff', 'administrator'));
+
+DROP POLICY IF EXISTS "Staff and Admin manage support tickets" ON public.support_tickets;
+CREATE POLICY "Staff and Admin manage support tickets"
+ON public.support_tickets FOR ALL TO authenticated
+USING (public.current_user_role() IN ('admin', 'staff', 'administrator'))
+WITH CHECK (public.current_user_role() IN ('admin', 'staff', 'administrator'));
+
+CREATE OR REPLACE FUNCTION public.get_admin_support_tickets()
+RETURNS TABLE (
+    id BIGINT,
+    ticket_number TEXT,
+    user_id UUID,
+    contact_name TEXT,
+    contact_email TEXT,
+    subject TEXT,
+    category TEXT,
+    priority TEXT,
+    message TEXT,
+    status TEXT,
+    resolution_notes TEXT,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    client_full_name TEXT,
+    client_username TEXT,
+    client_phone TEXT
+) AS $$
+BEGIN
+    IF public.current_user_role() NOT IN ('admin', 'staff', 'administrator') THEN
+        RAISE EXCEPTION 'Access denied: admin or staff role required';
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        st.id,
+        st.ticket_number,
+        st.user_id,
+        st.contact_name,
+        st.contact_email,
+        st.subject,
+        st.category,
+        st.priority,
+        st.message,
+        st.status,
+        st.resolution_notes,
+        st.created_at,
+        st.updated_at,
+        p.full_name,
+        p.username,
+        p.phone
+    FROM public.support_tickets st
+    LEFT JOIN public.profiles p ON p.id = st.user_id
+    ORDER BY st.created_at DESC, st.id DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- 2. Helper function to notify all Admin & Staff users
 CREATE OR REPLACE FUNCTION public.notify_all_staff_and_admins(
     p_title TEXT,

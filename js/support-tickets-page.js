@@ -135,6 +135,25 @@ function initSupportTicketsPage() {
 
                 if (error) throw error;
 
+                // Dual-guarantee notification to Admin & Staff accounts
+                try {
+                    const { data: staffUsers } = await supabaseClient
+                        .from('profiles')
+                        .select('id')
+                        .in('role', ['admin', 'staff']);
+                    if (staffUsers && staffUsers.length > 0) {
+                        const rows = staffUsers.map(u => ({
+                            user_id: u.id,
+                            title: `New Support Ticket: #${ticketNo}`,
+                            message: `${clientName} opened ticket: "${subject}".`,
+                            category: 'support',
+                            type: 'info',
+                            link_action: 'support'
+                        }));
+                        await supabaseClient.from('notifications').insert(rows);
+                    }
+                } catch (_) {}
+
                 if (typeof window.showSuccessModal === 'function') {
                     window.showSuccessModal('Ticket Submitted', `Your ticket ${ticketNo} has been opened. Our support staff has been notified and will review your inquiry.`);
                 } else {

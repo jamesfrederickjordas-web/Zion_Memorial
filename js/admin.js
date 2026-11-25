@@ -81,8 +81,8 @@ function scheduleAdminAutoRefresh() {
             if (typeof loadAdminMaintenanceTable === 'function') {
                 await loadAdminMaintenanceTable();
             }
-            if (typeof loadAdminTicketsTable === 'function' && document.getElementById('viewTickets')?.style.display !== 'none') {
-                await loadAdminTicketsTable();
+            if (typeof loadAdminSupportTicketsTable === 'function') {
+                await loadAdminSupportTicketsTable();
             }
         } catch (err) {
             console.warn('Admin auto-refresh notice:', err);
@@ -163,6 +163,9 @@ function setupAdminRealtimeAutoSync() {
         loadAdminNotifications();
         if (document.getElementById('viewMaintenance')?.style.display !== 'none' && typeof loadAdminMaintenanceTable === 'function') {
             loadAdminMaintenanceTable();
+        }
+        if (document.getElementById('viewSupport')?.style.display !== 'none' && typeof loadAdminSupportTicketsTable === 'function') {
+            loadAdminSupportTicketsTable();
         }
     }, 20000);
 }
@@ -9501,8 +9504,29 @@ async function loadAdminSupportTicketsTable() {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (ticketsErr) throw ticketsErr;
-        tickets = rawTickets || [];
+        if (!ticketsErr && rawTickets && rawTickets.length > 0) {
+            tickets = rawTickets;
+        } else {
+            try {
+                const { data: rpcTickets, error: rpcErr } = await supabaseClient.rpc('get_admin_support_tickets');
+                if (!rpcErr && Array.isArray(rpcTickets)) {
+                    tickets = rpcTickets.map(t => ({
+                        ...t,
+                        profiles: (t.client_full_name || t.client_username) ? {
+                            id: t.user_id,
+                            full_name: t.client_full_name,
+                            username: t.client_username,
+                            phone: t.client_phone
+                        } : null
+                    }));
+                } else if (ticketsErr) {
+                    throw ticketsErr;
+                }
+            } catch (rpcCatchErr) {
+                if (ticketsErr) throw ticketsErr;
+                console.warn('Support tickets RPC fallback notice:', rpcCatchErr);
+            }
+        }
 
         const userIds = [...new Set(tickets.map(t => t.user_id).filter(Boolean))];
         if (userIds.length > 0) {
