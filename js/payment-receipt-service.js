@@ -1745,11 +1745,60 @@ function renderReservationChecksPanel() {
                     <strong style="color: #0f172a; font-size: 0.92rem;">Credit / Debit Card via Xendit</strong>
                     <span style="font-size: 0.72rem; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 4px;">VISA / MASTERCARD / JCB</span>
                 </div>
-                <p style="margin: 0; font-size: 0.82rem; color: #475569; line-height: 1.45;">
-                    Upon clicking <strong>Confirm &amp; Submit Reservation</strong>, you will be redirected to Xendit&rsquo;s secure card checkout page to complete your payment of <strong>${formattedAmt}</strong>.
+                <p style="margin: 0 0 12px 0; font-size: 0.82rem; color: #475569; line-height: 1.45;">
+                    Upon clicking <strong>Confirm &amp; Submit Reservation</strong>, you will be redirected to Xendit&rsquo;s secure card checkout page to complete your payment of <strong>${formattedAmt}</strong>, or you may attach a screenshot of your card/bank payment confirmation below.
                 </p>
+                <div style="margin-bottom: 10px;">
+                    <label for="zmgCardRefNumber" style="display: block; font-size: 0.78rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">Card / Bank Transaction Reference (Optional if redirecting to Xendit)</label>
+                    <input type="text" id="zmgCardRefNumber" class="form-input" placeholder="e.g. XENDIT-REF-123456" style="width: 100%; font-size: 0.84rem; padding: 8px 10px;">
+                </div>
+                <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 12px 14px;">
+                    <label for="zmgCardReceiptUpload" style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e40af; margin-bottom: 4px;">
+                        Upload Card / Bank Payment Screenshot (Optional)
+                    </label>
+                    <span style="display: block; font-size: 0.74rem; color: #475569; margin-bottom: 8px;">
+                        Attach a screenshot of your card or bank confirmation receipt for Admin verification.
+                    </span>
+                    <input type="file" id="zmgCardReceiptUpload" accept="image/*" class="form-input" style="width: 100%; font-size: 0.82rem; padding: 8px; background: #ffffff; border: 1.5px dashed #3b82f6; border-radius: 4px;">
+                    <div id="zmgCardReceiptThumbBox" style="display: none; margin-top: 8px; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 6px 10px;">
+                        <img id="zmgCardReceiptThumb" src="" alt="Proof Thumbnail" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; border: 1px solid #cbd5e1;">
+                        <div style="flex: 1; overflow: hidden;">
+                            <span id="zmgCardReceiptFileName" style="font-size: 0.78rem; color: #166534; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                            <span style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Screenshot attached &bull; Ready for verification</span>
+                        </div>
+                        <button type="button" id="zmgRemoveCardReceiptProofBtn" style="background: transparent; border: none; color: #dc2626; font-size: 0.76rem; font-weight: 700; cursor: pointer; padding: 4px 8px;">Remove</button>
+                    </div>
+                </div>
             </div>
         `;
+
+        const cardProofInput = document.getElementById('zmgCardReceiptUpload');
+        const cardThumbBox = document.getElementById('zmgCardReceiptThumbBox');
+        const cardThumbImg = document.getElementById('zmgCardReceiptThumb');
+        const cardFileNameEl = document.getElementById('zmgCardReceiptFileName');
+        const cardRemoveBtn = document.getElementById('zmgRemoveCardReceiptProofBtn');
+
+        cardProofInput?.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const res = await zmgGcashQr.readAndCompressImageFile(file, 800, 800, 0.85);
+                stagedGcashReceiptProofUrl = res.dataUrl;
+                window.stagedGcashReceiptProofUrl = res.dataUrl;
+                if (cardThumbImg) cardThumbImg.src = res.dataUrl;
+                if (cardFileNameEl) cardFileNameEl.textContent = file.name;
+                if (cardThumbBox) cardThumbBox.style.display = 'flex';
+            } catch (err) {
+                alert('Could not attach receipt screenshot: ' + err.message);
+            }
+        });
+
+        cardRemoveBtn?.addEventListener('click', () => {
+            stagedGcashReceiptProofUrl = null;
+            window.stagedGcashReceiptProofUrl = null;
+            if (cardProofInput) cardProofInput.value = '';
+            if (cardThumbBox) cardThumbBox.style.display = 'none';
+        });
         return;
     }
 

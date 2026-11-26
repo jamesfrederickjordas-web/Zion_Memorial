@@ -1619,10 +1619,11 @@ async function submitPlotReservation(form) {
         const balanceRecorded = isImmediatelyPaid ? Math.max(0, price - amountNow) : price;
         const monthly = term > 0 ? (submitPricing ? submitPricing.monthlyPayment : (balanceRecorded / term)) : 0;
         const isCard = paymentChannel === 'Card';
+        const cardRef = (document.getElementById('zmgCardRefNumber')?.value || '').trim();
         const paymentTag = isImmediatelyPaid ? 'PAID' : (isCard || Boolean(attachedProof) || Boolean(gcashQrRef) || Boolean(manualRef) ? 'PENDING VERIFICATION' : 'UNPAID');
         const paymentReference = isCash
             ? (counterRef || manualRef || `CSH-COUNTER-${Date.now().toString(36).toUpperCase()}`)
-            : (isCard ? `XENDIT-CARD-${Date.now().toString(36).toUpperCase()}` : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`));
+            : (isCard ? (cardRef || `XENDIT-CARD-${Date.now().toString(36).toUpperCase()}`) : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`));
         const resNumber = `RES-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const deceasedTagNote = fullDeceasedName ? ` [Interred: ${fullDeceasedName}${deceasedDeathDate ? ` (DOD: ${deceasedDeathDate})` : ''}]` : '';
         const finalNotes = `[Channel: ${paymentChannel}] [Receipt Tag: ${paymentTag}] [Ref: ${paymentReference}]${deceasedTagNote} ${notes}`.trim();
