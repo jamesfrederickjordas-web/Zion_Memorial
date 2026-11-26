@@ -1142,7 +1142,7 @@ function injectPaymentAndReceiptUI() {
         const bankModal = document.createElement('div');
         bankModal.id = 'zmgBankPaymentModal';
         bankModal.className = 'zmg-receipt-modal-overlay';
-        bankModal.innerHTML = ` <div class="zmg-receipt-card" style="max-width: 540px;" role="dialog" aria-modal="true"> <div class="zmg-receipt-header" style="background: #2d4a36;"> <div> <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Bank Transfer Checkout <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius: 4px;">ONLINE BANKING</span> </h3> <span style="font-size:0.84rem; opacity:0.9;">Direct Online Banking &amp; Bank Transfer</span> </div> <button type="button" id="zmgCloseBankModalBtn" style="background:transparent;border:none;color:#fff;font-size:1.8rem;cursor:pointer;">&times;</button> </div> <div class="zmg-receipt-body"> <!-- Payment Target Info --> <div style="padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center;"> <span id="zmgBpmPurpose" style="font-size:0.84rem; font-weight:700; color:#166534; text-transform:uppercase;">Monthly Installment</span> <strong id="zmgBpmAmount" style="font-size:1.25rem; color:#15803d;">₱ 0.00</strong> </div> <div id="zmgBpmPlotInfo" style="font-size:0.85rem; color:#374151; margin-top:4px;">Plot SPB54 • Area 2</div> </div> <!-- Bank Selection --> <div class="zmg-setup-field" style="margin-bottom: 12px;"> <label for="zmgBpmBankSelect" style="font-weight: 700; color: #0f172a;">Select Bank Account *</label> <select id="zmgBpmBankSelect" class="form-select" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-weight: 600; width: 100%;"> ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS.map(b => `<option value="${b.id}" data-code="${b.code}" data-acc="${b.accountNo}" data-branch="${b.branch}" data-type="${b.type}">${b.name}</option>`).join('')} </select> </div> <!-- Account Details Box --> <div id="zmgBpmAccountBox" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 0.86rem; color: #334155;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <span style="font-weight:700; color:#0f172a;">Beneficiary: ${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</span> <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;"> Copy Acc</button> </div> <div>Account No: <strong id="zmgBpmAccNum" style="font-family:monospace; color:#0369a1; font-size:0.95rem;">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].accountNo}</strong></div> <div style="font-size:0.8rem; color:#64748b;" id="zmgBpmBranch">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].branch} &bull; ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].type}</div> </div> <!-- Test Reference --> <div class="zmg-setup-field" style="margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <label for="zmgBpmRefNumber" style="font-weight: 700; color: #0f172a; margin:0;">Generated Test Reference Number</label> <button type="button" id="zmgBpmRegenRefBtn" style="background:transparent; border:none; color:#0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;">&#8635; Regenerate</button> </div> <input type="text" id="zmgBpmRefNumber" readonly style="background: #f1f5f9; font-family: monospace; font-weight: 700; color: #0369a1; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; width: 100%;"> </div> <div style="padding: 10px 12px; background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 8px; font-size: 0.82rem; color: #1e40af; margin-bottom: 14px; line-height: 1.45;"> <strong>Sandbox Simulation:</strong> No actual money is debited from your bank account. Authorizing this payment will mark the installment/balance as PAID in the database, update your ledger, and issue an official PAID receipt. </div> </div> <div class="zmg-receipt-footer" style="display:flex; gap:10px;"> <button type="button" class="zmg-btn-receipt secondary" id="zmgCancelBankModalBtn">Cancel</button> <button type="button" class="zmg-btn-receipt primary" id="zmgAuthorizeBankModalBtn" style="background: #047857; color: #ffffff;">Authorize &amp; Pay (Test Mode)</button> </div> </div> `;
+        bankModal.innerHTML = ` <div class="zmg-receipt-card" style="max-width: 540px;" role="dialog" aria-modal="true"> <div class="zmg-receipt-header" style="background: #2d4a36;"> <div> <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Bank Transfer Checkout <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius: 4px;">ONLINE BANKING</span> </h3> <span style="font-size:0.84rem; opacity:0.9;">Direct Online Banking &amp; Bank Transfer</span> </div> <button type="button" id="zmgCloseBankModalBtn" style="background:transparent;border:none;color:#fff;font-size:1.8rem;cursor:pointer;">&times;</button> </div> <div class="zmg-receipt-body"> <!-- Payment Target Info --> <div style="padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center;"> <span id="zmgBpmPurpose" style="font-size:0.84rem; font-weight:700; color:#166534; text-transform:uppercase;">Monthly Installment</span> <strong id="zmgBpmAmount" style="font-size:1.25rem; color:#15803d;">₱ 0.00</strong> </div> <div id="zmgBpmPlotInfo" style="font-size:0.85rem; color:#374151; margin-top:4px;">Plot SPB54 • Area 2</div> </div> <!-- Bank Selection --> <div class="zmg-setup-field" style="margin-bottom: 12px;"> <label for="zmgBpmBankSelect" style="font-weight: 700; color: #0f172a;">Select Bank Account *</label> <select id="zmgBpmBankSelect" class="form-select" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-weight: 600; width: 100%;"> ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS.map(b => `<option value="${b.id}" data-code="${b.code}" data-acc="${b.accountNo}" data-branch="${b.branch}" data-type="${b.type}">${b.name}</option>`).join('')} </select> </div> <!-- Account Details Box --> <div id="zmgBpmAccountBox" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 0.86rem; color: #334155;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <span style="font-weight:700; color:#0f172a;">Beneficiary: ${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</span> <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;"> Copy Acc</button> </div> <div>Account No: <strong id="zmgBpmAccNum" style="font-family:monospace; color:#0369a1; font-size:0.95rem;">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].accountNo}</strong></div> <div style="font-size:0.8rem; color:#64748b;" id="zmgBpmBranch">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].branch} &bull; ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].type}</div> </div> <!-- Reference & Proof --> <div class="zmg-setup-field" style="margin-bottom: 12px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <label for="zmgBpmRefNumber" style="font-weight: 700; color: #0f172a; margin:0;">Bank Reference Number *</label> <button type="button" id="zmgBpmRegenRefBtn" style="background:transparent; border:none; color:#0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;">&#8635; Generate Ref</button> </div> <input type="text" id="zmgBpmRefNumber" style="background: #ffffff; font-family: monospace; font-weight: 700; color: #0369a1; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; width: 100%;" placeholder="Enter bank transaction reference"> </div> <div class="zmg-setup-field" style="margin-bottom: 14px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 10px 12px;"> <label for="zmgBpmProofInput" style="display: block; font-size: 0.82rem; font-weight: 700; color: #1e40af; margin-bottom: 4px;">Attach Screenshot of Bank Payment Proof</label> <input type="file" id="zmgBpmProofInput" accept="image/*" style="width: 100%; font-size: 0.82rem; padding: 6px; background: #ffffff; border: 1.5px dashed #3b82f6; border-radius: 6px;"> <div id="zmgBpmProofPreviewBox" style="display: none; margin-top: 8px; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 10px;"> <img id="zmgBpmProofThumb" src="" alt="Bank Proof" style="width: 44px; height: 44px; object-fit: contain; border-radius: 4px; border: 1px solid #cbd5e1;"> <span id="zmgBpmProofFileName" style="font-size: 0.78rem; color: #166534; font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span> </div> </div> </div> <div class="zmg-receipt-footer" style="display:flex; gap:10px;"> <button type="button" class="zmg-btn-receipt secondary" id="zmgCancelBankModalBtn">Cancel</button> <button type="button" class="zmg-btn-receipt primary" id="zmgAuthorizeBankModalBtn" style="background: #047857; color: #ffffff;">Authorize &amp; Pay</button> </div> </div> `;
         document.body.appendChild(bankModal);
 
         const closeBankModal = () => bankModal.classList.remove('active');
@@ -2773,10 +2773,36 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
         if (bRef) bRef.value = 'BNK-TEST-' + code + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     }
 
+    const bankProofInput = document.getElementById('zmgBpmProofInput');
+    const bankProofBox = document.getElementById('zmgBpmProofPreviewBox');
+    const bankProofThumb = document.getElementById('zmgBpmProofThumb');
+    const bankProofName = document.getElementById('zmgBpmProofFileName');
+    if (bankProofInput) bankProofInput.value = '';
+    if (bankProofBox) bankProofBox.style.display = 'none';
+    let localBankProofDataUrl = null;
+    if (bankProofInput) {
+        bankProofInput.onchange = async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const resImg = await zmgGcashQr.readAndCompressImageFile(file, 800, 800, 0.85);
+                localBankProofDataUrl = resImg.dataUrl;
+                if (bankProofThumb) bankProofThumb.src = resImg.dataUrl;
+                if (bankProofName) bankProofName.textContent = file.name;
+                if (bankProofBox) bankProofBox.style.display = 'flex';
+            } catch (_) {}
+        };
+    }
+
     if (authBtn) {
         authBtn.disabled = false;
         authBtn.innerHTML = `Authorize &amp; Pay ${peso(amount)}`;
         authBtn.onclick = async () => {
+            if (!localBankProofDataUrl) {
+                alert('Please attach a screenshot of your bank transfer receipt/proof before continuing.');
+                bankProofInput?.focus();
+                return;
+            }
             authBtn.disabled = true;
             authBtn.innerHTML = 'Processing Payment...';
 
@@ -2837,7 +2863,15 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                 }
             }
 
-            // 3. Direct DB fallback
+            // 3. Direct DB fallback (or attach screenshot URL if RPC/Edge created the payment row)
+            if (handled && localBankProofDataUrl && typeof supabaseClient !== 'undefined') {
+                try {
+                    await supabaseClient
+                        .from('payments')
+                        .update({ receipt_url: localBankProofDataUrl })
+                        .eq('payment_reference', refNumber);
+                } catch (_) {}
+            }
             if (!handled && typeof supabaseClient !== 'undefined') {
                 const nowIso = new Date().toISOString();
                 try {
@@ -2849,6 +2883,7 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                         payment_type: paymentType,
                         payment_method: 'Bank Transfer',
                         status: 'COMPLETED',
+                        receipt_url: localBankProofDataUrl || null,
                         paid_at: nowIso
                     }]);
 
