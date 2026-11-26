@@ -7747,17 +7747,29 @@ async function executeDisasterRecoveryRestore() {
 
             log(`Syncing table '${tableName}' (${rows.length} records)...`);
             try {
-                // Upsert in batches of 100 to avoid request size limits
+                // Upsert in batches of 100; for memorial_records use ignoreDuplicates so capacity triggers don't block existing rows
                 const chunkSize = 100;
+                const useIgnoreDupes = (tableName === 'memorial_records');
+                let tableRestored = 0;
                 for (let i = 0; i < rows.length; i += chunkSize) {
                     const chunk = rows.slice(i, i + chunkSize);
                     const { error } = await supabaseClient
                         .from(tableName)
-                        .upsert(chunk, { onConflict: 'id' });
-                    if (error) throw error;
+                        .upsert(chunk, { onConflict: 'id', ignoreDuplicates: useIgnoreDupes });
+                    if (!error) {
+                        tableRestored += chunk.length;
+                    } else {
+                        // Row-by-row fallback so one conflicting row doesn't abort restoring deleted rows
+                        for (const singleRow of chunk) {
+                            const { error: rowErr } = await supabaseClient
+                                .from(tableName)
+                                .upsert([singleRow], { onConflict: 'id', ignoreDuplicates: true });
+                            if (!rowErr) tableRestored++;
+                        }
+                    }
                 }
-                log(`Table '${tableName}' restored successfully (${rows.length} records).`);
-                restoredCount += rows.length;
+                log(`Table '${tableName}' restored successfully (${tableRestored} records).`);
+                restoredCount += tableRestored;
             } catch (err) {
                 log(`Table '${tableName}' notice: ${err.message}`, true);
             }
