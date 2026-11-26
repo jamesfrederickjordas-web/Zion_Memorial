@@ -2870,45 +2870,48 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
 
             let handled = false;
 
-            // 1. Try Edge Function bank_test_pay
-            try {
-                const edgeRes = await zmgGcashApi('bank_test_pay', {
-                    reservation_id: res.id,
-                    schedule_id: schedule?.id || null,
-                    amount: payAmt,
-                    bank_name: bankName,
-                    reference: refNumber,
-                    payment_type: paymentType
-                });
-                if (edgeRes?.status === 'SUCCEEDED') {
-                    handled = true;
-                    newTotalPaid = Number(edgeRes.reservation?.total_paid ?? newTotalPaid);
-                    newBalance = Number(edgeRes.reservation?.balance ?? newBalance);
-                    newStatus = edgeRes.reservation?.status ?? newStatus;
-                }
-            } catch (edgeErr) {
-                console.warn('Edge Function bank_test_pay fallback:', edgeErr.message);
-            }
-
-            // 2. Try Supabase RPC
-            if (!handled && typeof supabaseClient !== 'undefined') {
+            // Only use Edge/RPC shortcuts when no screenshot needs to be inserted into payments.receipt_url
+            if (!localBankProofDataUrl) {
+                // 1. Try Edge Function bank_test_pay
                 try {
-                    const { data: rpcRes, error: rpcErr } = await supabaseClient.rpc('zmg_record_bank_payment_test', {
-                        p_reservation_id: res.id,
-                        p_schedule_id: schedule?.id || null,
-                        p_amount: payAmt,
-                        p_bank_name: bankName,
-                        p_payment_ref: refNumber,
-                        p_payment_type: paymentType
+                    const edgeRes = await zmgGcashApi('bank_test_pay', {
+                        reservation_id: res.id,
+                        schedule_id: schedule?.id || null,
+                        amount: payAmt,
+                        bank_name: bankName,
+                        reference: refNumber,
+                        payment_type: paymentType
                     });
-                    if (!rpcErr && rpcRes?.success) {
+                    if (edgeRes?.status === 'SUCCEEDED') {
                         handled = true;
-                        newTotalPaid = Number(rpcRes.total_paid ?? newTotalPaid);
-                        newBalance = Number(rpcRes.balance ?? newBalance);
-                        newStatus = rpcRes.status ?? newStatus;
+                        newTotalPaid = Number(edgeRes.reservation?.total_paid ?? newTotalPaid);
+                        newBalance = Number(edgeRes.reservation?.balance ?? newBalance);
+                        newStatus = edgeRes.reservation?.status ?? newStatus;
                     }
-                } catch (rpcEx) {
-                    console.warn('RPC bank payment fallback:', rpcEx.message);
+                } catch (edgeErr) {
+                    console.warn('Edge Function bank_test_pay fallback:', edgeErr.message);
+                }
+
+                // 2. Try Supabase RPC
+                if (!handled && typeof supabaseClient !== 'undefined') {
+                    try {
+                        const { data: rpcRes, error: rpcErr } = await supabaseClient.rpc('zmg_record_bank_payment_test', {
+                            p_reservation_id: res.id,
+                            p_schedule_id: schedule?.id || null,
+                            p_amount: payAmt,
+                            p_bank_name: bankName,
+                            p_payment_ref: refNumber,
+                            p_payment_type: paymentType
+                        });
+                        if (!rpcErr && rpcRes?.success) {
+                            handled = true;
+                            newTotalPaid = Number(rpcRes.total_paid ?? newTotalPaid);
+                            newBalance = Number(rpcRes.balance ?? newBalance);
+                            newStatus = rpcRes.status ?? newStatus;
+                        }
+                    } catch (rpcEx) {
+                        console.warn('RPC bank payment fallback:', rpcEx.message);
+                    }
                 }
             }
 

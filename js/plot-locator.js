@@ -1651,7 +1651,7 @@ async function submitPlotReservation(form) {
         if (resError) throw resError;
 
         // Record payment in payments table
-        await supabaseClient.from('payments').insert([{
+        const { error: payInsErr } = await supabaseClient.from('payments').insert([{
             reservation_id: newReservation.id,
             payment_reference: manualRef || paymentReference,
             amount: amountNow,
@@ -1662,6 +1662,7 @@ async function submitPlotReservation(form) {
             paid_at: isImmediatelyPaid ? new Date().toISOString() : null,
             due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }]);
+        if (payInsErr) console.warn('Payment record insert notice:', payInsErr.message);
 
         if (isCard && typeof window.startXenditCardCheckout === 'function') {
             const xenditRes = await window.startXenditCardCheckout({
