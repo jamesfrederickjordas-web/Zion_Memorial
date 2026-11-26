@@ -5353,10 +5353,28 @@ async function deletePlotDirectly(plot) {
     });
 
     try {
-        await supabaseClient
-            .from('memorial_spaces')
-            .delete()
-            .eq('id', plot.id);
+        let delErr = null;
+        if (plot.id && !String(plot.id).startsWith('local')) {
+            const res = await supabaseClient
+                .from('memorial_spaces')
+                .delete()
+                .eq('id', plot.id);
+            delErr = res.error;
+        }
+        if (!delErr && plot.plot_identifier) {
+            const res2 = await supabaseClient
+                .from('memorial_spaces')
+                .delete()
+                .eq('plot_identifier', plot.plot_identifier);
+            if (res2.error) delErr = res2.error;
+        }
+        if (delErr) {
+            console.warn('Could not delete plot from DB:', delErr);
+            if (typeof showNotification === 'function') {
+                showNotification('Cannot Delete Plot', `${plot.plot_identifier} has an existing reservation or record in the database.`, 'warning');
+            }
+            return;
+        }
     } catch (err) {
         console.warn('Deleted locally:', err);
     }
@@ -5939,10 +5957,28 @@ async function deleteActivePlot() {
     });
 
     try {
-        await supabaseClient
-            .from('memorial_spaces')
-            .delete()
-            .eq('id', plot.id);
+        let delErr = null;
+        if (plot.id && !String(plot.id).startsWith('local')) {
+            const res = await supabaseClient
+                .from('memorial_spaces')
+                .delete()
+                .eq('id', plot.id);
+            delErr = res.error;
+        }
+        if (!delErr && plot.plot_identifier) {
+            const res2 = await supabaseClient
+                .from('memorial_spaces')
+                .delete()
+                .eq('plot_identifier', plot.plot_identifier);
+            if (res2.error) delErr = res2.error;
+        }
+        if (delErr) {
+            console.warn('Could not delete plot from DB:', delErr);
+            if (typeof showNotification === 'function') {
+                showNotification('Cannot Delete Plot', `${plot.plot_identifier} has an existing reservation or record in the database.`, 'warning');
+            }
+            return;
+        }
     } catch (err) {
         console.warn('Deleted locally:', err);
     }
