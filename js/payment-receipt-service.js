@@ -1142,7 +1142,7 @@ function injectPaymentAndReceiptUI() {
         const bankModal = document.createElement('div');
         bankModal.id = 'zmgBankPaymentModal';
         bankModal.className = 'zmg-receipt-modal-overlay';
-        bankModal.innerHTML = ` <div class="zmg-receipt-card" style="max-width: 540px;" role="dialog" aria-modal="true"> <div class="zmg-receipt-header" style="background: #2d4a36;"> <div> <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Bank Payment Simulator <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius: 4px;">TEST MODE</span> </h3> <span style="font-size:0.84rem; opacity:0.9;">Direct Online Banking &amp; Bank Transfer</span> </div> <button type="button" id="zmgCloseBankModalBtn" style="background:transparent;border:none;color:#fff;font-size:1.8rem;cursor:pointer;">&times;</button> </div> <div class="zmg-receipt-body"> <!-- Payment Target Info --> <div style="padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center;"> <span id="zmgBpmPurpose" style="font-size:0.84rem; font-weight:700; color:#166534; text-transform:uppercase;">Monthly Installment</span> <strong id="zmgBpmAmount" style="font-size:1.25rem; color:#15803d;">₱ 0.00</strong> </div> <div id="zmgBpmPlotInfo" style="font-size:0.85rem; color:#374151; margin-top:4px;">Plot SPB54 • Area 2</div> </div> <!-- Bank Selection --> <div class="zmg-setup-field" style="margin-bottom: 12px;"> <label for="zmgBpmBankSelect" style="font-weight: 700; color: #0f172a;">Select Bank Account *</label> <select id="zmgBpmBankSelect" class="form-select" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-weight: 600; width: 100%;"> ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS.map(b => `<option value="${b.id}" data-code="${b.code}" data-acc="${b.accountNo}" data-branch="${b.branch}" data-type="${b.type}">${b.name}</option>`).join('')} </select> </div> <!-- Account Details Box --> <div id="zmgBpmAccountBox" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 0.86rem; color: #334155;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <span style="font-weight:700; color:#0f172a;">Beneficiary: ${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</span> <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;"> Copy Acc</button> </div> <div>Account No: <strong id="zmgBpmAccNum" style="font-family:monospace; color:#0369a1; font-size:0.95rem;">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].accountNo}</strong></div> <div style="font-size:0.8rem; color:#64748b;" id="zmgBpmBranch">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].branch} &bull; ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].type}</div> </div> <!-- Test Reference --> <div class="zmg-setup-field" style="margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <label for="zmgBpmRefNumber" style="font-weight: 700; color: #0f172a; margin:0;">Generated Test Reference Number</label> <button type="button" id="zmgBpmRegenRefBtn" style="background:transparent; border:none; color:#0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;">&#8635; Regenerate</button> </div> <input type="text" id="zmgBpmRefNumber" readonly style="background: #f1f5f9; font-family: monospace; font-weight: 700; color: #0369a1; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; width: 100%;"> </div> <div style="padding: 10px 12px; background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 8px; font-size: 0.82rem; color: #1e40af; margin-bottom: 14px; line-height: 1.45;"> <strong>Sandbox Simulation:</strong> No actual money is debited from your bank account. Authorizing this payment will mark the installment/balance as PAID in the database, update your ledger, and issue an official PAID receipt. </div> </div> <div class="zmg-receipt-footer" style="display:flex; gap:10px;"> <button type="button" class="zmg-btn-receipt secondary" id="zmgCancelBankModalBtn">Cancel</button> <button type="button" class="zmg-btn-receipt primary" id="zmgAuthorizeBankModalBtn" style="background: #047857; color: #ffffff;">Authorize &amp; Pay (Test Mode)</button> </div> </div> `;
+        bankModal.innerHTML = ` <div class="zmg-receipt-card" style="max-width: 540px;" role="dialog" aria-modal="true"> <div class="zmg-receipt-header" style="background: #2d4a36;"> <div> <h3 style="margin:0; font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;"> Bank Transfer Checkout <span style="font-size:0.7rem; background:#10b981; color:#fff; padding:2px 8px; border-radius: 4px;">ONLINE BANKING</span> </h3> <span style="font-size:0.84rem; opacity:0.9;">Direct Online Banking &amp; Bank Transfer</span> </div> <button type="button" id="zmgCloseBankModalBtn" style="background:transparent;border:none;color:#fff;font-size:1.8rem;cursor:pointer;">&times;</button> </div> <div class="zmg-receipt-body"> <!-- Payment Target Info --> <div style="padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center;"> <span id="zmgBpmPurpose" style="font-size:0.84rem; font-weight:700; color:#166534; text-transform:uppercase;">Monthly Installment</span> <strong id="zmgBpmAmount" style="font-size:1.25rem; color:#15803d;">₱ 0.00</strong> </div> <div id="zmgBpmPlotInfo" style="font-size:0.85rem; color:#374151; margin-top:4px;">Plot SPB54 • Area 2</div> </div> <!-- Bank Selection --> <div class="zmg-setup-field" style="margin-bottom: 12px;"> <label for="zmgBpmBankSelect" style="font-weight: 700; color: #0f172a;">Select Bank Account *</label> <select id="zmgBpmBankSelect" class="form-select" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 12px; font-weight: 600; width: 100%;"> ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS.map(b => `<option value="${b.id}" data-code="${b.code}" data-acc="${b.accountNo}" data-branch="${b.branch}" data-type="${b.type}">${b.name}</option>`).join('')} </select> </div> <!-- Account Details Box --> <div id="zmgBpmAccountBox" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 0.86rem; color: #334155;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <span style="font-weight:700; color:#0f172a;">Beneficiary: ${ZMG_PAYMENT_CONFIG.bank.BENEFICIARY_NAME}</span> <button type="button" id="zmgBpmCopyBtn" style="background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer;"> Copy Acc</button> </div> <div>Account No: <strong id="zmgBpmAccNum" style="font-family:monospace; color:#0369a1; font-size:0.95rem;">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].accountNo}</strong></div> <div style="font-size:0.8rem; color:#64748b;" id="zmgBpmBranch">${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].branch} &bull; ${ZMG_PAYMENT_CONFIG.bank.PARTNER_BANKS[0].type}</div> </div> <!-- Test Reference --> <div class="zmg-setup-field" style="margin-bottom: 14px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"> <label for="zmgBpmRefNumber" style="font-weight: 700; color: #0f172a; margin:0;">Generated Test Reference Number</label> <button type="button" id="zmgBpmRegenRefBtn" style="background:transparent; border:none; color:#0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;">&#8635; Regenerate</button> </div> <input type="text" id="zmgBpmRefNumber" readonly style="background: #f1f5f9; font-family: monospace; font-weight: 700; color: #0369a1; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; width: 100%;"> </div> <div style="padding: 10px 12px; background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 8px; font-size: 0.82rem; color: #1e40af; margin-bottom: 14px; line-height: 1.45;"> <strong>Sandbox Simulation:</strong> No actual money is debited from your bank account. Authorizing this payment will mark the installment/balance as PAID in the database, update your ledger, and issue an official PAID receipt. </div> </div> <div class="zmg-receipt-footer" style="display:flex; gap:10px;"> <button type="button" class="zmg-btn-receipt secondary" id="zmgCancelBankModalBtn">Cancel</button> <button type="button" class="zmg-btn-receipt primary" id="zmgAuthorizeBankModalBtn" style="background: #047857; color: #ffffff;">Authorize &amp; Pay (Test Mode)</button> </div> </div> `;
         document.body.appendChild(bankModal);
 
         const closeBankModal = () => bankModal.classList.remove('active');
@@ -2512,6 +2512,35 @@ window.executeAutomatedGcashMonthlyInstallment = executeAutomatedGcashMonthlyIns
 window.checkAndRunAutomatedInstallmentNotices = checkAndRunAutomatedInstallmentNotices;
 
 
+async function notifyAdminsClientPayment({ res, amount, paymentType, paymentMethod, reference, clientName, newBalance }) {
+    if (typeof supabaseClient === 'undefined') return;
+    try {
+        const { data: staffUsers } = await supabaseClient
+            .from('profiles')
+            .select('id, role');
+        const targets = (staffUsers || []).filter(u => {
+            const r = String(u.role || '').toLowerCase();
+            return r === 'admin' || r === 'staff' || r === 'administrator';
+        });
+        if (targets.length === 0) return;
+        const pesoAmt = '₱' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const plotCode = res?.memorial_spaces?.plot_identifier || res?.reservation_number || `RES-${res?.id || ''}`;
+        const isFull = Number(newBalance) <= 0 || paymentType === 'FULL_PAYMENT';
+        const title = isFull ? `Full Payment Received: ${pesoAmt}` : `Client Payment Received: ${pesoAmt}`;
+        const message = `${clientName || 'Client'} paid ${pesoAmt} via ${paymentMethod || 'Online Payment'} for ${plotCode} (Ref: ${reference || 'N/A'}).${Number(newBalance) <= 0 ? ' Balance is now ₱0.00 (Fully Paid).' : ''}`;
+        const rows = targets.map(u => ({
+            user_id: u.id,
+            title,
+            message,
+            category: 'payment',
+            type: 'success',
+            link_action: 'reservations',
+            reference_id: res?.id ? String(res.id) : null
+        }));
+        await supabaseClient.from('notifications').insert(rows);
+    } catch (_) {}
+}
+
 // ==============================================================================
 // GCASH QR CODE PAYMENT MODAL & TRANSACTIONS
 // ==============================================================================
@@ -2588,13 +2617,14 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
                 ? (res.payment_method === 'INSTALLMENT' ? 'DOWN_PAYMENT' : 'FULL_PAYMENT')
                 : (action === 'pay_balance' ? 'FULL_PAYMENT' : 'INSTALLMENT');
 
-            const newTotalPaid = Number(res.total_paid || 0);
-            const newBalance = Number(res.balance ?? res.total_price ?? 0);
-            const newStatus = res.status;
+            const newTotalPaid = Number((Number(res.total_paid || 0) + payAmt).toFixed(2));
+            const newBalance = Number(Math.max(0, Number(res.total_price || 0) - newTotalPaid).toFixed(2));
+            const newStatus = newBalance <= 0 ? 'COMPLETED' : (res.status === 'PENDING' ? 'APPROVED' : res.status);
+            const nowIso = new Date().toISOString();
 
             try {
                 if (typeof supabaseClient !== 'undefined') {
-                    // 1. Insert into public.payments as PENDING until Admin/Staff verifies proof & reference
+                    // 1. Insert into public.payments
                     const { error: payInsErr } = await supabaseClient.from('payments').insert([{
                         reservation_id: res.id,
                         schedule_id: schedule?.id || null,
@@ -2602,17 +2632,35 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
                         amount: payAmt,
                         payment_type: paymentType,
                         payment_method: 'GCash',
-                        status: 'PENDING',
-                        due_date: schedule?.due_date || new Date().toISOString().split('T')[0],
-                        paid_at: null,
+                        status: 'COMPLETED',
+                        due_date: schedule?.due_date || nowIso.split('T')[0],
+                        paid_at: nowIso,
                         receipt_url: localProofDataUrl || null
                     }]);
                     if (payInsErr) throw payInsErr;
+
+                    // 2. Update payment_schedules if applicable
+                    if (schedule?.id) {
+                        await supabaseClient.from('payment_schedules').update({
+                            status: 'PAID',
+                            payment_reference: refVal,
+                            paid_at: nowIso,
+                            updated_at: nowIso
+                        }).eq('id', schedule.id);
+                    }
+
+                    // 3. Update reservation totals & status
+                    await supabaseClient.from('reservations').update({
+                        total_paid: newTotalPaid,
+                        balance: newBalance,
+                        status: newStatus,
+                        updated_at: nowIso
+                    }).eq('id', res.id);
                 }
 
                 modal.classList.remove('active');
 
-                // 4. Fetch User Profile & Issue Receipt
+                // 4. Fetch User Profile, Notify Admin & Issue Receipt
                 let clientName = 'Valued Client';
                 let clientEmail = '';
                 try {
@@ -2623,6 +2671,16 @@ function openGcashQrPaymentModal({ res, schedule, amount, action, onSuccess }) {
                         clientName = prof?.full_name || user.email?.split('@')[0] || 'Valued Client';
                     }
                 } catch (_) {}
+
+                await notifyAdminsClientPayment({
+                    res,
+                    amount: payAmt,
+                    paymentType,
+                    paymentMethod: 'GCash',
+                    reference: refVal,
+                    clientName,
+                    newBalance
+                });
 
                 const receiptData = {
                     paymentTag: 'PAID',
@@ -2717,10 +2775,10 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
 
     if (authBtn) {
         authBtn.disabled = false;
-        authBtn.innerHTML = `Authorize &amp; Pay ${peso(amount)} (Test Mode)`;
+        authBtn.innerHTML = `Authorize &amp; Pay ${peso(amount)}`;
         authBtn.onclick = async () => {
             authBtn.disabled = true;
-            authBtn.innerHTML = 'Authorizing Test Transfer...';
+            authBtn.innerHTML = 'Processing Payment...';
 
             const opt = bSelect?.options[bSelect.selectedIndex];
             const bankName = opt?.text || 'BDO Unibank';
@@ -2779,8 +2837,9 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                 }
             }
 
-            // 3. Direct DB fallback (PENDING until Admin/Staff verifies)
+            // 3. Direct DB fallback
             if (!handled && typeof supabaseClient !== 'undefined') {
+                const nowIso = new Date().toISOString();
                 try {
                     await supabaseClient.from('payments').insert([{
                         reservation_id: res.id,
@@ -2789,9 +2848,25 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                         amount: payAmt,
                         payment_type: paymentType,
                         payment_method: 'Bank Transfer',
-                        status: 'PENDING',
-                        paid_at: null
+                        status: 'COMPLETED',
+                        paid_at: nowIso
                     }]);
+
+                    if (schedule?.id) {
+                        await supabaseClient.from('payment_schedules').update({
+                            status: 'PAID',
+                            payment_reference: refNumber,
+                            paid_at: nowIso,
+                            updated_at: nowIso
+                        }).eq('id', schedule.id);
+                    }
+
+                    await supabaseClient.from('reservations').update({
+                        total_paid: newTotalPaid,
+                        balance: newBalance,
+                        status: newStatus,
+                        updated_at: nowIso
+                    }).eq('id', res.id);
                 } catch (dbErr) {
                     console.error('Direct DB fallback failed:', dbErr);
                 }
@@ -2799,7 +2874,7 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
 
             modal.classList.remove('active');
 
-            // Fetch user profile info for receipt
+            // Fetch user profile info for receipt & notify Admin
             let clientName = 'Valued Client';
             let clientEmail = '';
             try {
@@ -2810,6 +2885,16 @@ function openTestBankPaymentModal({ res, schedule, amount, action, onSuccess }) 
                     clientName = prof?.full_name || prof?.username || user.user_metadata?.full_name || clientEmail.split('@')[0] || 'Valued Client';
                 }
             } catch (_) {}
+
+            await notifyAdminsClientPayment({
+                res,
+                amount: payAmt,
+                paymentType,
+                paymentMethod: `Bank Transfer (${bankName})`,
+                reference: refNumber,
+                clientName,
+                newBalance
+            });
 
             const receiptData = {
                 paymentTag: 'PAID',
