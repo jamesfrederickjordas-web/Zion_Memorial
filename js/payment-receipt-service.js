@@ -1738,6 +1738,21 @@ function renderReservationChecksPanel() {
 
     const linkedAcct = getLinkedGcashAccount();
 
+    if (selectedChannel === 'Card') {
+        panelContainer.innerHTML = `
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+                    <strong style="color: #0f172a; font-size: 0.92rem;">Credit / Debit Card via Xendit</strong>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 4px;">VISA / MASTERCARD / JCB</span>
+                </div>
+                <p style="margin: 0; font-size: 0.82rem; color: #475569; line-height: 1.45;">
+                    Upon clicking <strong>Confirm &amp; Submit Reservation</strong>, you will be redirected to Xendit&rsquo;s secure card checkout page to complete your payment of <strong>${formattedAmt}</strong>.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
     if (selectedChannel === 'GCash') {
         const qrConfig = (typeof zmgGcashQr !== 'undefined' ? zmgGcashQr.getConfig() : null) || ZMG_PAYMENT_CONFIG.gcash;
 
@@ -2465,6 +2480,27 @@ window.saveLinkedGcashAccount = saveLinkedGcashAccount;
 window.unlinkGcashAccount = unlinkGcashAccount;
 window.switchBookingModalTab = switchBookingModalTab;
 window.validateGcashSetupOrRedirect = validateGcashSetupOrRedirect;
+window.startXenditCardCheckout = async function({ amount, externalId, payerEmail, description, redirectUrl }) {
+    try {
+        const resp = await fetch('/api/xendit-create-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount,
+                externalId,
+                payerEmail,
+                description,
+                successRedirectUrl: redirectUrl || window.location.href,
+                failureRedirectUrl: redirectUrl || window.location.href
+            })
+        });
+        const data = await resp.json();
+        return data;
+    } catch (err) {
+        return { mode: 'error', message: err.message };
+    }
+};
+
 window.setupDynamicPaymentChannelPanel = setupDynamicPaymentChannelPanel;
 window.processReservationReceiptAndEmail = processReservationReceiptAndEmail;
 window.generateAndDownloadReceiptPDF = generateAndDownloadReceiptPDF;

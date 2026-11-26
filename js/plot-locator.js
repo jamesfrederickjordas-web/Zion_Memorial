@@ -1618,10 +1618,11 @@ async function submitPlotReservation(form) {
         const totalPaidRecorded = isImmediatelyPaid ? amountNow : 0.00;
         const balanceRecorded = isImmediatelyPaid ? Math.max(0, price - amountNow) : price;
         const monthly = term > 0 ? (submitPricing ? submitPricing.monthlyPayment : (balanceRecorded / term)) : 0;
-        const paymentTag = isImmediatelyPaid ? 'PAID' : (Boolean(attachedProof) || Boolean(gcashQrRef) || Boolean(manualRef) ? 'PENDING VERIFICATION' : 'UNPAID');
+        const isCard = paymentChannel === 'Card';
+        const paymentTag = isImmediatelyPaid ? 'PAID' : (isCard || Boolean(attachedProof) || Boolean(gcashQrRef) || Boolean(manualRef) ? 'PENDING VERIFICATION' : 'UNPAID');
         const paymentReference = isCash
             ? (counterRef || manualRef || `CSH-COUNTER-${Date.now().toString(36).toUpperCase()}`)
-            : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`);
+            : (isCard ? `XENDIT-CARD-${Date.now().toString(36).toUpperCase()}` : (gcashQrRef || manualRef || `GCASH-SS-${Date.now().toString(36).toUpperCase()}`));
         const resNumber = `RES-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const deceasedTagNote = fullDeceasedName ? ` [Interred: ${fullDeceasedName}${deceasedDeathDate ? ` (DOD: ${deceasedDeathDate})` : ''}]` : '';
         const finalNotes = `[Channel: ${paymentChannel}] [Receipt Tag: ${paymentTag}] [Ref: ${paymentReference}]${deceasedTagNote} ${notes}`.trim();
@@ -1654,12 +1655,26 @@ async function submitPlotReservation(form) {
             payment_reference: manualRef || paymentReference,
             amount: amountNow,
             payment_type: paymentOption === 'INSTALLMENT' ? 'DOWN_PAYMENT' : 'FULL_PAYMENT',
-            payment_method: isCash ? 'Cash' : 'GCash',
+            payment_method: isCash ? 'Cash' : (isCard ? 'Credit / Debit Card' : 'GCash'),
             status: isImmediatelyPaid ? 'COMPLETED' : 'PENDING',
             receipt_url: attachedProof || currentPaymentProofDataUrl || null,
             paid_at: isImmediatelyPaid ? new Date().toISOString() : null,
             due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }]);
+
+        if (isCard && typeof window.startXenditCardCheckout === 'function') {
+            const xenditRes = await window.startXenditCardCheckout({
+                amount: amountNow,
+                externalId: manualRef || paymentReference,
+                payerEmail: user.email,
+                description: `Zion Memorial Garden - Plot ${plotCode} (${resNumber})`,
+                redirectUrl: window.location.origin + '/dashboard.html'
+            });
+            if (xenditRes?.mode === 'live' && xenditRes.invoiceUrl) {
+                window.location.href = xenditRes.invoiceUrl;
+                return;
+            }
+        }
 
         // Insert Interred Deceased into memorial_records if provided
         const targetSpaceId = parseInt(spaceId);
