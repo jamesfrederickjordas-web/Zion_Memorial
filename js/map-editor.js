@@ -5383,22 +5383,15 @@ async function saveCurrentPlotLayoutToDatabase() {
 
     syncPlotSectionLocalCache(chosenSection, currentPlotsList);
 
-    if (!currentPlotsList || currentPlotsList.length === 0) {
-        if (typeof showNotification === 'function') {
-            showNotification('No Plots to Save', `There are no plots currently placed in ${chosenSection}.`, 'warning');
-        }
-        return;
-    }
-
     const validCategories = ['Condominium', 'Single Teired', 'Supreme', 'Special Supreme', 'Mausoleum', 'Family Estate Jr.'];
 
-    const payload = currentPlotsList.map(p => ({
+    const payload = (currentPlotsList || []).map(p => ({
         plot_identifier: p.plot_identifier,
         section_name: chosenSection,
         category: validCategories.includes(p.category) ? p.category : 'Supreme',
         status: p.status || 'available',
-        price: Number(p.price) || 60000,
-        down_payment: Number(p.down_payment) || 10200,
+        price: Number(p.price) || 65000,
+        down_payment: Number(p.down_payment) || 11960,
         col_num: p.col_num || 1,
         row_num: p.row_num || 1,
         coordinates: {
@@ -5410,12 +5403,48 @@ async function saveCurrentPlotLayoutToDatabase() {
     }));
 
     try {
-        const { data, error } = await supabaseClient
+        // 1. Delete plots that were erased/removed from this section in the editor
+        const { data: existingDbRows, error: fetchErr } = await supabaseClient
             .from('memorial_spaces')
-            .upsert(payload, { onConflict: 'plot_identifier' })
-            .select();
+            .select('id, plot_identifier')
+            .ilike('section_name', `%${chosenSection}%`);
 
-        if (error) throw error;
+        if (fetchErr) throw fetchErr;
+
+        const keepIdentifiers = new Set(payload.map(p => p.plot_identifier));
+        const removedRows = (existingDbRows || []).filter(r => r.plot_identifier && !keepIdentifiers.has(r.plot_identifier));
+        let skippedProtected = 0;
+
+        if (removedRows.length > 0) {
+            const removedIds = removedRows.map(r => r.id);
+            const { error: delErr } = await supabaseClient
+                .from('memorial_spaces')
+                .delete()
+                .in('id', removedIds);
+
+            if (delErr) {
+                // Fallback: delete individually so plots without active reservations still delete cleanly
+                for (const row of removedRows) {
+                    const { error: singleErr } = await supabaseClient
+                        .from('memorial_spaces')
+                        .delete()
+                        .eq('id', row.id);
+                    if (singleErr) skippedProtected++;
+                }
+            }
+        }
+
+        // 2. Upsert remaining/new plots
+        let data = [];
+        if (payload.length > 0) {
+            const { data: upserted, error } = await supabaseClient
+                .from('memorial_spaces')
+                .upsert(payload, { onConflict: 'plot_identifier' })
+                .select();
+
+            if (error) throw error;
+            data = upserted || [];
+        }
 
         if (Array.isArray(data) && data.length > 0) {
             const dbMap = new Map(data.map(row => [row.plot_identifier, row]));
@@ -5434,12 +5463,18 @@ async function saveCurrentPlotLayoutToDatabase() {
         }
 
         if (typeof showNotification === 'function') {
-            showNotification('Plots Saved', `Successfully saved ${payload.length} plots for ${chosenSection} to database!`, 'success');
+            const deletedCount = removedRows.length - skippedProtected;
+            const msg = skippedProtected > 0
+                ? `Saved ${payload.length} plots (${deletedCount} deleted; ${skippedProtected} kept because they have active reservations/records).`
+                : (deletedCount > 0
+                    ? `Saved ${payload.length} plots and deleted ${deletedCount} removed plot(s) from database!`
+                    : `Successfully saved ${payload.length} plots for ${chosenSection} to database!`);
+            showNotification('Plots Saved', msg, skippedProtected > 0 ? 'warning' : 'success');
         }
     } catch (err) {
         console.error('Error saving plots to DB:', err);
         if (typeof showNotification === 'function') {
-            showNotification('Save Notice', 'Plots saved to local memory.', 'info');
+            showNotification('Save Failed', 'Could not save to database: ' + (err.message || 'Check permissions.'), 'error');
         }
     }
 }
